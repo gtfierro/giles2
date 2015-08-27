@@ -7,13 +7,13 @@ import (
 
 type Config struct {
 	Archiver struct {
-		TSDB           *string
-		Metadata       *string
-		Objects        *string
-		Keepalive      *int
-		EnforceKeys    bool
-		LogLevel       *string
-		MaxConnections *int
+		TimeseriesStore *string
+		MetadataStore   *string
+		Objects         *string
+		Keepalive       *int
+		EnforceKeys     bool
+		LogLevel        *string
+		MaxConnections  *int
 	}
 
 	ReadingDB struct {
@@ -81,8 +81,8 @@ func LoadConfig(filename string) *Config {
 func PrintConfig(c *Config) {
 	fmt.Println("Giles Configuration")
 	fmt.Println("Connecting to Mongo at", *c.Mongo.Address, ":", *c.Mongo.Port, "with update interval", *c.Mongo.UpdateInterval, "seconds")
-	fmt.Println("Using Timeseries DB", *c.Archiver.TSDB)
-	switch *c.Archiver.TSDB {
+	fmt.Println("Using Timeseries DB", *c.Archiver.TimeseriesStore)
+	switch *c.Archiver.TimeseriesStore {
 	case "readingdb":
 		fmt.Println("	at address", *c.ReadingDB.Address, ":", *c.ReadingDB.Port)
 	case "quasar":

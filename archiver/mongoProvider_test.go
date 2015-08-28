@@ -78,3 +78,102 @@ func BenchmarkSaveTagsWithMetadataParallel(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkGetUnitOfTime(b *testing.B) {
+	msg := &SmapMessage{
+		Path: "/sensor8",
+		UUID: NewUUID(),
+		Properties: &smapProperties{
+			unitOfTime:    UOT_MS,
+			streamType:    NUMERIC_STREAM,
+			unitOfMeasure: "F",
+		},
+	}
+	ms.SaveTags(msg)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ms.GetUnitOfTime(msg.UUID)
+	}
+}
+
+func BenchmarkGetUnitOfTimeParallel(b *testing.B) {
+	msg := &SmapMessage{
+		Path: "/sensor8",
+		UUID: NewUUID(),
+		Properties: &smapProperties{
+			unitOfTime:    UOT_MS,
+			streamType:    NUMERIC_STREAM,
+			unitOfMeasure: "F",
+		},
+	}
+	ms.SaveTags(msg)
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			ms.GetUnitOfTime(msg.UUID)
+		}
+	})
+}
+
+func TestGetUnitOfTime(t *testing.T) {
+	msg := &SmapMessage{
+		Path: "/sensor8",
+		UUID: NewUUID(),
+		Properties: &smapProperties{
+			unitOfTime:    UOT_MS,
+			streamType:    NUMERIC_STREAM,
+			unitOfMeasure: "F",
+		},
+	}
+	ms.SaveTags(msg)
+
+	uot, err := ms.GetUnitOfTime(msg.UUID)
+	if err != nil {
+		t.Errorf("Err getting uot for %v (%v)", msg, err)
+	}
+	if uot != UOT_MS {
+		t.Errorf("UOT should be %v but was %v", UOT_MS, uot)
+	}
+}
+
+func TestGetStreamType(t *testing.T) {
+	msg := &SmapMessage{
+		Path: "/sensor8",
+		UUID: NewUUID(),
+		Properties: &smapProperties{
+			unitOfTime:    UOT_MS,
+			streamType:    NUMERIC_STREAM,
+			unitOfMeasure: "F",
+		},
+	}
+	ms.SaveTags(msg)
+
+	st, err := ms.GetStreamType(msg.UUID)
+	if err != nil {
+		t.Errorf("Err getting StreamType for %v (%v)", msg, err)
+	}
+	if st != NUMERIC_STREAM {
+		t.Errorf("UOT should be %v but was %v", NUMERIC_STREAM, st)
+	}
+}
+
+func TestGetUnitOfMeasure(t *testing.T) {
+	msg := &SmapMessage{
+		Path: "/sensor8",
+		UUID: NewUUID(),
+		Properties: &smapProperties{
+			unitOfTime:    UOT_MS,
+			streamType:    NUMERIC_STREAM,
+			unitOfMeasure: "F",
+		},
+	}
+	ms.SaveTags(msg)
+
+	uom, err := ms.GetUnitOfMeasure(msg.UUID)
+	if err != nil {
+		t.Errorf("Err getting UnitofMeasure for %v (%v)", msg, err)
+	}
+	if uom != "F" {
+		t.Errorf("UOT should be %v but was %v", "F", uom)
+	}
+}

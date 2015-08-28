@@ -105,7 +105,7 @@ func (m *mongoStore) GetUnitOfTime(uuid UUID) (UnitOfTime, error) {
 		return
 	})
 	if item != nil && err == nil {
-		return item.Value().(UnitOfTime), err
+		return UnitOfTime(item.Value().(bson.M)["Properties"].(bson.M)["UnitofTime"].(int)), err
 	}
 	return UOT_S, err
 }
@@ -118,7 +118,7 @@ func (m *mongoStore) GetStreamType(uuid UUID) (StreamType, error) {
 		return
 	})
 	if item != nil && err == nil {
-		return item.Value().(StreamType), err
+		return StreamType(item.Value().(bson.M)["Properties"].(bson.M)["StreamType"].(int)), err
 	}
 	return NUMERIC_STREAM, err
 }
@@ -131,7 +131,7 @@ func (m *mongoStore) GetUnitOfMeasure(uuid UUID) (string, error) {
 		return
 	})
 	if item != nil && err == nil {
-		return item.Value().(string), err
+		return item.Value().(bson.M)["Properties"].(bson.M)["UnitofMeasure"].(string), err
 	}
 	return "", err
 }

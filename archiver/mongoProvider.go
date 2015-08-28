@@ -34,8 +34,9 @@ type mongoConfig struct {
 	enforceKeys bool
 }
 
-func newMongoStore(c *mongoConfig) (m *mongoStore) {
+func newMongoStore(c *mongoConfig) *mongoStore {
 	var err error
+	m := &mongoStore{}
 	log.Notice("Connecting to MongoDB at %v...", c.address.String())
 	m.session, err = mgo.Dial(c.address.String())
 	if err != nil {
@@ -57,7 +58,7 @@ func newMongoStore(c *mongoConfig) (m *mongoStore) {
 	m.uomCache = ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(50))
 	m.stCache = ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(50))
 	m.cacheExpiry = 10 * time.Minute
-	return
+	return m
 }
 
 func (m *mongoStore) addIndexes() {
@@ -148,7 +149,11 @@ func (m *mongoStore) GetUUIDs(where bson.M) ([]UUID, error) {
 }
 
 func (m *mongoStore) SaveTags(msg *SmapMessage) error {
-	return nil
+	if !msg.HasMetadata() {
+		return nil
+	}
+	_, err := m.metadata.Upsert(bson.M{"uuid": msg.UUID}, bson.M{"$set": msg.ToBson()})
+	return err
 }
 
 func (m *mongoStore) SaveTagsBulk(msgs []*SmapMessage) error {

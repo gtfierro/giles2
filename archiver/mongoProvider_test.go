@@ -187,23 +187,22 @@ func TestGetTags(t *testing.T) {
 		msg    *SmapMessage
 		tags   []string
 		where  bson.M
-		result []bson.M
+		result *SmapMessageList
 	}{
 		{
 			&SmapMessage{Path: myPath, UUID: myUUID},
 			[]string{"uuid"},
 			bson.M{"uuid": myUUID},
-			[]bson.M{bson.M{"uuid": myUUID}},
+			&SmapMessageList{{UUID: myUUID}},
 		},
 	} {
-		log.Debug("test %v", test)
 		ms.SaveTags(test.msg)
 		res, err := ms.GetTags(test.tags, test.where)
 		if err != nil {
 			t.Errorf("Err during GetTags (%v) \n%v", err, test)
 		}
 		if !reflect.DeepEqual(test.result, res) {
-			t.Errorf("Result should be \n%v\n but was \n%v\n", test.result, res)
+			t.Errorf("Result should be \n%v\n but was \n%v\n", test.result.ToBson(), res.ToBson())
 		}
 	}
 }

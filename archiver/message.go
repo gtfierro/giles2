@@ -57,3 +57,13 @@ func (msg *SmapMessage) HasMetadata() bool {
 		(msg.Metadata != nil && len(msg.Metadata) > 0) ||
 		(msg.Properties != nil && !msg.Properties.IsEmpty())
 }
+
+type SmapMessageList []*SmapMessage
+
+func (sml *SmapMessageList) ToBson() []bson.M {
+	ret := make([]bson.M, len(*sml))
+	for idx, msg := range *sml {
+		ret[idx] = msg.ToBson()
+	}
+	return ret
+}

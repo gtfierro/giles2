@@ -140,11 +140,11 @@ func (m *mongoStore) GetUnitOfMeasure(uuid UUID) (string, error) {
 }
 
 // Retrieves all tags in the provided list that match the provided where clause.
-func (m *mongoStore) GetTags(tags []string, where bson.M) ([]interface{}, error) {
+func (m *mongoStore) GetTags(tags []string, where bson.M) (*SmapMessageList, error) {
 	var (
 		staged     *mgo.Query
 		selectTags bson.M
-		res        []interface{}
+		res        SmapMessageList
 	)
 	staged = m.metadata.Find(where)
 	if len(tags) == 0 { // select all
@@ -156,7 +156,7 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) ([]interface{}, error)
 		}
 	}
 	err := staged.Select(selectTags).All(&res)
-	return res, err
+	return &res, err
 }
 
 func (m *mongoStore) GetDistinct(tag string, where bson.M) (interface{}, error) {

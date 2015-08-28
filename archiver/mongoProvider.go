@@ -25,6 +25,8 @@ type mongoStore struct {
 	uomCache *ccache.Cache
 	// StreamType cache
 	stCache *ccache.Cache
+	// UUID cache
+	uuidCache *ccache.Cache
 	// expiry time for cache entries before they are automatically purged
 	cacheExpiry time.Duration
 }
@@ -57,6 +59,7 @@ func newMongoStore(c *mongoConfig) *mongoStore {
 	m.uotCache = ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(50))
 	m.uomCache = ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(50))
 	m.stCache = ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(50))
+	m.uuidCache = ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(50))
 	m.cacheExpiry = 10 * time.Minute
 	return m
 }
@@ -149,10 +152,14 @@ func (m *mongoStore) GetUUIDs(where bson.M) ([]UUID, error) {
 }
 
 func (m *mongoStore) SaveTags(msg *SmapMessage) error {
-	if !msg.HasMetadata() {
+	// if the message has no metadata and is already in cache, then skip writing
+	if !msg.HasMetadata() && m.uuidCache.Get(string(msg.UUID)) != nil {
 		return nil
 	}
+	// save to the metadata database
 	_, err := m.metadata.Upsert(bson.M{"uuid": msg.UUID}, bson.M{"$set": msg.ToBson()})
+	// and save to the uuid cache
+	m.uuidCache.Set(string(msg.UUID), struct{}{}, m.cacheExpiry)
 	return err
 }
 

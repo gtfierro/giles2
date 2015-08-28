@@ -37,7 +37,6 @@ func NewArchiver(c *Config) (a *Archiver) {
 		if err != nil {
 			log.Fatal("Error parsing Mongo address: %v", err)
 		}
-		log.Info("mongo %v", mongoaddr) //TODO: remove
 		config := &mongoConfig{
 			address:     mongoaddr,
 			enforceKeys: c.Archiver.EnforceKeys,

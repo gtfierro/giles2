@@ -65,19 +65,18 @@ func TestSmapMessageToBson(t *testing.T) {
 }
 
 func TestSmapMessageHasMetadata(t *testing.T) {
-	myUUID := NewUUID()
 	myPath := "/sensor8"
 	for _, test := range []struct {
 		msg *SmapMessage
 		out bool
 	}{
-		{&SmapMessage{Path: myPath, UUID: myUUID}, false},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Readings: []Reading{}}, false},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{}}, false},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{"X": "Y"}}, true},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Actuator: Dict{"X": "Y"}}, true},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Properties: &smapProperties{}}, false},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Properties: &smapProperties{unitOfTime: UOT_NS}}, true},
+		{&SmapMessage{Path: myPath, UUID: NewUUID()}, false},
+		{&SmapMessage{Path: myPath, UUID: NewUUID(), Readings: []Reading{}}, false},
+		{&SmapMessage{Path: myPath, UUID: NewUUID(), Metadata: Dict{}}, false},
+		{&SmapMessage{Path: myPath, UUID: NewUUID(), Metadata: Dict{"X": "Y"}}, true},
+		{&SmapMessage{Path: myPath, UUID: NewUUID(), Actuator: Dict{"X": "Y"}}, true},
+		{&SmapMessage{Path: myPath, UUID: NewUUID(), Properties: &smapProperties{}}, false},
+		{&SmapMessage{Path: myPath, UUID: NewUUID(), Properties: &smapProperties{unitOfTime: UOT_NS}}, true},
 	} {
 		try := test.msg.HasMetadata()
 		if try != test.out {

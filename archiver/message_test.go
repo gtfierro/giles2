@@ -59,7 +59,29 @@ func TestSmapMessageToBson(t *testing.T) {
 	} {
 		try := test.msg.ToBson()
 		if !reflect.DeepEqual(try, test.out) {
-			t.Errorf("Smap Message should be \n%v\n but was \n%v\n", test.out, try)
+			t.Errorf("SmapMessage should be \n%v\n but was \n%v\n", test.out, try)
+		}
+	}
+}
+
+func TestSmapMessageHasMetadata(t *testing.T) {
+	myUUID := NewUUID()
+	myPath := "/sensor8"
+	for _, test := range []struct {
+		msg *SmapMessage
+		out bool
+	}{
+		{&SmapMessage{Path: myPath, UUID: myUUID}, true},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Readings: []Reading{}}, true},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{}}, true},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{"X": "Y"}}, false},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Actuator: Dict{"X": "Y"}}, false},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Properties: &smapProperties{}}, true},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Properties: &smapProperties{unitOfTime: UOT_NS}}, false},
+	} {
+		try := test.msg.HasMetadata()
+		if try != test.out {
+			t.Errorf("SmapMessage \n%v\n should be %v but was %v\n", test.msg, try, test.out)
 		}
 	}
 }

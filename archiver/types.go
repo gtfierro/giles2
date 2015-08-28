@@ -52,7 +52,7 @@ func (u UnitOfTime) String() string {
 type StreamType uint
 
 const (
-	OBJECT_STREAM StreamType = iota
+	OBJECT_STREAM StreamType = iota + 1
 	NUMERIC_STREAM
 )
 

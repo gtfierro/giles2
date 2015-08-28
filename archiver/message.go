@@ -10,6 +10,12 @@ type smapProperties struct {
 	streamType    StreamType `json:"StreamType,omitempty"`
 }
 
+func (sp *smapProperties) IsEmpty() bool {
+	return sp.unitOfTime == 0 &&
+		sp.unitOfMeasure == "" &&
+		sp.streamType == 0
+}
+
 type SmapMessage struct {
 	Path       string
 	UUID       UUID `json:"uuid"`
@@ -43,4 +49,11 @@ func (msg *SmapMessage) ToBson() (ret bson.M) {
 		ret["Properties.StreamType"] = msg.Properties.streamType
 	}
 	return ret
+}
+
+// returns True if the message contains anything beyond Path, UUID, Readings
+func (msg *SmapMessage) HasMetadata() bool {
+	return (msg.Actuator == nil || len(msg.Actuator) == 0) &&
+		(msg.Metadata == nil || len(msg.Metadata) == 0) &&
+		(msg.Properties == nil || msg.Properties.IsEmpty())
 }

@@ -34,6 +34,19 @@ func BenchmarkSaveTagsBare(b *testing.B) {
 	}
 }
 
+func BenchmarkSaveTagsBareParallel(b *testing.B) {
+	msg := &SmapMessage{
+		Path: "/sensor8",
+		UUID: NewUUID(),
+	}
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			ms.SaveTags(msg)
+		}
+	})
+}
+
 func BenchmarkSaveTagsWithMetadata(b *testing.B) {
 	msg := &SmapMessage{
 		Path: "/sensor8",
@@ -47,4 +60,21 @@ func BenchmarkSaveTagsWithMetadata(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		ms.SaveTags(msg)
 	}
+}
+
+func BenchmarkSaveTagsWithMetadataParallel(b *testing.B) {
+	msg := &SmapMessage{
+		Path: "/sensor8",
+		UUID: NewUUID(),
+		Metadata: Dict{
+			"System":     "HVAC",
+			"Point.Name": "My Point",
+		},
+	}
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			ms.SaveTags(msg)
+		}
+	})
 }

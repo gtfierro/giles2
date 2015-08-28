@@ -38,6 +38,11 @@ func NewArchiver(c *Config) (a *Archiver) {
 			log.Fatal("Error parsing Mongo address: %v", err)
 		}
 		log.Info("mongo %v", mongoaddr) //TODO: remove
+		config := &mongoConfig{
+			address:     mongoaddr,
+			enforceKeys: c.Archiver.EnforceKeys,
+		}
+		mdStore = newMongoStore(config)
 	default:
 		log.Fatal(*c.Archiver.MetadataStore, " is not a recognized metadata store")
 	}

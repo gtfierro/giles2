@@ -1,2 +1,7 @@
 # binary
 2giles
+
+# test files
+archiver/archiver.test
+archiver/cpu.out
+archiver/mem.out

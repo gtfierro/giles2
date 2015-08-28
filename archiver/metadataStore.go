@@ -5,18 +5,18 @@ import (
 )
 
 type MetadataStore interface {
-	GetUnitOfTime(uuid UUID) UnitOfTime
-	GetStreamType(uuid UUID) StreamType
-	GetUnitOfMeasure(uuid UUID) string
+	GetUnitOfTime(uuid UUID) (UnitOfTime, error)
+	GetStreamType(uuid UUID) (StreamType, error)
+	GetUnitOfMeasure(uuid UUID) (string, error)
 
 	GetTags(tags []string, where bson.M) (interface{}, error)
 	GetDistinct(tag string, where bson.M) (interface{}, error)
 	GetUUIDs(where bson.M) ([]UUID, error)
 
 	SaveTags(msg *SmapMessage) error
+	SaveTagsBulk(msgs []*SmapMessage) error
 
-	//TODO: add feedback on how many docs changed/removed/etc. This requires
-	//      a specialized struct
+	//TODO: add feedback on how many docs changed/removed/etc. This requires a specialized struct
 	RemoveTags(tags []string, where bson.M) error
 	RemoveDocs(where bson.M) error
 }

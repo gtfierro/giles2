@@ -2,9 +2,11 @@ package archiver
 
 // mongo provider for metadata store
 import (
+	"github.com/karlseguin/ccache"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net"
+	"time"
 )
 
 // default select clause to ignore internal variables
@@ -15,6 +17,16 @@ type mongoStore struct {
 	db          *mgo.Database
 	metadata    *mgo.Collection
 	enforceKeys bool
+
+	// caches for commonly queries items
+	// UnitOfTime cache
+	uotCache *ccache.Cache
+	// UnitofMeasure cache
+	uomCache *ccache.Cache
+	// StreamType cache
+	stCache *ccache.Cache
+	// expiry time for cache entries before they are automatically purged
+	cacheExpiry time.Duration
 }
 
 type mongoConfig struct {
@@ -39,6 +51,12 @@ func newMongoStore(c *mongoConfig) (m *mongoStore) {
 	m.addIndexes()
 
 	m.enforceKeys = c.enforceKeys
+
+	// configure the unitoftime cache
+	m.uotCache = ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(50))
+	m.uomCache = ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(50))
+	m.stCache = ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(50))
+	m.cacheExpiry = 10 * time.Minute
 	return
 }
 
@@ -78,16 +96,43 @@ func (m *mongoStore) addIndexes() {
 	}
 }
 
-func (m *mongoStore) GetUnitOfTime(uuid UUID) UnitOfTime {
-	return UOT_MS
+func (m *mongoStore) GetUnitOfTime(uuid UUID) (UnitOfTime, error) {
+	item, err := m.uotCache.Fetch(string(uuid), m.cacheExpiry, func() (res interface{}, err error) {
+		err = m.metadata.Find(bson.M{"uuid": uuid}).
+			Select(bson.M{"Properties.UnitofTime": 1}).
+			One(&res)
+		return
+	})
+	if item != nil && err == nil {
+		return item.Value().(UnitOfTime), err
+	}
+	return UOT_S, err
 }
 
-func (m *mongoStore) GetStreamType(uuid UUID) StreamType {
-	return NUMERIC_STREAM
+func (m *mongoStore) GetStreamType(uuid UUID) (StreamType, error) {
+	item, err := m.stCache.Fetch(string(uuid), m.cacheExpiry, func() (res interface{}, err error) {
+		err = m.metadata.Find(bson.M{"uuid": uuid}).
+			Select(bson.M{"Properties.StreamType": 1}).
+			One(&res)
+		return
+	})
+	if item != nil && err == nil {
+		return item.Value().(StreamType), err
+	}
+	return NUMERIC_STREAM, err
 }
 
-func (m *mongoStore) GetUnitOfMeasure(uuid UUID) string {
-	return ""
+func (m *mongoStore) GetUnitOfMeasure(uuid UUID) (string, error) {
+	item, err := m.uotCache.Fetch(string(uuid), m.cacheExpiry, func() (res interface{}, err error) {
+		err = m.metadata.Find(bson.M{"uuid": uuid}).
+			Select(bson.M{"Properties.UnitofMeasure": 1}).
+			One(&res)
+		return
+	})
+	if item != nil && err == nil {
+		return item.Value().(string), err
+	}
+	return "", err
 }
 
 func (m *mongoStore) GetTags(tags []string, where bson.M) (interface{}, error) {
@@ -103,6 +148,10 @@ func (m *mongoStore) GetUUIDs(where bson.M) ([]UUID, error) {
 }
 
 func (m *mongoStore) SaveTags(msg *SmapMessage) error {
+	return nil
+}
+
+func (m *mongoStore) SaveTagsBulk(msgs []*SmapMessage) error {
 	return nil
 }
 

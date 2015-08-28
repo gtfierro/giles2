@@ -2,8 +2,10 @@ package archiver
 
 import (
 	"flag"
+	"gopkg.in/mgo.v2/bson"
 	"net"
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -175,5 +177,33 @@ func TestGetUnitOfMeasure(t *testing.T) {
 	}
 	if uom != "F" {
 		t.Errorf("UOT should be %v but was %v", "F", uom)
+	}
+}
+
+func TestGetTags(t *testing.T) {
+	myUUID := NewUUID()
+	myPath := "/sensor8"
+	for _, test := range []struct {
+		msg    *SmapMessage
+		tags   []string
+		where  bson.M
+		result []bson.M
+	}{
+		{
+			&SmapMessage{Path: myPath, UUID: myUUID},
+			[]string{"uuid"},
+			bson.M{"uuid": myUUID},
+			[]bson.M{bson.M{"uuid": myUUID}},
+		},
+	} {
+		log.Debug("test %v", test)
+		ms.SaveTags(test.msg)
+		res, err := ms.GetTags(test.tags, test.where)
+		if err != nil {
+			t.Errorf("Err during GetTags (%v) \n%v", err, test)
+		}
+		if !reflect.DeepEqual(test.result, res) {
+			t.Errorf("Result should be \n%v\n but was \n%v\n", test.result, res)
+		}
 	}
 }

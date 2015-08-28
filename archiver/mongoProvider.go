@@ -139,8 +139,24 @@ func (m *mongoStore) GetUnitOfMeasure(uuid UUID) (string, error) {
 	return "", err
 }
 
-func (m *mongoStore) GetTags(tags []string, where bson.M) (interface{}, error) {
-	return nil, nil
+// Retrieves all tags in the provided list that match the provided where clause.
+func (m *mongoStore) GetTags(tags []string, where bson.M) ([]interface{}, error) {
+	var (
+		staged     *mgo.Query
+		selectTags bson.M
+		res        []interface{}
+	)
+	staged = m.metadata.Find(where)
+	if len(tags) == 0 { // select all
+		selectTags = bson.M{"_id": 0, "_api": 0}
+	} else {
+		selectTags = bson.M{"_id": 0}
+		for _, tag := range tags {
+			selectTags[tag] = 1
+		}
+	}
+	err := staged.Select(selectTags).All(&res)
+	return res, err
 }
 
 func (m *mongoStore) GetDistinct(tag string, where bson.M) (interface{}, error) {
@@ -161,10 +177,6 @@ func (m *mongoStore) SaveTags(msg *SmapMessage) error {
 	// and save to the uuid cache
 	m.uuidCache.Set(string(msg.UUID), struct{}{}, m.cacheExpiry)
 	return err
-}
-
-func (m *mongoStore) SaveTagsBulk(msgs []*SmapMessage) error {
-	return nil
 }
 
 func (m *mongoStore) RemoveTags(tags []string, where bson.M) error {

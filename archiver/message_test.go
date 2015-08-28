@@ -71,13 +71,13 @@ func TestSmapMessageHasMetadata(t *testing.T) {
 		msg *SmapMessage
 		out bool
 	}{
-		{&SmapMessage{Path: myPath, UUID: myUUID}, true},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Readings: []Reading{}}, true},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{}}, true},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{"X": "Y"}}, false},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Actuator: Dict{"X": "Y"}}, false},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Properties: &smapProperties{}}, true},
-		{&SmapMessage{Path: myPath, UUID: myUUID, Properties: &smapProperties{unitOfTime: UOT_NS}}, false},
+		{&SmapMessage{Path: myPath, UUID: myUUID}, false},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Readings: []Reading{}}, false},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{}}, false},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{"X": "Y"}}, true},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Actuator: Dict{"X": "Y"}}, true},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Properties: &smapProperties{}}, false},
+		{&SmapMessage{Path: myPath, UUID: myUUID, Properties: &smapProperties{unitOfTime: UOT_NS}}, true},
 	} {
 		try := test.msg.HasMetadata()
 		if try != test.out {

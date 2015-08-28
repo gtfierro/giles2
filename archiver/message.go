@@ -53,7 +53,7 @@ func (msg *SmapMessage) ToBson() (ret bson.M) {
 
 // returns True if the message contains anything beyond Path, UUID, Readings
 func (msg *SmapMessage) HasMetadata() bool {
-	return (msg.Actuator == nil || len(msg.Actuator) == 0) &&
-		(msg.Metadata == nil || len(msg.Metadata) == 0) &&
-		(msg.Properties == nil || msg.Properties.IsEmpty())
+	return (msg.Actuator != nil && len(msg.Actuator) > 0) ||
+		(msg.Metadata != nil && len(msg.Metadata) > 0) ||
+		(msg.Properties != nil && !msg.Properties.IsEmpty())
 }

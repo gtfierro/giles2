@@ -54,7 +54,7 @@ func TestSmapMessageToBson(t *testing.T) {
 		},
 		{
 			&SmapMessage{Path: myPath, UUID: myUUID, Properties: &smapProperties{UOT_NS, "F", NUMERIC_STREAM}},
-			bson.M{"uuid": myUUID, "Path": myPath, "Properties.UnitofTime": "ns", "Properties.UnitofMeasure": "F", "Properties.StreamType": "numeric"},
+			bson.M{"uuid": myUUID, "Path": myPath, "Properties.UnitofTime": UOT_NS, "Properties.UnitofMeasure": "F", "Properties.StreamType": NUMERIC_STREAM},
 		},
 	} {
 		try := test.msg.ToBson()

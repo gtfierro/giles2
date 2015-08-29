@@ -23,7 +23,7 @@ func BenchmarkSmapMessageToBsonFull(b *testing.B) {
 		UUID: NewUUID(),
 		Metadata: Dict{
 			"System":     "HVAC",
-			"Point.Name": "My Point",
+			"Point|Name": "My Point",
 		},
 	}
 	b.ResetTimer()
@@ -45,8 +45,8 @@ func TestSmapMessageToBson(t *testing.T) {
 			bson.M{"uuid": myUUID, "Path": myPath},
 		},
 		{
-			&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{"System": "HVAC", "Point.Name": "My Point"}},
-			bson.M{"uuid": myUUID, "Path": myPath, "Metadata.System": "HVAC", "Metadata.Point.Name": "My Point"},
+			&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{"System": "HVAC", "Point|Name": "My Point"}},
+			bson.M{"uuid": myUUID, "Path": myPath, "Metadata.System": "HVAC", "Metadata.Point|Name": "My Point"},
 		},
 		{
 			&SmapMessage{Path: myPath, UUID: myUUID, Actuator: Dict{"State": "[45, 90]"}},

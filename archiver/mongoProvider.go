@@ -144,7 +144,7 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (*SmapMessageList, err
 	var (
 		staged     *mgo.Query
 		selectTags bson.M
-		res        SmapMessageList
+		x          []bson.M
 	)
 	staged = m.metadata.Find(where)
 	if len(tags) == 0 { // select all
@@ -155,8 +155,8 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (*SmapMessageList, err
 			selectTags[tag] = 1
 		}
 	}
-	err := staged.Select(selectTags).All(&res)
-	return &res, err
+	err := staged.Select(selectTags).All(&x)
+	return SmapMessageListFromBson(x), err
 }
 
 func (m *mongoStore) GetDistinct(tag string, where bson.M) (interface{}, error) {

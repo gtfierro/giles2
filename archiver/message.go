@@ -35,12 +35,12 @@ func (msg *SmapMessage) ToBson() (ret bson.M) {
 	}
 	if msg.Metadata != nil && len(msg.Metadata) > 0 {
 		for k, v := range msg.Metadata {
-			ret["Metadata."+k] = v
+			ret["Metadata."+fixKey(k)] = v
 		}
 	}
 	if msg.Actuator != nil && len(msg.Actuator) > 0 {
 		for k, v := range msg.Actuator {
-			ret["Actuator."+k] = v
+			ret["Actuator."+fixKey(k)] = v
 		}
 	}
 	if msg.Properties != nil {
@@ -48,6 +48,27 @@ func (msg *SmapMessage) ToBson() (ret bson.M) {
 		ret["Properties.UnitofMeasure"] = msg.Properties.unitOfMeasure
 		ret["Properties.StreamType"] = msg.Properties.streamType
 	}
+	return ret
+}
+
+func SmapMessageFromBson(m bson.M) *SmapMessage {
+	ret := &SmapMessage{}
+	if uuid, found := m["uuid"]; found {
+		ret.UUID = UUID(uuid.(string))
+	}
+
+	if path, found := m["Path"]; found {
+		ret.Path = path.(string)
+	}
+
+	if md, found := m["Metadata"]; found {
+		ret.Metadata = *DictFromBson(md.(bson.M))
+	}
+
+	if md, found := m["Actuator"]; found {
+		ret.Actuator = *DictFromBson(md.(bson.M))
+	}
+
 	return ret
 }
 
@@ -66,4 +87,12 @@ func (sml *SmapMessageList) ToBson() []bson.M {
 		ret[idx] = msg.ToBson()
 	}
 	return ret
+}
+
+func SmapMessageListFromBson(m []bson.M) *SmapMessageList {
+	ret := make(SmapMessageList, len(m))
+	for idx, doc := range m {
+		ret[idx] = SmapMessageFromBson(doc)
+	}
+	return &ret
 }

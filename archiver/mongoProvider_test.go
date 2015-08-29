@@ -26,24 +26,22 @@ func TestMain(m *testing.M) {
 }
 
 func BenchmarkSaveTagsBare(b *testing.B) {
-	msg := &SmapMessage{
-		Path: "/sensor8",
-		UUID: NewUUID(),
-	}
-	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		msg := &SmapMessage{
+			Path: "/sensor8",
+			UUID: NewUUID(),
+		}
 		ms.SaveTags(msg)
 	}
 }
 
 func BenchmarkSaveTagsBareParallel(b *testing.B) {
-	msg := &SmapMessage{
-		Path: "/sensor8",
-		UUID: NewUUID(),
-	}
-	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
+			msg := &SmapMessage{
+				Path: "/sensor8",
+				UUID: NewUUID(),
+			}
 			ms.SaveTags(msg)
 		}
 	})
@@ -194,6 +192,12 @@ func TestGetTags(t *testing.T) {
 			[]string{"uuid"},
 			bson.M{"uuid": myUUID},
 			&SmapMessageList{{UUID: myUUID}},
+		},
+		{
+			&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{"System": "HVAC", "Point|Name": "My Point"}},
+			[]string{"Metadata.System", "Path"},
+			bson.M{"uuid": myUUID},
+			&SmapMessageList{{Path: myPath, Metadata: Dict{"System": "HVAC"}}},
 		},
 	} {
 		ms.SaveTags(test.msg)

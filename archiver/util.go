@@ -2,6 +2,7 @@ package archiver
 
 import (
 	"gopkg.in/mgo.v2/bson"
+	"strings"
 )
 
 // Takes a dictionary that contains nested dictionaries and
@@ -18,4 +19,8 @@ func flatten(m bson.M) bson.M {
 		}
 	}
 	return ret
+}
+
+func fixKey(k string) string {
+	return strings.Replace(k, ".", "|", -1)
 }

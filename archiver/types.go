@@ -2,6 +2,7 @@ package archiver
 
 import (
 	"github.com/satori/go.uuid"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // internal unique identifier
@@ -17,6 +18,16 @@ type Dict map[string]string
 
 func NewDict() *Dict {
 	return new(Dict)
+}
+
+func DictFromBson(m bson.M) *Dict {
+	d := Dict{}
+	for k, v := range m {
+		if vs, ok := v.(string); ok {
+			d[k] = vs
+		}
+	}
+	return &d
 }
 
 // unit of time indicators

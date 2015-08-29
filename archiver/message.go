@@ -10,7 +10,7 @@ type smapProperties struct {
 	streamType    StreamType `json:"StreamType,omitempty"`
 }
 
-func (sp *smapProperties) IsEmpty() bool {
+func (sp smapProperties) IsEmpty() bool {
 	return sp.unitOfTime == 0 &&
 		sp.unitOfMeasure == "" &&
 		sp.streamType == 0
@@ -19,7 +19,7 @@ func (sp *smapProperties) IsEmpty() bool {
 type SmapMessage struct {
 	Path       string
 	UUID       UUID `json:"uuid"`
-	Properties *smapProperties
+	Properties smapProperties
 	Actuator   Dict
 	Metadata   Dict
 	Readings   []Reading
@@ -43,7 +43,7 @@ func (msg *SmapMessage) ToBson() (ret bson.M) {
 			ret["Actuator."+fixKey(k)] = v
 		}
 	}
-	if msg.Properties != nil {
+	if !msg.Properties.IsEmpty() {
 		ret["Properties.UnitofTime"] = msg.Properties.unitOfTime
 		ret["Properties.UnitofMeasure"] = msg.Properties.unitOfMeasure
 		ret["Properties.StreamType"] = msg.Properties.streamType
@@ -69,6 +69,23 @@ func SmapMessageFromBson(m bson.M) *SmapMessage {
 		ret.Actuator = *DictFromBson(md.(bson.M))
 	}
 
+	if md, found := m["Properties"]; found {
+		if props, ok := md.(bson.M); ok {
+			ret.Properties = smapProperties{}
+			log.Debug("props %v %v", props, ret.Properties)
+			if uot, fnd := props["UnitofTime"]; fnd {
+				ret.Properties.unitOfTime = uot.(UnitOfTime)
+			}
+			if uom, fnd := props["UnitofMeasure"]; fnd {
+				ret.Properties.unitOfMeasure = uom.(string)
+			}
+			if uot, fnd := props["StreamType"]; fnd {
+				ret.Properties.streamType = uot.(StreamType)
+			}
+			log.Debug("props %v %v", props, ret.Properties)
+		}
+	}
+
 	return ret
 }
 
@@ -76,7 +93,7 @@ func SmapMessageFromBson(m bson.M) *SmapMessage {
 func (msg *SmapMessage) HasMetadata() bool {
 	return (msg.Actuator != nil && len(msg.Actuator) > 0) ||
 		(msg.Metadata != nil && len(msg.Metadata) > 0) ||
-		(msg.Properties != nil && !msg.Properties.IsEmpty())
+		(!msg.Properties.IsEmpty())
 }
 
 type SmapMessageList []*SmapMessage

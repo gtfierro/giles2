@@ -53,7 +53,7 @@ func TestSmapMessageToBson(t *testing.T) {
 			bson.M{"uuid": myUUID, "Path": myPath, "Actuator.State": "[45, 90]"},
 		},
 		{
-			&SmapMessage{Path: myPath, UUID: myUUID, Properties: &smapProperties{UOT_NS, "F", NUMERIC_STREAM}},
+			&SmapMessage{Path: myPath, UUID: myUUID, Properties: smapProperties{unitOfTime: UOT_NS, unitOfMeasure: "F", streamType: NUMERIC_STREAM}},
 			bson.M{"uuid": myUUID, "Path": myPath, "Properties.UnitofTime": UOT_NS, "Properties.UnitofMeasure": "F", "Properties.StreamType": NUMERIC_STREAM},
 		},
 	} {
@@ -75,12 +75,48 @@ func TestSmapMessageHasMetadata(t *testing.T) {
 		{&SmapMessage{Path: myPath, UUID: NewUUID(), Metadata: Dict{}}, false},
 		{&SmapMessage{Path: myPath, UUID: NewUUID(), Metadata: Dict{"X": "Y"}}, true},
 		{&SmapMessage{Path: myPath, UUID: NewUUID(), Actuator: Dict{"X": "Y"}}, true},
-		{&SmapMessage{Path: myPath, UUID: NewUUID(), Properties: &smapProperties{}}, false},
-		{&SmapMessage{Path: myPath, UUID: NewUUID(), Properties: &smapProperties{unitOfTime: UOT_NS}}, true},
+		{&SmapMessage{Path: myPath, UUID: NewUUID(), Properties: smapProperties{}}, false},
+		{&SmapMessage{Path: myPath, UUID: NewUUID(), Properties: smapProperties{unitOfTime: UOT_NS}}, true},
 	} {
 		try := test.msg.HasMetadata()
 		if try != test.out {
-			t.Errorf("SmapMessage \n%v\n should be %v but was %v\n", test.msg, try, test.out)
+			t.Errorf("SmapMessage \n%v\n should be %v but was %v\n", test.msg, test.out, try)
 		}
+	}
+}
+
+func TestSmapMessageFromBson(t *testing.T) {
+	myPath := "/sensor8"
+	myUUID := NewUUID()
+	myUUIDstr := string(myUUID)
+	for _, test := range []struct {
+		in  bson.M
+		out *SmapMessage
+	}{
+		{
+			bson.M{"uuid": myUUIDstr, "Path": myPath},
+			&SmapMessage{UUID: myUUID, Path: myPath},
+		},
+		{
+			bson.M{"uuid": myUUIDstr, "Path": myPath, "Metadata": bson.M{"System": "HVAC", "Point|Name": "Hey"}},
+			&SmapMessage{UUID: myUUID, Path: myPath, Metadata: Dict{"System": "HVAC", "Point|Name": "Hey"}},
+		},
+		{
+			bson.M{"uuid": myUUIDstr, "Path": myPath, "Properties": bson.M{"UnitofTime": UOT_S, "UnitofMeasure": "F", "StreamType": NUMERIC_STREAM}},
+			&SmapMessage{UUID: myUUID, Path: myPath, Properties: smapProperties{unitOfTime: UOT_NS, unitOfMeasure: "F", streamType: NUMERIC_STREAM}},
+		},
+	} {
+		try := SmapMessageFromBson(test.in)
+		if !reflect.DeepEqual(*try, *test.out) {
+			t.Errorf("SmapMessage \n%v\n should be \n%v\n but was \n%v\n", test.in, test.out, try)
+		}
+	}
+}
+
+func BenchmarkSmapMessageFromBson(b *testing.B) {
+	in := bson.M{"uuid": string(NewUUID()), "Path": "/sensor8", "Metadata": bson.M{"System": "HVAC", "Point|Name": "Hey"}}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		SmapMessageFromBson(in)
 	}
 }

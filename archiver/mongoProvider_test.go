@@ -83,7 +83,7 @@ func BenchmarkGetUnitOfTime(b *testing.B) {
 	msg := &SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
-		Properties: &smapProperties{
+		Properties: smapProperties{
 			unitOfTime:    UOT_MS,
 			streamType:    NUMERIC_STREAM,
 			unitOfMeasure: "F",
@@ -100,7 +100,7 @@ func BenchmarkGetUnitOfTimeParallel(b *testing.B) {
 	msg := &SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
-		Properties: &smapProperties{
+		Properties: smapProperties{
 			unitOfTime:    UOT_MS,
 			streamType:    NUMERIC_STREAM,
 			unitOfMeasure: "F",
@@ -119,7 +119,7 @@ func TestGetUnitOfTime(t *testing.T) {
 	msg := &SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
-		Properties: &smapProperties{
+		Properties: smapProperties{
 			unitOfTime:    UOT_MS,
 			streamType:    NUMERIC_STREAM,
 			unitOfMeasure: "F",
@@ -140,7 +140,7 @@ func TestGetStreamType(t *testing.T) {
 	msg := &SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
-		Properties: &smapProperties{
+		Properties: smapProperties{
 			unitOfTime:    UOT_MS,
 			streamType:    NUMERIC_STREAM,
 			unitOfMeasure: "F",
@@ -161,7 +161,7 @@ func TestGetUnitOfMeasure(t *testing.T) {
 	msg := &SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
-		Properties: &smapProperties{
+		Properties: smapProperties{
 			unitOfTime:    UOT_MS,
 			streamType:    NUMERIC_STREAM,
 			unitOfMeasure: "F",

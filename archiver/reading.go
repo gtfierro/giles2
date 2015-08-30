@@ -62,3 +62,13 @@ func (s *SmapObjectReading) IsObject() bool {
 func (s *SmapObjectReading) GetValue() interface{} {
 	return s.Value
 }
+
+type SmapNumbersResponse struct {
+	Readings []*SmapNumberReading
+	UUID     UUID `json:"uuid"`
+}
+
+type SmapObjectResponse struct {
+	Readings []*SmapObjectReading
+	UUID     UUID `json:"uuid"`
+}

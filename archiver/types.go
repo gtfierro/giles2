@@ -77,3 +77,7 @@ func (st StreamType) String() string {
 		return ""
 	}
 }
+
+type ApiKey string
+
+//TODO: we will attach validation/generation methods to this type

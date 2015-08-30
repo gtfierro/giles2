@@ -26,6 +26,9 @@ type Archiver struct {
 	mdStore MetadataStore
 }
 
+// Returns a new archiver object from a configuration. Will Fatal out of the
+// program if there is an error in setting up connections to databases or reading
+// the config file
 func NewArchiver(c *Config) (a *Archiver) {
 	var (
 		mdStore MetadataStore
@@ -48,4 +51,19 @@ func NewArchiver(c *Config) (a *Archiver) {
 
 	a.mdStore = mdStore
 	return
+}
+
+// Takes an incoming SmapMessage object (from a client) and does the following:
+//  - Checks the incoming message against the ApiKey to verify it is valid to write
+//  - Saves the attached metadata (if any) to the metadata store
+//  - Reevaluates any dynamic subscriptions and pushes to republish clients
+//  - Saves the attached readings (if any) to the timeseries database
+// These last 2 steps happen in parallel
+func (a *Archiver) AddData(msg *SmapMessage, apikey ApiKey) (err error) {
+	// save metadata
+	err = a.mdStore.SaveTags(msg)
+	if err != nil {
+		return err
+	}
+	return nil
 }

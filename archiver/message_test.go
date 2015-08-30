@@ -102,7 +102,7 @@ func TestSmapMessageFromBson(t *testing.T) {
 			&SmapMessage{UUID: myUUID, Path: myPath, Metadata: Dict{"System": "HVAC", "Point|Name": "Hey"}},
 		},
 		{
-			bson.M{"uuid": myUUIDstr, "Path": myPath, "Properties": bson.M{"UnitofTime": UOT_S, "UnitofMeasure": "F", "StreamType": NUMERIC_STREAM}},
+			bson.M{"uuid": myUUIDstr, "Path": myPath, "Properties": bson.M{"UnitofTime": UOT_NS, "UnitofMeasure": "F", "StreamType": NUMERIC_STREAM}},
 			&SmapMessage{UUID: myUUID, Path: myPath, Properties: smapProperties{unitOfTime: UOT_NS, unitOfMeasure: "F", streamType: NUMERIC_STREAM}},
 		},
 	} {

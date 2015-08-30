@@ -72,7 +72,6 @@ func SmapMessageFromBson(m bson.M) *SmapMessage {
 	if md, found := m["Properties"]; found {
 		if props, ok := md.(bson.M); ok {
 			ret.Properties = smapProperties{}
-			log.Debug("props %v %v", props, ret.Properties)
 			if uot, fnd := props["UnitofTime"]; fnd {
 				ret.Properties.unitOfTime = uot.(UnitOfTime)
 			}
@@ -82,7 +81,6 @@ func SmapMessageFromBson(m bson.M) *SmapMessage {
 			if uot, fnd := props["StreamType"]; fnd {
 				ret.Properties.streamType = uot.(StreamType)
 			}
-			log.Debug("props %v %v", props, ret.Properties)
 		}
 	}
 

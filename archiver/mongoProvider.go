@@ -159,9 +159,9 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (*SmapMessageList, err
 	return SmapMessageListFromBson(x), err
 }
 
-func (m *mongoStore) GetDistinct(tag string, where bson.M) (interface{}, error) {
+func (m *mongoStore) GetDistinct(tag string, where bson.M) ([]string, error) {
 	var (
-		result interface{}
+		result []string
 	)
 	err := m.metadata.Find(where).Distinct(tag, &result)
 	return result, err

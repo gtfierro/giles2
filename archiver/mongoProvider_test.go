@@ -270,7 +270,7 @@ func TestGetDistinct(t *testing.T) {
 		if err != nil {
 			t.Errorf("Err during GetDistinct (%v) \n%v", err, test)
 		}
-		if !reflect.DeepEqual(res, test.result) {
+		if !compareStringSliceAsSet(res, test.result) {
 			t.Errorf("Result should be \n%v\n but was \n%v\n", test.result, res)
 		}
 	}

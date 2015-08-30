@@ -10,7 +10,7 @@ type MetadataStore interface {
 	GetUnitOfMeasure(uuid UUID) (string, error)
 
 	GetTags(tags []string, where bson.M) (*SmapMessageList, error)
-	GetDistinct(tag string, where bson.M) (interface{}, error)
+	GetDistinct(tag string, where bson.M) ([]string, error)
 	GetUUIDs(where bson.M) ([]UUID, error)
 
 	SaveTags(msg *SmapMessage) error

@@ -173,7 +173,15 @@ func (m *mongoStore) GetDistinct(tag string, where bson.M) ([]string, error) {
 }
 
 func (m *mongoStore) GetUUIDs(where bson.M) ([]UUID, error) {
-	return nil, nil
+	var results []UUID
+	var x []bson.M
+	selectClause := bson.M{"_id": 0, "uuid": 1}
+	err := m.metadata.Find(where).Select(selectClause).All(&x)
+	results = make([]UUID, len(x))
+	for i, doc := range x {
+		results[i] = UUID(doc["uuid"].(string))
+	}
+	return results, err
 }
 
 func (m *mongoStore) SaveTags(msg *SmapMessage) error {

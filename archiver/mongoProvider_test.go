@@ -275,3 +275,29 @@ func TestGetDistinct(t *testing.T) {
 		}
 	}
 }
+
+func TestGetUUIDs(t *testing.T) {
+	commonUUID := NewUUID()
+	msg1 := &SmapMessage{Path: "/sensor1", UUID: NewUUID(), Metadata: Dict{"Tag": "Value1", "Shared": string(commonUUID)}}
+	msg2 := &SmapMessage{Path: "/sensor2", UUID: NewUUID(), Metadata: Dict{"Tag": "Value2", "Shared": string(commonUUID)}}
+	ms.SaveTags(msg1)
+	ms.SaveTags(msg2)
+
+	results, err := ms.GetUUIDs(bson.M{"Metadata.Shared": string(commonUUID)})
+
+	if err != nil {
+		t.Errorf("Error running GetUUIDs (%v)", err)
+		return
+	}
+
+	if len(results) != 2 {
+		t.Errorf("Should have returned 2, but returned %v", len(results))
+		return
+	}
+
+	if !((results[0] == msg1.UUID || results[1] == msg1.UUID) &&
+		(results[0] == msg2.UUID || results[1] == msg2.UUID)) {
+		t.Errorf("Results were %v but should be %v", results, []UUID{msg1.UUID, msg2.UUID})
+
+	}
+}

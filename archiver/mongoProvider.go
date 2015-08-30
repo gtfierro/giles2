@@ -6,6 +6,7 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"net"
+	"sync/atomic"
 	"time"
 )
 
@@ -17,6 +18,8 @@ type mongoStore struct {
 	db          *mgo.Database
 	metadata    *mgo.Collection
 	enforceKeys bool
+
+	pool *mongoConnectionPool
 
 	// caches for commonly queries items
 	// UnitOfTime cache
@@ -54,6 +57,8 @@ func newMongoStore(c *mongoConfig) *mongoStore {
 	m.addIndexes()
 
 	m.enforceKeys = c.enforceKeys
+
+	m.pool = newMongoConnectionPool(m.session, m.metadata, 20)
 
 	// configure the unitoftime cache
 	m.uotCache = ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(50))
@@ -189,4 +194,44 @@ func (m *mongoStore) RemoveTags(tags []string, where bson.M) error {
 
 func (m *mongoStore) RemoveDocs(where bson.M) error {
 	return nil
+}
+
+type mongoSession struct {
+	s *mgo.Session
+	c *mgo.Collection
+}
+
+// connection pool for MongoStore
+type mongoConnectionPool struct {
+	s     *mgo.Session
+	c     *mgo.Collection
+	pool  chan *mongoSession
+	count int64
+}
+
+func newMongoConnectionPool(session *mgo.Session, collection *mgo.Collection, maxConnections int) *mongoConnectionPool {
+	return &mongoConnectionPool{s: session, c: collection, pool: make(chan *mongoSession, maxConnections), count: 0}
+}
+
+func (mpool *mongoConnectionPool) get() *mongoSession {
+	var s *mongoSession
+	select {
+	case s = <-mpool.pool:
+	default:
+		s = &mongoSession{s: mpool.s.Copy()}
+		s.c = mpool.c.With(s.s)
+		atomic.AddInt64(&mpool.count, 1)
+		//log.Info("Creating new Mongo connection in pool (%v)", mpool.count)
+	}
+	return s
+}
+
+func (mpool *mongoConnectionPool) put(s *mongoSession) {
+	select {
+	case mpool.pool <- s:
+	default:
+		s.s.Close()
+		atomic.AddInt64(&mpool.count, -1)
+		//log.Info("Releasing connection in pool, now %v", mpool.count)
+	}
 }

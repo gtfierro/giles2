@@ -37,3 +37,47 @@ func BenchmarkFlatten2x3(b *testing.B) {
 		flatten(test)
 	}
 }
+
+func TestCompareStringSliceAsSet(t *testing.T) {
+	for _, test := range []struct {
+		s1    []string
+		s2    []string
+		equal bool
+	}{
+		{
+			[]string{"a", "b", "c"},
+			[]string{"a", "b", "c"},
+			true,
+		},
+		{
+			[]string{"b", "a", "c"},
+			[]string{"a", "b", "c"},
+			true,
+		},
+		{
+			[]string{"a", "c"},
+			[]string{"a", "b", "c"},
+			false,
+		},
+		{
+			[]string{"a", "c", "d"},
+			[]string{"a", "b", "c"},
+			false,
+		},
+		{
+			[]string{"a", "b", "c"},
+			[]string{"a", "c"},
+			false,
+		},
+		{
+			[]string{"a", "b", "c"},
+			[]string{"a", "d", "c"},
+			false,
+		},
+	} {
+		res := compareStringSliceAsSet(test.s1, test.s2)
+		if res != test.equal {
+			t.Errorf("Slices \n%v\n \n%v\n should be equal? Got %v but should be %v", test.s1, test.s2, res, test.equal)
+		}
+	}
+}

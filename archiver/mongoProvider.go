@@ -160,7 +160,11 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (*SmapMessageList, err
 }
 
 func (m *mongoStore) GetDistinct(tag string, where bson.M) (interface{}, error) {
-	return nil, nil
+	var (
+		result interface{}
+	)
+	err := m.metadata.Find(where).Distinct(tag, &result)
+	return result, err
 }
 
 func (m *mongoStore) GetUUIDs(where bson.M) ([]UUID, error) {

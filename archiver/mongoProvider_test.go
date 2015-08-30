@@ -248,3 +248,30 @@ func BenchmarkGetTagsParallel(b *testing.B) {
 		}
 	})
 }
+
+func TestGetDistinct(t *testing.T) {
+	commonUUID := NewUUID()
+	msg1 := &SmapMessage{Path: "/sensor1", UUID: NewUUID(), Metadata: Dict{"Tag": "Value1", "Shared": string(commonUUID)}}
+	msg2 := &SmapMessage{Path: "/sensor2", UUID: NewUUID(), Metadata: Dict{"Tag": "Value2", "Shared": string(commonUUID)}}
+	ms.SaveTags(msg1)
+	ms.SaveTags(msg2)
+	for _, test := range []struct {
+		tag    string
+		where  bson.M
+		result []string
+	}{
+		{
+			"Metadata.Tag",
+			bson.M{"Metadata.Shared": commonUUID},
+			[]string{"Value1", "Value2"},
+		},
+	} {
+		res, err := ms.GetDistinct(test.tag, test.where)
+		if err != nil {
+			t.Errorf("Err during GetDistinct (%v) \n%v", err, test)
+		}
+		if !reflect.DeepEqual(res, test.result) {
+			t.Errorf("Result should be \n%v\n but was \n%v\n", test.result, res)
+		}
+	}
+}

@@ -210,3 +210,41 @@ func TestGetTags(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkGetTags(b *testing.B) {
+	msg := &SmapMessage{
+		Path: "/sensor8",
+		UUID: NewUUID(),
+		Metadata: Dict{
+			"System":     "HVAC",
+			"Point.Name": "My Point",
+		},
+	}
+	tags := []string{"uuid"}
+	where := bson.M{"uuid": msg.UUID}
+	ms.SaveTags(msg)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ms.GetTags(tags, where)
+	}
+}
+
+func BenchmarkGetTagsParallel(b *testing.B) {
+	msg := &SmapMessage{
+		Path: "/sensor8",
+		UUID: NewUUID(),
+		Metadata: Dict{
+			"System":     "HVAC",
+			"Point.Name": "My Point",
+		},
+	}
+	tags := []string{"uuid"}
+	where := bson.M{"uuid": msg.UUID}
+	ms.SaveTags(msg)
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			ms.GetTags(tags, where)
+		}
+	})
+}

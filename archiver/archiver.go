@@ -60,10 +60,15 @@ func NewArchiver(c *Config) (a *Archiver) {
 //  - Saves the attached readings (if any) to the timeseries database
 // These last 2 steps happen in parallel
 func (a *Archiver) AddData(msg *SmapMessage, apikey ApiKey) (err error) {
+	//TODO: check api key
+
 	// save metadata
 	err = a.mdStore.SaveTags(msg)
 	if err != nil {
 		return err
 	}
+
+	//TODO reevaluate subscriptions, push to clients
+	//TODO save timeseries data
 	return nil
 }

@@ -24,6 +24,8 @@ type Archiver struct {
 	tsStore TimeseriesStore
 	// metadata store
 	mdStore MetadataStore
+	// transaction coalescer
+	coalescer *coalescer
 }
 
 // Returns a new archiver object from a configuration. Will Fatal out of the
@@ -32,6 +34,7 @@ type Archiver struct {
 func NewArchiver(c *Config) (a *Archiver) {
 	var (
 		mdStore MetadataStore
+		tsStore TimeseriesStore
 	)
 
 	switch *c.Archiver.MetadataStore {
@@ -50,6 +53,26 @@ func NewArchiver(c *Config) (a *Archiver) {
 	}
 
 	a.mdStore = mdStore
+
+	switch *c.Archiver.TimeseriesStore {
+	case "quasar":
+		qsraddr, err := net.ResolveTCPAddr("tcp4", *c.Quasar.Address+":"+*c.Quasar.Port)
+		if err != nil {
+			log.Fatal("Error parsing Quasar address: %v", err)
+		}
+		config := &quasarConfig{
+			addr:           qsraddr,
+			mdStore:        a.mdStore,
+			maxConnections: *c.Archiver.MaxConnections,
+		}
+		tsStore = newQuasarDB(config)
+	default:
+		log.Fatal(*c.Archiver.TimeseriesStore, " is not a recognized timeseries store")
+	}
+
+	a.tsStore = tsStore
+
+	a.coalescer = newCoalescer(a.tsStore)
 	return
 }
 

@@ -5,9 +5,9 @@ import (
 )
 
 type smapProperties struct {
-	unitOfTime    UnitOfTime `json:"UnitofTime,omitempty"`
-	unitOfMeasure string     `json:"UnitofMeasure,omitempty"`
-	streamType    StreamType `json:"StreamType,omitempty"`
+	unitOfTime    UnitOfTime
+	unitOfMeasure string
+	streamType    StreamType
 }
 
 func (sp smapProperties) IsEmpty() bool {

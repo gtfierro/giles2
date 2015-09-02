@@ -46,45 +46,29 @@ func (c *coalescer) add(uuid UUID, readings []*SmapNumberReading) error {
 
 	// create a new streambuffer
 	newbuf = newStreamBuffer(uuid)
-
-	// copy readings into it. Shouldn't need to check return value here
-	// because it's a new buffer
 	newbuf.add(readings)
 
+	// check again and commit whatever buffer is there and put
+	// our new buffer in. STILL NOT RIGHT
 	c.Lock()
-	// after getting lock, check to see if a buffer has been created since
-	// we gained the lock.
-	if buf, found = c.buffers[uuid]; !found {
-		// If there isn't, then we put our own buffer in place
-		c.buffers[uuid] = newbuf
-	} else {
-		// write to the existing buffer
-		//TODO: this is slow to do inside the lock section!
-		//TODO: what if this is full too?
-		buf.add(readings)
+	if buf, found := c.buffers[uuid]; found {
+		go c.commit(buf) //TODO: if goroutine, shouldn't return error
 	}
+	c.buffers[uuid] = newbuf
 	c.Unlock()
 	return err
 }
 
 // commits the buffer to the timeseries database
-func (c *coalescer) commit(uuid UUID) error {
-	// lock the transaction coalescer, remove the buffer entry for use
-	var (
-		buf   *streamBuffer
-		found bool
-	)
-
-	c.Lock()
-	if buf, found = c.buffers[uuid]; !found {
-		// if not found, just be a no-op
-		c.Unlock()
-		return nil
-	}
-	delete(c.buffers, uuid)
-	c.Unlock()
-
+//TODO: this should send the error to some log. if an error happens
+// during commiting, it should probably be fatal/critical, or should at least re-try
+func (c *coalescer) commit(buf *streamBuffer) error {
 	return c.tsStore.AddBuffer(buf)
+}
+
+// creates a new stream buffer and starts a goroutine to monitor
+func (c *coalescer) getStreamBuffer(uuid UUID) *streamBuffer {
+	return nil
 }
 
 type streamBuffer struct {
@@ -119,3 +103,37 @@ func (sb *streamBuffer) add(readings []*SmapNumberReading) bool {
 	sb.Unlock()
 	return true
 }
+
+/*
+Start with:
+RLOCK
+1. is there a buffer already?
+    yes:
+        is it full?
+            no: add and return RUNLOCK
+            yes: continue to 2
+    no:
+        continue to 2
+RUNLOCK
+2. create a new buffer and put our readings in it
+LOCK
+3. is there a buffer already in the map (from step 1)?
+    yes: it is full! we need to comimt! it is full if "found" is true and we are here
+        go(?) commit the buffer
+        LOCK
+        put our new buffer  in the map
+        UNLOCK
+    no:
+        we are the new buffer
+
+
+
+there isn't a buffer, so we create one and put our readings in it
+3. if (found) is true, then that means the buffer WAS full and needs to be replaced,
+   so we commit it and then put our new buffer in the map. DONE
+
+
+
+
+
+*/

@@ -44,6 +44,26 @@ const (
 	UOT_S UnitOfTime = 4
 )
 
+var unitmultiplier = map[UnitOfTime]uint64{
+	UOT_NS: 1000000000,
+	UOT_US: 1000000,
+	UOT_MS: 1000,
+	UOT_S:  1,
+}
+
+// Takes a timestamp with accompanying unit of time 'stream_uot' and
+// converts it to the unit of time 'target_uot'
+func convertTime(time uint64, stream_uot, target_uot UnitOfTime) uint64 {
+	if stream_uot == target_uot {
+		return time
+	}
+	if target_uot < stream_uot { // target/stream is > 1, so we can use uint64
+		return time * (unitmultiplier[target_uot] / unitmultiplier[stream_uot])
+	} else {
+		return time / uint64(unitmultiplier[stream_uot]/unitmultiplier[target_uot])
+	}
+}
+
 func (u UnitOfTime) String() string {
 	switch u {
 	case UOT_NS:

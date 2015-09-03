@@ -1,6 +1,7 @@
 package archiver
 
 import (
+	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
 	"sort"
 )
@@ -50,6 +51,50 @@ func (msg *SmapMessage) ToBson() (ret bson.M) {
 		ret["Properties.StreamType"] = msg.Properties.streamType
 	}
 	return ret
+}
+
+func (sm *SmapMessage) UnmarshalJSON(b []byte) (err error) {
+	var (
+		incoming  = new(incomingSmapMessage)
+		time      uint64
+		value_num float64
+		value_obj interface{}
+	)
+
+	// unmarshal to an intermediary struct that matches the format
+	// of the incoming messages
+	err = json.Unmarshal(b, incoming)
+	if err != nil {
+		return
+	}
+
+	// copy the values over that we don't need to translate
+	sm.UUID = incoming.UUID
+	sm.Path = incoming.Path
+	sm.Metadata = *DictFromBson(flatten(incoming.Metadata))
+	//sm.Properties = DictFromBson(flatten(incoming.Properties))
+	sm.Actuator = *DictFromBson(flatten(incoming.Actuator))
+
+	// convert the readings depending if they are numeric or object
+	sm.Readings = make([]Reading, len(incoming.Readings))
+	for idx, reading := range incoming.Readings {
+		// time should be a uint64 no matter what
+		err = json.Unmarshal(reading[0], &time)
+		if err != nil {
+			return
+		}
+
+		// check if we have a numerical value
+		err = json.Unmarshal(reading[1], &value_num)
+		if err != nil {
+			// if we don't, then we treat as an object reading
+			err = json.Unmarshal(reading[1], &value_obj)
+			sm.Readings[idx] = &SmapObjectReading{time, value_obj}
+		} else {
+			sm.Readings[idx] = &SmapNumberReading{time, value_num}
+		}
+	}
+	return
 }
 
 func SmapMessageFromBson(m bson.M) *SmapMessage {
@@ -187,4 +232,23 @@ func (tsm *TieredSmapMessage) CollapseToTimeseries() {
 			delete(*tsm, path)
 		}
 	}
+}
+
+type incomingSmapMessage struct {
+	// Readings for this message
+	Readings [][]json.RawMessage
+	// If this struct corresponds to a sMAP collection,
+	// then Contents contains a list of paths contained within
+	// this collection
+	Contents []string `json:",omitempty"`
+	// Map of the metadata
+	Metadata bson.M `json:",omitempty"`
+	// Map containing the actuator reference
+	Actuator bson.M `json:",omitempty"`
+	// Map of the properties
+	Properties bson.M `json:",omitempty"`
+	// Unique identifier for this stream. Should be empty for Collections
+	UUID UUID `json:"uuid"`
+	// Path of this stream (thus far)
+	Path string
 }

@@ -26,6 +26,8 @@ type Archiver struct {
 	mdStore MetadataStore
 	// transaction coalescer
 	coalescer *coalescer
+	// metrics
+	metrics metricMap
 }
 
 // Returns a new archiver object from a configuration. Will Fatal out of the
@@ -75,6 +77,9 @@ func NewArchiver(c *Config) (a *Archiver) {
 	a.tsStore = tsStore
 
 	a.coalescer = newCoalescer(a.tsStore, a.mdStore)
+
+	a.metrics = make(metricMap)
+	a.metrics.addMetric("adds")
 	return
 }
 
@@ -96,6 +101,7 @@ func (a *Archiver) AddData(msg *SmapMessage, apikey ApiKey) (err error) {
 	//TODO reevaluate subscriptions, push to clients
 	//save timeseries data
 	a.coalescer.add(msg)
+	a.metrics["adds"].Mark(1)
 	//a.tsStore.AddMessage(msg)
 	return nil
 }

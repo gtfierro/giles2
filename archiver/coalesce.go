@@ -86,6 +86,10 @@ func newStreamBuffer(uuid UUID) *streamBuffer {
 
 // copy the readings into the buffer to be committed. Returns true if the
 // copy was successful, and false otherwise.
+//TODO: because this can fail, this makes the above hard (maybe even impossible).
+// this method HAS TO COMPLETE or FATALs out of the program. If you are at/above
+// the coalesce, you should already be committed. This method should be used by
+// coalescer to handle the delete/etc clauses around it
 func (sb *streamBuffer) add(readings []*SmapNumberReading) bool {
 
 	// grab read lock and test that we aren't already full

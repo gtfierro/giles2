@@ -37,6 +37,8 @@ func NewArchiver(c *Config) (a *Archiver) {
 		tsStore TimeseriesStore
 	)
 
+	a = &Archiver{}
+
 	switch *c.Archiver.MetadataStore {
 	case "mongo":
 		mongoaddr, err := net.ResolveTCPAddr("tcp4", *c.Mongo.Address+":"+*c.Mongo.Port)

@@ -2,6 +2,7 @@ package archiver
 
 import (
 	"gopkg.in/mgo.v2/bson"
+	"sort"
 )
 
 type smapProperties struct {
@@ -110,4 +111,76 @@ func SmapMessageListFromBson(m []bson.M) *SmapMessageList {
 		ret[idx] = SmapMessageFromBson(doc)
 	}
 	return &ret
+}
+
+type TieredSmapMessage map[string]*SmapMessage
+
+// This performs the metadata inheritance for the paths and messages inside
+// this collection of SmapMessages. Inheritance starts from the root path "/"
+// can progresses towards the leaves.
+// First, get a list of all of the potential timeseries (any path that contains a UUID)
+// Then, for each of the prefixes for the path of that timeserie (util.getPrefixes), grab
+// the paths from the TieredSmapMessage that match the prefixes. Sort these in "decreasing" order
+// and apply to the metadata.
+// Finally, delete all non-timeseries paths
+func (tsm *TieredSmapMessage) CollapseToTimeseries() {
+	var (
+		prefixMsg *SmapMessage
+		found     bool
+	)
+	for path, msg := range *tsm {
+		if !msg.IsTimeseries() {
+			continue
+		}
+		prefixes := getPrefixes(path)
+		sort.Sort(sort.Reverse(sort.StringSlice(prefixes)))
+		for _, prefix := range prefixes {
+			// if we don't find the prefix OR it exists but doesn't have metadata, we skip
+			prefixMsg, found = (*tsm)[prefix]
+			if !found || prefixMsg == nil || (prefixMsg != nil && !prefixMsg.HasMetadata()) {
+				continue
+			}
+			// otherwise, we apply keys from paths higher up if our timeseries doesn't already have the key
+			// (this is reverse inheritance)
+			if prefixMsg.Metadata != nil && len(prefixMsg.Metadata) > 0 {
+				for k, v := range prefixMsg.Metadata {
+					if _, hasKey := msg.Metadata[k]; !hasKey {
+						if msg.Metadata == nil {
+							msg.Metadata = make(Dict)
+						}
+						msg.Metadata[k] = v
+					}
+				}
+			}
+			if !prefixMsg.Properties.IsEmpty() {
+				if msg.Properties.unitOfTime != 0 {
+					msg.Properties.unitOfTime = prefixMsg.Properties.unitOfTime
+				}
+				if msg.Properties.unitOfMeasure != "" {
+					msg.Properties.unitOfMeasure = prefixMsg.Properties.unitOfMeasure
+				}
+				if msg.Properties.streamType != 0 {
+					msg.Properties.streamType = prefixMsg.Properties.streamType
+				}
+			}
+
+			if prefixMsg.Actuator != nil && len(prefixMsg.Actuator) > 0 {
+				for k, v := range prefixMsg.Actuator {
+					if _, hasKey := msg.Actuator[k]; !hasKey {
+						if msg.Actuator == nil {
+							msg.Actuator = make(Dict)
+						}
+						msg.Actuator[k] = v
+					}
+				}
+			}
+			(*tsm)[path] = msg
+		}
+	}
+	// when done, delete all non timeseries paths
+	for path, msg := range *tsm {
+		if !msg.IsTimeseries() {
+			delete(*tsm, path)
+		}
+	}
 }

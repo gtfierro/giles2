@@ -95,7 +95,7 @@ func (a *Archiver) AddData(msg *SmapMessage, apikey ApiKey) (err error) {
 
 	//TODO reevaluate subscriptions, push to clients
 	//save timeseries data
-	//a.coalescer.add(msg)
-	a.tsStore.AddMessage(msg)
+	a.coalescer.add(msg)
+	//a.tsStore.AddMessage(msg)
 	return nil
 }

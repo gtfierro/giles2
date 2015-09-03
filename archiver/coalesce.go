@@ -69,7 +69,6 @@ func (c *coalescer) add(msg *SmapMessage) error {
 		c.Unlock()
 		return nil
 	}
-	c.RUnlock()
 
 	// if no buffer exists, then we create our own
 	newbuf = newStreamBuffer(msg.UUID)

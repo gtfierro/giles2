@@ -8,6 +8,7 @@ import (
 // interface for sMAP readings
 type Reading interface {
 	GetTime() uint64
+	ConvertTime(from, to UnitOfTime)
 	GetValue() interface{}
 	IsObject() bool
 }
@@ -28,6 +29,10 @@ func (s *SmapNumberReading) MarshalJSON() ([]byte, error) {
 
 func (s *SmapNumberReading) GetTime() uint64 {
 	return s.Time
+}
+
+func (s *SmapNumberReading) ConvertTime(from_uot, to_uot UnitOfTime) {
+	s.Time = convertTime(s.Time, from_uot, to_uot)
 }
 
 func (s *SmapNumberReading) IsObject() bool {
@@ -53,6 +58,10 @@ func (s *SmapObjectReading) MarshalJSON() ([]byte, error) {
 
 func (s *SmapObjectReading) GetTime() uint64 {
 	return s.Time
+}
+
+func (s *SmapObjectReading) ConvertTime(from_uot, to_uot UnitOfTime) {
+	s.Time = convertTime(s.Time, from_uot, to_uot)
 }
 
 func (s *SmapObjectReading) IsObject() bool {

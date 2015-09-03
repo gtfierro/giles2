@@ -72,6 +72,37 @@ func (q *quasarDB) getConnection() *tsConn {
 }
 
 func (q *quasarDB) AddMessage(msg *SmapMessage) error {
+	var (
+		parsed_uuid uuid.UUID
+		err         error
+	)
+	if len(msg.Readings) == 0 {
+		return nil
+	}
+	conn := q.connpool.Get()
+	defer q.connpool.Put(conn)
+	if parsed_uuid, err = uuid.FromString(string(msg.UUID)); err != nil {
+		return err
+	}
+	qr := q.packetpool.Get().(quasarReading)
+	qr.ins.SetUuid(parsed_uuid.Bytes())
+	rl := qsr.NewRecordList(qr.seg, len(msg.Readings))
+	rla := rl.ToArray()
+	for i, val := range msg.Readings {
+		rla[i].SetTime(int64(val.GetTime()))
+		if num, ok := val.GetValue().(float64); ok {
+			rla[i].SetValue(num)
+		} else {
+			return fmt.Errorf("Bad number in message %v %v", msg.UUID, val)
+		}
+	}
+	qr.ins.SetValues(rl)
+	qr.req.SetInsertValues(*qr.ins)
+	qr.seg.WriteTo(conn)
+	if _, err = q.receive(conn, -1); err != nil {
+		return fmt.Errorf("Error writing to quasar %v", err)
+	}
+	q.packetpool.Put(qr)
 	return nil
 }
 

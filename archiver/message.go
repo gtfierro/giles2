@@ -95,6 +95,10 @@ func (msg *SmapMessage) HasMetadata() bool {
 		(!msg.Properties.IsEmpty())
 }
 
+func (msg *SmapMessage) IsTimeseries() bool {
+	return msg.UUID != ""
+}
+
 type SmapMessageList []*SmapMessage
 
 func (sml *SmapMessageList) ToBson() []bson.M {

@@ -68,3 +68,16 @@ func getPrefixes(s string) []string {
 	}
 	return ret
 }
+
+// returns true if the two slices are equal
+func isStringSliceEqual(x, y []string) bool {
+	if len(x) != len(y) {
+		return false
+	}
+	for idx := range x {
+		if x[idx] != y[idx] {
+			return false
+		}
+	}
+	return true
+}

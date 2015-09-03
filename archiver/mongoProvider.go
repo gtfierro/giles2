@@ -2,6 +2,7 @@ package archiver
 
 // mongo provider for metadata store
 import (
+	"fmt"
 	"github.com/karlseguin/ccache"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -106,40 +107,84 @@ func (m *mongoStore) addIndexes() {
 }
 
 func (m *mongoStore) GetUnitOfTime(uuid UUID) (UnitOfTime, error) {
-	item, err := m.uotCache.Fetch(string(uuid), m.cacheExpiry, func() (res interface{}, err error) {
-		err = m.metadata.Find(bson.M{"uuid": uuid}).
-			Select(bson.M{"Properties.UnitofTime": 1}).
-			One(&res)
+	item, err := m.uotCache.Fetch(string(uuid), m.cacheExpiry, func() (uot interface{}, err error) {
+		var (
+			res interface{}
+			c   int
+		)
+		uot = UOT_S
+		query := m.metadata.Find(bson.M{"uuid": uuid}).Select(bson.M{"Properties.UnitofTime": 1})
+		if c, err = query.Count(); err != nil {
+			return
+		} else if c == 0 {
+			err = fmt.Errorf("no stream named %v", uuid)
+			return
+		}
+		err = query.One(&res)
+		if props, found := res.(bson.M)["Properties"]; found {
+			if entry, found := props.(bson.M)["UnitofTime"]; found {
+				uot = UnitOfTime(entry.(int))
+			}
+		}
 		return
 	})
 	if item != nil && err == nil {
-		return UnitOfTime(item.Value().(bson.M)["Properties"].(bson.M)["UnitofTime"].(int)), err
+		return item.Value().(UnitOfTime), err
 	}
 	return UOT_S, err
 }
 
 func (m *mongoStore) GetStreamType(uuid UUID) (StreamType, error) {
-	item, err := m.stCache.Fetch(string(uuid), m.cacheExpiry, func() (res interface{}, err error) {
-		err = m.metadata.Find(bson.M{"uuid": uuid}).
-			Select(bson.M{"Properties.StreamType": 1}).
-			One(&res)
+	item, err := m.stCache.Fetch(string(uuid), m.cacheExpiry, func() (entry interface{}, err error) {
+		var (
+			res interface{}
+			c   int
+		)
+		entry = NUMERIC_STREAM
+		query := m.metadata.Find(bson.M{"uuid": uuid}).Select(bson.M{"Properties.StreamType": 1})
+		if c, err = query.Count(); err != nil {
+			return
+		} else if c == 0 {
+			err = fmt.Errorf("no stream named %v", uuid)
+			return
+		}
+		err = query.One(&res)
+		if props, found := res.(bson.M)["Properties"]; found {
+			if entry, found := props.(bson.M)["StreamType"]; found {
+				entry = StreamType(entry.(int))
+			}
+		}
 		return
 	})
 	if item != nil && err == nil {
-		return StreamType(item.Value().(bson.M)["Properties"].(bson.M)["StreamType"].(int)), err
+		return item.Value().(StreamType), err
 	}
 	return NUMERIC_STREAM, err
 }
 
 func (m *mongoStore) GetUnitOfMeasure(uuid UUID) (string, error) {
-	item, err := m.uotCache.Fetch(string(uuid), m.cacheExpiry, func() (res interface{}, err error) {
-		err = m.metadata.Find(bson.M{"uuid": uuid}).
-			Select(bson.M{"Properties.UnitofMeasure": 1}).
-			One(&res)
+	item, err := m.uotCache.Fetch(string(uuid), m.cacheExpiry, func() (entry interface{}, err error) {
+		var (
+			res interface{}
+			c   int
+		)
+		entry = ""
+		query := m.metadata.Find(bson.M{"uuid": uuid}).Select(bson.M{"Properties.UnitofMeasure": 1})
+		if c, err = query.Count(); err != nil {
+			err = err
+			return
+		} else if c == 0 {
+			err = fmt.Errorf("no stream named %v", uuid)
+			return
+		}
+		err = query.One(&res)
+		if props, found := res.(bson.M)["Properties"]; found {
+			entry = props.(bson.M)["UnitofMeasure"]
+		}
 		return
 	})
 	if item != nil && err == nil {
-		return item.Value().(bson.M)["Properties"].(bson.M)["UnitofMeasure"].(string), err
+		return item.Value().(string), err
 	}
 	return "", err
 }

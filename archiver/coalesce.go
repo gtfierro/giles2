@@ -44,8 +44,8 @@ func (c *coalescer) add(msg *SmapMessage) error {
 
 	// if the message has properties, grab unit of time, else grab from cache
 	// grab the unit of time for this stream
-	if msg.Properties.unitOfTime != 0 {
-		stream_uot = msg.Properties.unitOfTime
+	if msg.Properties.UnitOfTime != 0 {
+		stream_uot = msg.Properties.UnitOfTime
 	} else if stream_uot, err = c.mdStore.GetUnitOfTime(msg.UUID); err != nil {
 		return err
 	}

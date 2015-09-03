@@ -7,15 +7,15 @@ import (
 )
 
 type smapProperties struct {
-	unitOfTime    UnitOfTime
-	unitOfMeasure string
-	streamType    StreamType
+	UnitOfTime    UnitOfTime
+	UnitOfMeasure string
+	StreamType    StreamType
 }
 
 func (sp smapProperties) IsEmpty() bool {
-	return sp.unitOfTime == 0 &&
-		sp.unitOfMeasure == "" &&
-		sp.streamType == 0
+	return sp.UnitOfTime == 0 &&
+		sp.UnitOfMeasure == "" &&
+		sp.StreamType == 0
 }
 
 type SmapMessage struct {
@@ -46,9 +46,9 @@ func (msg *SmapMessage) ToBson() (ret bson.M) {
 		}
 	}
 	if !msg.Properties.IsEmpty() {
-		ret["Properties.UnitofTime"] = msg.Properties.unitOfTime
-		ret["Properties.UnitofMeasure"] = msg.Properties.unitOfMeasure
-		ret["Properties.StreamType"] = msg.Properties.streamType
+		ret["Properties.UnitofTime"] = msg.Properties.UnitOfTime
+		ret["Properties.UnitofMeasure"] = msg.Properties.UnitOfMeasure
+		ret["Properties.StreamType"] = msg.Properties.StreamType
 	}
 	return ret
 }
@@ -72,7 +72,7 @@ func (sm *SmapMessage) UnmarshalJSON(b []byte) (err error) {
 	sm.UUID = incoming.UUID
 	sm.Path = incoming.Path
 	sm.Metadata = *DictFromBson(flatten(incoming.Metadata))
-	//sm.Properties = DictFromBson(flatten(incoming.Properties))
+	sm.Properties = incoming.Properties
 	sm.Actuator = *DictFromBson(flatten(incoming.Actuator))
 
 	// convert the readings depending if they are numeric or object
@@ -119,13 +119,13 @@ func SmapMessageFromBson(m bson.M) *SmapMessage {
 		if props, ok := md.(bson.M); ok {
 			ret.Properties = smapProperties{}
 			if uot, fnd := props["UnitofTime"]; fnd {
-				ret.Properties.unitOfTime = uot.(UnitOfTime)
+				ret.Properties.UnitOfTime = uot.(UnitOfTime)
 			}
 			if uom, fnd := props["UnitofMeasure"]; fnd {
-				ret.Properties.unitOfMeasure = uom.(string)
+				ret.Properties.UnitOfMeasure = uom.(string)
 			}
 			if uot, fnd := props["StreamType"]; fnd {
-				ret.Properties.streamType = uot.(StreamType)
+				ret.Properties.StreamType = uot.(StreamType)
 			}
 		}
 	}
@@ -202,14 +202,14 @@ func (tsm *TieredSmapMessage) CollapseToTimeseries() {
 				}
 			}
 			if !prefixMsg.Properties.IsEmpty() {
-				if msg.Properties.unitOfTime != 0 {
-					msg.Properties.unitOfTime = prefixMsg.Properties.unitOfTime
+				if msg.Properties.UnitOfTime != 0 {
+					msg.Properties.UnitOfTime = prefixMsg.Properties.UnitOfTime
 				}
-				if msg.Properties.unitOfMeasure != "" {
-					msg.Properties.unitOfMeasure = prefixMsg.Properties.unitOfMeasure
+				if msg.Properties.UnitOfMeasure != "" {
+					msg.Properties.UnitOfMeasure = prefixMsg.Properties.UnitOfMeasure
 				}
-				if msg.Properties.streamType != 0 {
-					msg.Properties.streamType = prefixMsg.Properties.streamType
+				if msg.Properties.StreamType != 0 {
+					msg.Properties.StreamType = prefixMsg.Properties.StreamType
 				}
 			}
 
@@ -246,7 +246,7 @@ type incomingSmapMessage struct {
 	// Map containing the actuator reference
 	Actuator bson.M `json:",omitempty"`
 	// Map of the properties
-	Properties bson.M `json:",omitempty"`
+	Properties smapProperties `json:",omitempty"`
 	// Unique identifier for this stream. Should be empty for Collections
 	UUID UUID `json:"uuid"`
 	// Path of this stream (thus far)

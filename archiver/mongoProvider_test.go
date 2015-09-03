@@ -84,9 +84,9 @@ func BenchmarkGetUnitOfTime(b *testing.B) {
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Properties: smapProperties{
-			unitOfTime:    UOT_MS,
-			streamType:    NUMERIC_STREAM,
-			unitOfMeasure: "F",
+			UnitOfTime:    UOT_MS,
+			StreamType:    NUMERIC_STREAM,
+			UnitOfMeasure: "F",
 		},
 	}
 	ms.SaveTags(msg)
@@ -101,9 +101,9 @@ func BenchmarkGetUnitOfTimeParallel(b *testing.B) {
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Properties: smapProperties{
-			unitOfTime:    UOT_MS,
-			streamType:    NUMERIC_STREAM,
-			unitOfMeasure: "F",
+			UnitOfTime:    UOT_MS,
+			StreamType:    NUMERIC_STREAM,
+			UnitOfMeasure: "F",
 		},
 	}
 	ms.SaveTags(msg)
@@ -120,9 +120,9 @@ func TestGetUnitOfTime(t *testing.T) {
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Properties: smapProperties{
-			unitOfTime:    UOT_MS,
-			streamType:    NUMERIC_STREAM,
-			unitOfMeasure: "F",
+			UnitOfTime:    UOT_MS,
+			StreamType:    NUMERIC_STREAM,
+			UnitOfMeasure: "F",
 		},
 	}
 	ms.SaveTags(msg)
@@ -141,9 +141,9 @@ func TestGetStreamType(t *testing.T) {
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Properties: smapProperties{
-			unitOfTime:    UOT_MS,
-			streamType:    NUMERIC_STREAM,
-			unitOfMeasure: "F",
+			UnitOfTime:    UOT_MS,
+			StreamType:    NUMERIC_STREAM,
+			UnitOfMeasure: "F",
 		},
 	}
 	ms.SaveTags(msg)
@@ -162,9 +162,9 @@ func TestGetUnitOfMeasure(t *testing.T) {
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Properties: smapProperties{
-			unitOfTime:    UOT_MS,
-			streamType:    NUMERIC_STREAM,
-			unitOfMeasure: "F",
+			UnitOfTime:    UOT_MS,
+			StreamType:    NUMERIC_STREAM,
+			UnitOfMeasure: "F",
 		},
 	}
 	ms.SaveTags(msg)

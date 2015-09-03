@@ -1,8 +1,10 @@
 package archiver
 
 import (
+	"fmt"
 	"github.com/satori/go.uuid"
 	"gopkg.in/mgo.v2/bson"
+	"strings"
 )
 
 // internal unique identifier
@@ -79,6 +81,23 @@ func (u UnitOfTime) String() string {
 	}
 }
 
+func (u *UnitOfTime) UnmarshalJSON(b []byte) (err error) {
+	str := strings.Trim(string(b), `"`)
+	switch str {
+	case "ns":
+		*u = UOT_NS
+	case "us":
+		*u = UOT_US
+	case "ms":
+		*u = UOT_MS
+	case "s":
+		*u = UOT_S
+	default:
+		return fmt.Errorf("%v is not a valid UnitOfTime", str)
+	}
+	return nil
+}
+
 // stream type indicators
 type StreamType uint
 
@@ -96,6 +115,19 @@ func (st StreamType) String() string {
 	default:
 		return ""
 	}
+}
+
+func (st *StreamType) UnmarshalJSON(b []byte) (err error) {
+	str := strings.Trim(string(b), `"`)
+	switch str {
+	case "numeric":
+		*st = NUMERIC_STREAM
+	case "object":
+		*st = OBJECT_STREAM
+	default:
+		return fmt.Errorf("%v is not a valid StreamType", str)
+	}
+	return nil
 }
 
 type ApiKey string

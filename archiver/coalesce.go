@@ -29,36 +29,69 @@ func newCoalescer(tsStore TimeseriesStore, mdStore MetadataStore) *coalescer {
 // from the given SmapMessage to it. When the threshold is hit,
 // that is COALESCE_TIMEOUT milliseconds elapse or COALESCE_MAX readings are
 // buffered, the buffer is committed to the timeseries database.
-func (c *coalescer) add(uuid UUID, readings []*SmapNumberReading) error {
+func (c *coalescer) add(msg *SmapMessage) error {
 	var (
-		buf    *streamBuffer
-		newbuf *streamBuffer
-		found  bool
-		err    error
+		buf        *streamBuffer
+		newbuf     *streamBuffer
+		found      bool
+		stream_uot UnitOfTime
+		err        error
 	)
-	// grab a read lock to see if a buffer already exists
-	c.RLock()
-	if buf, found = c.buffers[uuid]; found {
-		if buf.add(readings) { // returns true if copied into buffer
-			c.RUnlock()
-			return nil
+
+	if len(msg.Readings) == 0 {
+		return nil // no readings to commit
+	}
+
+	// if the message has properties, grab unit of time, else grab from cache
+	// grab the unit of time for this stream
+	if msg.Properties.unitOfTime != 0 {
+		stream_uot = msg.Properties.unitOfTime
+	} else if stream_uot, err = c.mdStore.GetUnitOfTime(msg.UUID); err != nil {
+		return err
+	}
+
+	// convert readings to nanoseconds
+	if stream_uot != UOT_NS {
+		for _, rdg := range msg.Readings {
+			rdg.ConvertTime(stream_uot, UOT_NS)
 		}
+	}
+
+	// now we are ready to commit into a buffer
+	c.RLock()
+	buf, found = c.buffers[msg.UUID]
+	c.RUnlock()
+
+	if found && buf.add(msg.Readings) {
+		c.Lock()
+		//TODO: commit buf
+		delete(c.buffers, msg.UUID)
+		c.Unlock()
+		return nil
 	}
 	c.RUnlock()
 
-	// create a new streambuffer
-	newbuf = newStreamBuffer(uuid)
-	newbuf.add(readings)
+	// if no buffer exists, then we create our own
+	newbuf = newStreamBuffer(msg.UUID)
+	newbuf.Lock()
+	newbuf.readings = append(newbuf.readings, msg.Readings...)
+	newbuf.Unlock()
 
-	// check again and commit whatever buffer is there and put
-	// our new buffer in. STILL NOT RIGHT
+	// now we need to write this back to the internal map
+	// grab the lock
 	c.Lock()
-	if buf, found := c.buffers[uuid]; found {
-		go c.commit(buf) //TODO: if goroutine, shouldn't return error
+	// check that a new buffer hasn't been allocated already
+	if buf, found = c.buffers[msg.UUID]; found {
+		if buf.add(msg.Readings) {
+			//TODO: commit buf
+			delete(c.buffers, msg.UUID)
+		}
+	} else {
+		c.buffers[msg.UUID] = newbuf
 	}
-	c.buffers[uuid] = newbuf
 	c.Unlock()
-	return err
+
+	return nil
 }
 
 // commits the buffer to the timeseries database
@@ -74,72 +107,33 @@ func (c *coalescer) getStreamBuffer(uuid UUID) *streamBuffer {
 }
 
 type streamBuffer struct {
-	readings []*SmapNumberReading
+	readings []Reading
 	idx      int
 	uuid     UUID
 	sync.RWMutex
 }
 
 func newStreamBuffer(uuid UUID) *streamBuffer {
-	return &streamBuffer{readings: []*SmapNumberReading{},
+	return &streamBuffer{readings: []Reading{},
 		idx:  0,
 		uuid: uuid}
 }
 
 // copy the readings into the buffer to be committed. Returns true if the
-// copy was successful, and false otherwise.
-//TODO: because this can fail, this makes the above hard (maybe even impossible).
-// this method HAS TO COMPLETE or FATALs out of the program. If you are at/above
-// the coalesce, you should already be committed. This method should be used by
-// coalescer to handle the delete/etc clauses around it
-func (sb *streamBuffer) add(readings []*SmapNumberReading) bool {
+// buffer is ready to be deleted, false otherwise
+func (sb *streamBuffer) add(readings []Reading) bool {
+	// grab write lock and append readings to the buffer
+	sb.Lock()
+	sb.readings = append(sb.readings, readings...)
+	sb.Unlock()
 
 	// grab read lock and test that we aren't already full
 	sb.RLock()
 	//TODO: have a read lock for a timeout?
 	if len(sb.readings) >= COALESCE_MAX {
 		sb.RUnlock()
-		return false
+		return true
 	}
 	sb.RUnlock()
-
-	// grab write lock and append readings to the buffer
-	sb.Lock()
-	sb.readings = append(sb.readings, readings...)
-	sb.Unlock()
-	return true
+	return false
 }
-
-/*
-Start with:
-RLOCK
-1. is there a buffer already?
-    yes:
-        is it full?
-            no: add and return RUNLOCK
-            yes: continue to 2
-    no:
-        continue to 2
-RUNLOCK
-2. create a new buffer and put our readings in it
-LOCK
-3. is there a buffer already in the map (from step 1)?
-    yes: it is full! we need to comimt! it is full if "found" is true and we are here
-        go(?) commit the buffer
-        LOCK
-        put our new buffer  in the map
-        UNLOCK
-    no:
-        we are the new buffer
-
-
-
-there isn't a buffer, so we create one and put our readings in it
-3. if (found) is true, then that means the buffer WAS full and needs to be replaced,
-   so we commit it and then put our new buffer in the map. DONE
-
-
-
-
-
-*/

@@ -4,6 +4,7 @@ import (
 	"github.com/op/go-logging"
 	"net"
 	"os"
+	"time"
 )
 
 // logger
@@ -80,7 +81,19 @@ func NewArchiver(c *Config) (a *Archiver) {
 
 	a.metrics = make(metricMap)
 	a.metrics.addMetric("adds")
+
+	a.startReport()
 	return
+}
+
+func (a *Archiver) startReport() {
+	go func() {
+		t := time.NewTicker(1 * time.Second)
+		for {
+			log.Info("Adds:%d", a.metrics["adds"].GetAndReset())
+			<-t.C
+		}
+	}()
 }
 
 // Takes an incoming SmapMessage object (from a client) and does the following:

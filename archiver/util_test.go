@@ -81,3 +81,28 @@ func TestCompareStringSliceAsSet(t *testing.T) {
 		}
 	}
 }
+
+func TestGetPrefixes(t *testing.T) {
+	var x string
+	var y, z []string
+	x = "/a/b/c"
+	y = getPrefixes(x)
+	z = []string{"/", "/a", "/a/b"}
+	if !isStringSliceEqual(y, z) {
+		t.Error("Got ", y, " should be ", z)
+	}
+
+	x = "/a/b/c/"
+	y = getPrefixes(x)
+	z = []string{"/", "/a", "/a/b"}
+	if !isStringSliceEqual(y, z) {
+		t.Error("Got ", y, " should be ", z)
+	}
+
+	x = "a/b/c/"
+	y = getPrefixes(x)
+	z = []string{"/", "/a", "/a/b"}
+	if !isStringSliceEqual(y, z) {
+		t.Error("Got ", y, " should be ", z)
+	}
+}

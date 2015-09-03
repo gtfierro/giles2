@@ -49,3 +49,22 @@ func compareStringSliceAsSet(s1, s2 []string) bool {
 
 	return true
 }
+
+// Given a forward-slash delimited path, returns a slice of prefixes, e.g.:
+// input: /a/b/c/d
+// output: ['/', '/a','/a/b','/a/b/c']
+func getPrefixes(s string) []string {
+	ret := []string{"/"}
+	root := ""
+	s = "/" + s
+	for _, prefix := range strings.Split(s, "/") {
+		if len(prefix) > 0 { //skip empty strings created by Split
+			root += "/" + prefix
+			ret = append(ret, root)
+		}
+	}
+	if len(ret) > 1 {
+		return ret[:len(ret)-1]
+	}
+	return ret
+}

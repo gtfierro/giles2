@@ -2,6 +2,7 @@ package archiver
 
 import (
 	"sync"
+	"time"
 )
 
 // thresholds for when transactions will be committed to the database
@@ -64,8 +65,8 @@ func (c *coalescer) add(msg *SmapMessage) error {
 
 	if found && buf.add(msg.Readings) {
 		c.Lock()
-		//TODO: commit buf
 		delete(c.buffers, msg.UUID)
+		go c.commit(buf)
 		c.Unlock()
 		return nil
 	}
@@ -82,8 +83,8 @@ func (c *coalescer) add(msg *SmapMessage) error {
 	// check that a new buffer hasn't been allocated already
 	if buf, found = c.buffers[msg.UUID]; found {
 		if buf.add(msg.Readings) {
-			//TODO: commit buf
 			delete(c.buffers, msg.UUID)
+			go c.commit(buf)
 		}
 	} else {
 		c.buffers[msg.UUID] = newbuf
@@ -91,6 +92,18 @@ func (c *coalescer) add(msg *SmapMessage) error {
 	c.Unlock()
 
 	return nil
+}
+
+func (c *coalescer) newStreamBuffer(uuid UUID) *streamBuffer {
+	//TODO: fetch this from a pool of streambuffers
+	newbuf := newStreamBuffer(uuid)
+	time.AfterFunc(time.Duration(COALESCE_TIMEOUT)*time.Millisecond, func() {
+		c.Lock()
+		delete(c.buffers, uuid)
+		c.Unlock()
+		c.commit(newbuf)
+	})
+	return newbuf
 }
 
 // commits the buffer to the timeseries database
@@ -109,6 +122,7 @@ type streamBuffer struct {
 	readings []Reading
 	idx      int
 	uuid     UUID
+	stop     *time.Timer
 	sync.RWMutex
 }
 
@@ -120,6 +134,7 @@ func newStreamBuffer(uuid UUID) *streamBuffer {
 
 // copy the readings into the buffer to be committed. Returns true if the
 // buffer is ready to be deleted, false otherwise
+// TODO: use copy(), not append
 func (sb *streamBuffer) add(readings []Reading) bool {
 	// grab write lock and append readings to the buffer
 	sb.Lock()
@@ -128,8 +143,10 @@ func (sb *streamBuffer) add(readings []Reading) bool {
 
 	// grab read lock and test that we aren't already full
 	sb.RLock()
-	//TODO: have a read lock for a timeout?
 	if len(sb.readings) >= COALESCE_MAX {
+		if sb.stop != nil {
+			sb.stop.Stop()
+		}
 		sb.RUnlock()
 		return true
 	}

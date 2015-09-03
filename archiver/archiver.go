@@ -72,7 +72,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 
 	a.tsStore = tsStore
 
-	a.coalescer = newCoalescer(a.tsStore)
+	a.coalescer = newCoalescer(a.tsStore, a.mdStore)
 	return
 }
 

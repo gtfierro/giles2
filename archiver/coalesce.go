@@ -13,12 +13,14 @@ const (
 type coalescer struct {
 	buffers map[UUID](*streamBuffer)
 	tsStore TimeseriesStore
+	mdStore MetadataStore
 	sync.RWMutex
 }
 
-func newCoalescer(tsStore TimeseriesStore) *coalescer {
+func newCoalescer(tsStore TimeseriesStore, mdStore MetadataStore) *coalescer {
 	return &coalescer{buffers: make(map[UUID](*streamBuffer)),
 		tsStore: tsStore,
+		mdStore: mdStore,
 	}
 }
 

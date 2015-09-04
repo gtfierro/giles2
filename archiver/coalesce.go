@@ -15,6 +15,7 @@ type coalescer struct {
 	buffers map[UUID](*streamBuffer)
 	tsStore TimeseriesStore
 	mdStore MetadataStore
+	bufpool sync.Pool
 	sync.RWMutex
 }
 
@@ -22,6 +23,11 @@ func newCoalescer(tsStore TimeseriesStore, mdStore MetadataStore) *coalescer {
 	return &coalescer{buffers: make(map[UUID](*streamBuffer)),
 		tsStore: tsStore,
 		mdStore: mdStore,
+		bufpool: sync.Pool{
+			New: func() interface{} {
+				return &streamBuffer{readings: make([]Reading, COALESCE_MAX), idx: 0, stop: nil}
+			},
+		},
 	}
 }
 
@@ -63,26 +69,35 @@ func (c *coalescer) add(msg *SmapMessage) error {
 	buf, found = c.buffers[msg.UUID]
 	c.RUnlock()
 
-	if found && buf.add(msg.Readings) {
+	// go will evalute these until it finds a FALSE
+	if found && buf.fits(msg.Readings) && buf.add(msg.Readings) {
 		c.Lock()
 		delete(c.buffers, msg.UUID)
 		go c.commit(buf)
 		c.Unlock()
 		return nil
+	} else if found && !buf.fits(msg.Readings) {
+		c.Lock()
+		delete(c.buffers, msg.UUID)
+		go c.commit(buf)
+		c.Unlock()
 	}
 
 	// if no buffer exists, then we create our own
-	newbuf = newStreamBuffer(msg.UUID)
-	newbuf.Lock()
-	newbuf.readings = append(newbuf.readings, msg.Readings...)
-	newbuf.Unlock()
+	newbuf = c.newStreamBuffer(msg.UUID)
+	newbuf.add(msg.Readings)
 
 	// now we need to write this back to the internal map
 	// grab the lock
 	c.Lock()
 	// check that a new buffer hasn't been allocated already
 	if buf, found = c.buffers[msg.UUID]; found {
-		if buf.add(msg.Readings) {
+		if buf.fits(msg.Readings) {
+			if buf.add(msg.Readings) {
+				delete(c.buffers, msg.UUID)
+				go c.commit(buf)
+			}
+		} else {
 			delete(c.buffers, msg.UUID)
 			go c.commit(buf)
 		}
@@ -96,13 +111,14 @@ func (c *coalescer) add(msg *SmapMessage) error {
 
 func (c *coalescer) newStreamBuffer(uuid UUID) *streamBuffer {
 	//TODO: fetch this from a pool of streambuffers
-	newbuf := newStreamBuffer(uuid)
-	time.AfterFunc(time.Duration(COALESCE_TIMEOUT)*time.Millisecond, func() {
-		c.Lock()
-		delete(c.buffers, uuid)
-		c.Unlock()
-		c.commit(newbuf)
-	})
+	newbuf := c.bufpool.Get().(*streamBuffer)
+	newbuf.uuid = uuid
+	//newbuf.stop = time.AfterFunc(time.Duration(COALESCE_TIMEOUT)*time.Millisecond, func() {
+	//	c.Lock()
+	//	delete(c.buffers, uuid)
+	//	c.Unlock()
+	//	c.commit(newbuf)
+	//})
 	return newbuf
 }
 
@@ -110,7 +126,15 @@ func (c *coalescer) newStreamBuffer(uuid UUID) *streamBuffer {
 //TODO: this should send the error to some log. if an error happens
 // during commiting, it should probably be fatal/critical, or should at least re-try
 func (c *coalescer) commit(buf *streamBuffer) error {
-	return c.tsStore.AddBuffer(buf)
+	if buf.stop != nil {
+		buf.stop.Stop()
+	}
+	err := c.tsStore.AddBuffer(buf)
+	buf.idx = 0
+	buf.uuid = ""
+	buf.stop = nil
+	c.bufpool.Put(buf)
+	return err
 }
 
 // creates a new stream buffer and starts a goroutine to monitor
@@ -126,27 +150,22 @@ type streamBuffer struct {
 	sync.RWMutex
 }
 
-func newStreamBuffer(uuid UUID) *streamBuffer {
-	return &streamBuffer{readings: []Reading{},
-		idx:  0,
-		uuid: uuid}
+func (sb *streamBuffer) fits(readings []Reading) bool {
+	return sb.idx+len(readings) < COALESCE_MAX
 }
 
 // copy the readings into the buffer to be committed. Returns true if the
 // buffer is ready to be deleted, false otherwise
-// TODO: use copy(), not append
 func (sb *streamBuffer) add(readings []Reading) bool {
 	// grab write lock and append readings to the buffer
 	sb.Lock()
-	sb.readings = append(sb.readings, readings...)
+	copied := copy(sb.readings[sb.idx:], readings)
+	sb.idx += copied
 	sb.Unlock()
 
 	// grab read lock and test that we aren't already full
 	sb.RLock()
 	if len(sb.readings) >= COALESCE_MAX {
-		if sb.stop != nil {
-			sb.stop.Stop()
-		}
 		sb.RUnlock()
 		return true
 	}

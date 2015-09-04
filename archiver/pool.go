@@ -41,10 +41,11 @@ type connectionPool struct {
 	// connectionPool will call this function when it needs a new connection
 	newConn func() *tsConn
 	count   int64
+	max     int64
 }
 
 func NewConnectionPool(newConn func() *tsConn, maxConnections int) *connectionPool {
-	pool := &connectionPool{newConn: newConn, pool: make(chan *tsConn, maxConnections), count: 0}
+	pool := &connectionPool{newConn: newConn, pool: make(chan *tsConn, maxConnections), count: 0, max: int64(maxConnections)}
 	return pool
 }
 
@@ -53,9 +54,11 @@ func (pool *connectionPool) Get() *tsConn {
 	select {
 	case c = <-pool.pool:
 	default:
-		c = pool.newConn()
-		atomic.AddInt64(&pool.count, 1)
-		log.Info("Creating new connection in pool %v, %v", &c.conn, pool.count)
+		if atomic.LoadInt64(&pool.count) < pool.max {
+			c = pool.newConn()
+			atomic.AddInt64(&pool.count, 1)
+			log.Info("Creating new connection in pool %v, %v", &c.conn, pool.count)
+		}
 	}
 	return c
 }

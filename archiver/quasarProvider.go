@@ -121,9 +121,9 @@ func (q *quasarDB) AddBuffer(buf *streamBuffer) error {
 	}
 	qr := q.packetpool.Get().(quasarReading)
 	qr.ins.SetUuid(parsed_uuid.Bytes())
-	rl := qsr.NewRecordList(qr.seg, len(buf.readings))
+	rl := qsr.NewRecordList(qr.seg, buf.idx)
 	rla := rl.ToArray()
-	for i, val := range buf.readings {
+	for i, val := range buf.readings[:buf.idx] {
 		rla[i].SetTime(int64(val.GetTime()))
 		if num, ok := val.GetValue().(float64); ok {
 			rla[i].SetValue(num)

@@ -2,173 +2,174 @@ package archiver
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
-// thresholds for when transactions will be committed to the database
 const (
 	COALESCE_TIMEOUT = 1000  // milliseconds
 	COALESCE_MAX     = 16384 // num readings
 )
 
-type coalescer struct {
-	buffers map[UUID](*streamBuffer)
-	tsStore TimeseriesStore
-	mdStore MetadataStore
-	bufpool sync.Pool
-	sync.RWMutex
-}
-
-func newCoalescer(tsStore TimeseriesStore, mdStore MetadataStore) *coalescer {
-	return &coalescer{buffers: make(map[UUID](*streamBuffer)),
-		tsStore: tsStore,
-		mdStore: mdStore,
-		bufpool: sync.Pool{
-			New: func() interface{} {
-				return &streamBuffer{readings: make([]Reading, COALESCE_MAX), idx: 0, stop: nil}
-			},
-		},
-	}
-}
-
-// fetches a pre-existing or creates a new streamBuffer object which will
-// buffer readings for a particular UUID (stream) and adds the readings
-// from the given SmapMessage to it. When the threshold is hit,
-// that is COALESCE_TIMEOUT milliseconds elapse or COALESCE_MAX readings are
-// buffered, the buffer is committed to the timeseries database.
-func (c *coalescer) add(msg *SmapMessage) error {
-	var (
-		buf        *streamBuffer
-		newbuf     *streamBuffer
-		found      bool
-		stream_uot UnitOfTime
-		err        error
-	)
-
-	if len(msg.Readings) == 0 {
-		return nil // no readings to commit
-	}
-
-	// if the message has properties, grab unit of time, else grab from cache
-	// grab the unit of time for this stream
-	if msg.Properties.UnitOfTime != 0 {
-		stream_uot = msg.Properties.UnitOfTime
-	} else if stream_uot, err = c.mdStore.GetUnitOfTime(msg.UUID); err != nil {
-		return err
-	}
-
-	// convert readings to nanoseconds
-	if stream_uot != UOT_NS {
-		for _, rdg := range msg.Readings {
-			rdg.ConvertTime(stream_uot, UOT_NS)
-		}
-	}
-
-	// now we are ready to commit into a buffer
-	c.RLock()
-	buf, found = c.buffers[msg.UUID]
-	c.RUnlock()
-
-	// go will evalute these until it finds a FALSE
-	if found && buf.fits(msg.Readings) && buf.add(msg.Readings) {
-		c.Lock()
-		delete(c.buffers, msg.UUID)
-		go c.commit(buf)
-		c.Unlock()
-		return nil
-	} else if found && !buf.fits(msg.Readings) {
-		c.Lock()
-		delete(c.buffers, msg.UUID)
-		go c.commit(buf)
-		c.Unlock()
-	}
-
-	// if no buffer exists, then we create our own
-	newbuf = c.newStreamBuffer(msg.UUID)
-	newbuf.add(msg.Readings)
-
-	// now we need to write this back to the internal map
-	// grab the lock
-	c.Lock()
-	// check that a new buffer hasn't been allocated already
-	if buf, found = c.buffers[msg.UUID]; found {
-		if buf.fits(msg.Readings) {
-			if buf.add(msg.Readings) {
-				delete(c.buffers, msg.UUID)
-				go c.commit(buf)
-			}
-		} else {
-			delete(c.buffers, msg.UUID)
-			go c.commit(buf)
-		}
-	} else {
-		c.buffers[msg.UUID] = newbuf
-	}
-	c.Unlock()
-
-	return nil
-}
-
-func (c *coalescer) newStreamBuffer(uuid UUID) *streamBuffer {
-	//TODO: fetch this from a pool of streambuffers
-	newbuf := c.bufpool.Get().(*streamBuffer)
-	newbuf.uuid = uuid
-	//newbuf.stop = time.AfterFunc(time.Duration(COALESCE_TIMEOUT)*time.Millisecond, func() {
-	//	c.Lock()
-	//	delete(c.buffers, uuid)
-	//	c.Unlock()
-	//	c.commit(newbuf)
-	//})
-	return newbuf
-}
-
-// commits the buffer to the timeseries database
-//TODO: this should send the error to some log. if an error happens
-// during commiting, it should probably be fatal/critical, or should at least re-try
-func (c *coalescer) commit(buf *streamBuffer) error {
-	if buf.stop != nil {
-		buf.stop.Stop()
-	}
-	err := c.tsStore.AddBuffer(buf)
-	buf.idx = 0
-	buf.uuid = ""
-	buf.stop = nil
-	c.bufpool.Put(buf)
-	return err
-}
-
-// creates a new stream buffer and starts a goroutine to monitor
-func (c *coalescer) getStreamBuffer(uuid UUID) *streamBuffer {
-	return nil
-}
+type streamMap map[UUID](*streamBuffer)
 
 type streamBuffer struct {
-	readings []Reading
-	idx      int
-	uuid     UUID
-	stop     *time.Timer
-	sync.RWMutex
+	incoming   chan *SmapMessage
+	uuid       UUID
+	unitOfTime UnitOfTime
+	readings   []*SmapNumberReading
+	txc        *transactionCoalescer
+	closed     atomic.Value
+	timeout    <-chan time.Time
+	abort      chan bool
+	num        int64
+	idx        int
+	sync.Mutex
 }
 
-func (sb *streamBuffer) fits(readings []Reading) bool {
-	return sb.idx+len(readings) < COALESCE_MAX
+func newStreamBuf(uuid UUID, uot UnitOfTime, txc *transactionCoalescer) *streamBuffer {
+	sb := &streamBuffer{uuid: uuid, unitOfTime: uot,
+		incoming: txc.chanpool.Get().(chan *SmapMessage),
+		num:      0,
+		idx:      0,
+		txc:      txc,
+		readings: txc.bufpool.Get().([]*SmapNumberReading),
+		abort:    make(chan bool, 1),
+		timeout:  time.After(time.Duration(COALESCE_TIMEOUT) * time.Millisecond)}
+	sb.closed.Store(false)
+	go sb.watch()
+	return sb
 }
 
-// copy the readings into the buffer to be committed. Returns true if the
-// buffer is ready to be deleted, false otherwise
-func (sb *streamBuffer) add(readings []Reading) bool {
-	// grab write lock and append readings to the buffer
+func (sb *streamBuffer) watch() {
+	select {
+	case <-sb.timeout:
+		sb.commit()
+	case <-sb.abort:
+	}
+}
+
+func (sb *streamBuffer) isClosed() bool {
+	return sb.closed.Load().(bool)
+}
+
+// Returns true if successfully added SmapMessage to the buffer,
+// and false if the buffer is already closed
+func (sb *streamBuffer) add(sm *SmapMessage) bool {
+	// if no longer accepting readings, return false
+	if sb.isClosed() {
+		return false
+	}
+
 	sb.Lock()
-	copied := copy(sb.readings[sb.idx:], readings)
-	sb.idx += copied
-	sb.Unlock()
+	// if we are short some readings, append the space to the end
+	if diff := (len(sm.Readings) + sb.idx) - COALESCE_MAX; diff > 0 {
+		sb.readings = append(sb.readings, make([]*SmapNumberReading, diff)...)
+	}
+	// copy over all the readings
+	for idx, rdg := range sm.Readings {
+		sb.readings[sb.idx+idx] = rdg.(*SmapNumberReading)
+	}
+	// advance our pointer
+	sb.idx += len(sm.Readings)
 
-	// grab read lock and test that we aren't already full
-	sb.RLock()
-	if len(sb.readings) >= COALESCE_MAX {
-		sb.RUnlock()
+	if sb.idx >= COALESCE_MAX {
+		sb.abort <- true // cancels the timeout
+		sb.Unlock()
+		sb.commit()
 		return true
 	}
-	sb.RUnlock()
-	return false
+	sb.Unlock()
+	return true
+}
+
+func (sb *streamBuffer) commit() {
+	// close from further readings
+	sb.closed.Store(true)
+	// dispatch the commit
+	sb.txc.Commit(sb)
+}
+
+type transactionCoalescer struct {
+	tsdb     *TimeseriesStore
+	store    *MetadataStore
+	streams  atomic.Value
+	bufpool  sync.Pool
+	chanpool sync.Pool
+	sync.Mutex
+}
+
+func newTransactionCoalescer(tsdb *TimeseriesStore, store *MetadataStore) *transactionCoalescer {
+	txc := &transactionCoalescer{tsdb: tsdb, store: store}
+	txc.streams.Store(make(streamMap))
+	txc.bufpool = sync.Pool{
+		New: func() interface{} {
+			return make([]*SmapNumberReading, COALESCE_MAX)
+		},
+	}
+	txc.chanpool = sync.Pool{
+		New: func() interface{} {
+			return make(chan *SmapMessage, COALESCE_MAX)
+		},
+	}
+	return txc
+}
+
+// Called to add an incoming SmapMessage to the underlying timeseries database. A SmapMessage contains
+// an array of Readings and the UUID for the stream the readings belong to. The Readings must be added to
+// a StreamBuffer for coalescing. This StreamBuffer is either a) pre-existing and still open, b) pre-existing and committing or
+// c) not existing. In the
+func (txc *transactionCoalescer) AddSmapMessage(sm *SmapMessage) {
+	var sb *streamBuffer
+
+	// if we find the stream buffer and it is still accepting data, we write to that
+	// stream and then return
+	streams := txc.streams.Load().(streamMap)
+	if sb, found := streams[sm.UUID]; found && sb != nil {
+		if sb.add(sm) {
+			return
+		}
+	}
+
+	txc.Lock()
+	streams = txc.streams.Load().(streamMap)
+	// check again
+	if sb, found := streams[sm.UUID]; found && sb != nil {
+		if sb.add(sm) {
+			txc.Unlock()
+			return
+		}
+	}
+	uot, err := (*txc.store).GetUnitOfTime(sm.UUID)
+	if err != nil {
+		panic(err)
+	}
+	sb = newStreamBuf(sm.UUID, uot, txc)
+	newStreams := make(streamMap, len(streams)+1)
+	for k, v := range streams {
+		newStreams[k] = v
+	}
+	newStreams[sm.UUID] = sb
+	txc.streams.Store(newStreams)
+	txc.Unlock()
+	txc.AddSmapMessage(sm)
+}
+
+func (txc *transactionCoalescer) Commit(sb *streamBuffer) {
+	streams := txc.streams.Load().(streamMap)
+	if streams[sb.uuid] == sb {
+		txc.Lock()
+		newStreams := make(streamMap, len(streams))
+		for k, v := range streams {
+			newStreams[k] = v
+		}
+		delete(newStreams, sb.uuid)
+		txc.streams.Store(streams)
+		txc.Unlock()
+	}
+	sb.Lock()
+	(*txc.tsdb).AddBuffer(sb)
+	txc.bufpool.Put(sb.readings)
+	txc.chanpool.Put(sb.incoming)
+	sb.Unlock()
 }

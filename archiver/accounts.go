@@ -3,6 +3,7 @@ package archiver
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"gopkg.in/mgo.v2"
 )
 
 //TODO: put this in the config file
@@ -56,4 +57,57 @@ type AccountManager interface {
 	// Removes the given role and strikes it from the role permissons of all streams
 	// If the role does not exist, this is a noop
 	RemoveRole(role Role) error
+}
+
+type mongoAccountManager struct {
+	session *mgo.Session
+	db      *mgo.Database
+	users   *mgo.Collection
+}
+
+func newMongoAccountManager(c *mongoConfig) *mongoAccountManager {
+	var err error
+	ma := &mongoAccountManager{}
+	ma.session, err = mgo.Dial(c.address.String())
+	log.Notice("Connecting to MongoDB at %v...", c.address.String())
+	if err != nil {
+		log.Critical("Could not connect to MongoDB: %v", err)
+		return nil
+	}
+	log.Notice("...connected!")
+	// fetch/create collections and db reference
+	ma.db = ma.session.DB("gilesauth")
+	ma.users = ma.db.C("users")
+
+	// add indexes. This will fail Fatal
+	ma.addIndexes()
+	return ma
+}
+
+func (ma *mongoAccountManager) addIndexes() {
+	var err error
+	// create indexes
+	index := mgo.Index{
+		Key:        []string{"uuid"},
+		Unique:     true,
+		DropDups:   false,
+		Background: false,
+		Sparse:     false,
+	}
+	err = ma.users.EnsureIndex(index)
+	if err != nil {
+		log.Fatalf("Could not create index on users.uuid (%v)", err)
+	}
+}
+
+func (ma *mongoAccountManager) CreateUser(email, password string) (*User, error) {
+	return nil, nil
+}
+
+func (ma *mongoAccountManager) CreateRole(name string) (Role, error) {
+	return Role{}, nil
+}
+
+func (ma *mongoAccountManager) RemoveRole(role Role) error {
+	return nil
 }

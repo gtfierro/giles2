@@ -51,6 +51,8 @@ type AccountManager interface {
 	// creates a new user if one does not already exist with the given
 	// email, returns a pointer to that user and saves it to the database
 	CreateUser(email, password string) (*User, error)
+	// fetches/verifies a user and returns a pointer
+	GetUser(email, password string) (*User, error)
 	// Creates a new role with the given name and saves it to the database.
 	// If a role already exists with this name, it will just return that role
 	CreateRole(name string) (Role, error)
@@ -101,6 +103,10 @@ func (ma *mongoAccountManager) addIndexes() {
 }
 
 func (ma *mongoAccountManager) CreateUser(email, password string) (*User, error) {
+	return nil, nil
+}
+
+func (ma *mongoAccountManager) GetUser(email, password string) (*User, error) {
 	return nil, nil
 }
 

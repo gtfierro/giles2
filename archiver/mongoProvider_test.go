@@ -21,6 +21,7 @@ func TestMain(m *testing.M) {
 		enforceKeys: false,
 	}
 	ms = newMongoStore(config)
+	am = newMongoAccountManager(config)
 	flag.Parse()
 	os.Exit(m.Run())
 }

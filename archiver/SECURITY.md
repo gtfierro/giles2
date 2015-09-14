@@ -50,7 +50,15 @@ When a SOURCE is created, it receives a private key from the archiver. When a ST
 is created for a SOURCE, the private key from the SOURCE is used to generate the symmetric
 key used for that stream. This symmetric key is sent to the archiver to register the stream,
 and should somehow be signed by the SOURCE so the archiver can ensure that the symmetric
-key actually belongs to that SOURCE.
+key actually belongs to that SOURCE. Symmetric keys do not expire. this is for embedded
+applications or long-running large deployments where automating key exchange would be
+difficult to practically manage.
+--
+we have an ed25519 private key as a user. I want to create a stream. That stream will
+have some symmetric key that the archiver knows about. 
+let's say for now that symmetric key is generated OOB
+i encrypt message w/ my symmetric key. Sign message w/ ed25519? no. can't do on embedded device.
+all transport is only done doing 
 
 SOURCES will AES encrypt all messages to the archiver with their given symmetric key. The archiver
 also has the symmetric key, and thus will be able to read all messages. If a symmetric key is removed
@@ -82,6 +90,24 @@ key used for symmetric encryption? Why not! That's good.
 
 need to look into FAST symmetric encryption in go.
 
+Generating symmetric keys that are associated w/ a user: how? Does archiver have a known public key
+so that we can ask for a symmetric key as an API call, and then receive one encrypted using the archiver's
+knowledge of our public key? Then further information is done via the symmetric key. When archiver
+receives a message, that message will have an (ephemeral) key attached to it? Need some unique identifier
+to know *who* someone is. We have to know *who* is talking. Not really a way around that. If we don't
+know who is talking then we don't know who to try to authenticate them as. 
+
+Summary:
+
+USERs are given an ed25519 key pair when they are created. Archiver knows the public key of the USER.
+    - If USER sends a request to the archiver, how does archiver know who to verify the key as?
+
+USER generates ephemeral API key w/ archiver that has some expiry. All API request sent with key
+appended, e.g. /api/query/<key>. Contents of message are SIGNED with ED25519 private key by the client.
+archiver verifies signature (/api/query/<key>/<sig>?) against the known ED25519 public key for the attached ephemeral key.
+Messages can optionally be encrypted with a symmetric key established OOB.
+
+
 
 # 1. How do I create a user account?
 
@@ -110,3 +136,19 @@ resolve ephemeral key to a set of roles and cache that for lookup
 func GetEphemeralKey(user Username, password Password, valid Duration) -> EphemeralKey
 
 need to add/remove roles and permissions to a stream. Also need to cache permissions for the ephemeral key? not sure here
+
+### Ephemeral Key Permissions Matching
+
+Transport security can probably be handled later, as long as the notion of what
+we want to do is baked into the design.  Right snow, I need to think think about
+the "hot path" in which we receive a message with an ephemeral key attached,
+and need to process that message so that it matches streams that the key is
+allowed to access.
+
+We store a 3-way relation in the database: UUID, Role, Permission
+
+When we execute something against the metadata store, it will return all matching streams.
+We then filter these streams after the query. Obviously, we'd want to cache the results
+of the permissions lookup so that we don't have to keep going back to the database to
+see if we have permission to read that stream. But how do we cache this? Do I store
+a golang map? the 3-way relations?

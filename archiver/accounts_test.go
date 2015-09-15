@@ -1,6 +1,7 @@
 package archiver
 
 import (
+	"reflect"
 	"testing"
 )
 
@@ -121,5 +122,87 @@ func TestCreateRole(t *testing.T) {
 	err := am.RemoveRole("asdf")
 	if err != nil {
 		t.Errorf("Could not remove role %v", err)
+	}
+}
+
+func TestUserAddRole(t *testing.T) {
+	u := &user{}
+	for _, test := range []struct {
+		toAdd     role
+		goalRoles []role
+		duplicate bool
+	}{
+		{
+			role{"a"},
+			[]role{{"a"}},
+			false,
+		},
+		{
+			role{"b"},
+			[]role{{"a"}, {"b"}},
+			false,
+		},
+		{
+			role{"a"},
+			[]role{{"a"}, {"b"}},
+			true,
+		},
+	} {
+		duplicate := u.addRole(test.toAdd)
+		if duplicate != test.duplicate {
+			t.Errorf("Should role have been duplicate? %v Was it? %v", test.duplicate, duplicate)
+			continue
+		}
+
+		if !reflect.DeepEqual(test.goalRoles, u.Roles) {
+			t.Errorf("Role sets did not match: goal %v, user %v", test.goalRoles, u.Roles)
+			continue
+		}
+	}
+}
+
+func TestUserRemoveRole(t *testing.T) {
+	u := &user{Roles: []role{{"a"}, {"b"}, {"c"}}}
+	for _, test := range []struct {
+		toRemove  role
+		goalRoles []role
+		found     bool
+	}{
+		{
+			role{"d"},
+			[]role{{"a"}, {"b"}, {"c"}},
+			false,
+		},
+		{
+			role{"b"},
+			[]role{{"a"}, {"c"}},
+			true,
+		},
+		{
+			role{"b"},
+			[]role{{"a"}, {"c"}},
+			false,
+		},
+		{
+			role{"a"},
+			[]role{{"c"}},
+			true,
+		},
+		{
+			role{"c"},
+			[]role{},
+			true,
+		},
+	} {
+		found := u.removeRole(test.toRemove)
+		if found != test.found {
+			t.Errorf("Should role have been found? %v Was it? %v", test.found, found)
+			continue
+		}
+
+		if !reflect.DeepEqual(test.goalRoles, u.Roles) {
+			t.Errorf("Role sets did not match: goal %v, user %v", test.goalRoles, u.Roles)
+			continue
+		}
 	}
 }

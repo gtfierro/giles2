@@ -217,6 +217,7 @@ func (ma *mongoAccountManager) CreateRole(name string) (r role, exists bool, err
 }
 
 // add the given role to the given user
+//TODO: update caches of ephemeral keys associated w/ this user?
 func (ma *mongoAccountManager) UserAddRole(u *user, r role) error {
 	u.addRole(r)
 	return ma.users.Update(bson.M{"email": u.Email}, u)

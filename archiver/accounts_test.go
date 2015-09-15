@@ -7,7 +7,7 @@ import (
 
 var am AccountManager
 
-func TestCreateUser(t *testing.T) {
+func TestMongoCreateUser(t *testing.T) {
 	if am.DeleteUser("gabe@example.com") != nil {
 		t.Errorf("Could not delete old test user record")
 		return
@@ -47,7 +47,7 @@ func TestCreateUser(t *testing.T) {
 	}
 }
 
-func TestGetUser(t *testing.T) {
+func TestMongoGetUser(t *testing.T) {
 	email := "gabe@example.com"
 	pass := "12345"
 	//cleanup
@@ -98,7 +98,7 @@ func TestGetUser(t *testing.T) {
 	}
 }
 
-func TestCreateRole(t *testing.T) {
+func TestMongoCreateRole(t *testing.T) {
 	for _, test := range []struct {
 		name  string
 		found bool

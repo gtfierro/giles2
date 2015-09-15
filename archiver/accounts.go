@@ -22,7 +22,7 @@ type Role struct {
 	Name string
 }
 
-type User struct {
+type user struct {
 	Email    string
 	Password []byte
 	Roles    []Role
@@ -30,7 +30,7 @@ type User struct {
 
 // add the given Role to user. Returns true if the user already
 // had the role, and false otherwise. This method should always succeed
-func (u *User) AddRole(role Role) bool {
+func (u *user) AddRole(role Role) bool {
 	for _, r := range u.Roles {
 		if r == role {
 			return true
@@ -45,9 +45,9 @@ func (u *User) AddRole(role Role) bool {
 type AccountManager interface {
 	// creates a new user if one does not already exist with the given
 	// email, returns a pointer to that user and saves it to the database
-	CreateUser(email, password string) (*User, error)
+	CreateUser(email, password string) (*user, error)
 	// fetches/verifies a user and returns a pointer
-	GetUser(email, password string) (*User, error)
+	GetUser(email, password string) (*user, error)
 	// removes the user with the given email
 	DeleteUser(email string) error
 	// Creates a new role with the given name and saves it to the database.
@@ -90,7 +90,7 @@ func (ma *mongoAccountManager) addIndexes() {
 	var err error
 	// create indexes
 	index := mgo.Index{
-		Key:        []string{"uuid"},
+		Key:        []string{"email"},
 		Unique:     true,
 		DropDups:   false,
 		Background: false,
@@ -98,13 +98,19 @@ func (ma *mongoAccountManager) addIndexes() {
 	}
 	err = ma.users.EnsureIndex(index)
 	if err != nil {
-		log.Fatalf("Could not create index on users.uuid (%v)", err)
+		log.Fatalf("Could not create index on users.email (%v)", err)
+	}
+
+	index.Key[0] = "name"
+	err = ma.roles.EnsureIndex(index)
+	if err != nil {
+		log.Fatalf("Could not create index on roles.name (%v)", err)
 	}
 }
 
 // Creates a new user with the given email and password. Email should be unique.
 // Method will error out if user already exists
-func (ma *mongoAccountManager) CreateUser(email, password string) (u *User, err error) {
+func (ma *mongoAccountManager) CreateUser(email, password string) (u *user, err error) {
 	if len(email) == 0 || len(password) == 0 {
 		err = fmt.Errorf("Email and password must be of length > 0")
 		return
@@ -122,7 +128,7 @@ func (ma *mongoAccountManager) CreateUser(email, password string) (u *User, err 
 	}
 
 	// create a new user
-	u = &User{Email: email}
+	u = &user{Email: email}
 	// encode password
 	u.Password, err = generatePasswordHash([]byte(password))
 	if err != nil {
@@ -134,7 +140,7 @@ func (ma *mongoAccountManager) CreateUser(email, password string) (u *User, err 
 
 // Fetches user with given email only if the password matches. Returns an error
 // if user doesn't exist or if password does not match
-func (ma *mongoAccountManager) GetUser(email, password string) (u *User, err error) {
+func (ma *mongoAccountManager) GetUser(email, password string) (u *user, err error) {
 	q := ma.users.Find(bson.M{"email": email})
 
 	// test if we have a user with that email
@@ -146,7 +152,7 @@ func (ma *mongoAccountManager) GetUser(email, password string) (u *User, err err
 		return
 	}
 
-	u = &User{}
+	u = &user{}
 
 	// have reader, so extract into object
 	err = q.One(u)

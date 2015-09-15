@@ -111,11 +111,12 @@ func TestCreateRole(t *testing.T) {
 			continue
 		}
 		if exists != test.found {
-			t.Errorf("Expected Role to exist? %v Did it? %v", exists, test.found)
+			t.Errorf("Expected Role to exist? %v Did it? %v", test.found, exists)
 			continue
 		}
 		if role.Name != test.name {
 			t.Errorf("Returned role did not have the same name (%v)", test)
 		}
 	}
+	//am.RemoveRole("asdf")
 }

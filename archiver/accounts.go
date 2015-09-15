@@ -51,8 +51,9 @@ type AccountManager interface {
 	// removes the user with the given email
 	DeleteUser(email string) error
 	// Creates a new role with the given name and saves it to the database.
-	// If a role already exists with this name, it will just return that role
-	CreateRole(name string) (Role, error)
+	// If a role already exists with this name, it will just return that role.
+	// The boolean value is true if the Role already existed, an false otherwise
+	CreateRole(name string) (Role, bool, error)
 	// Removes the given role and strikes it from the role permissons of all streams
 	// If the role does not exist, this is a noop
 	RemoveRole(role Role) error
@@ -170,14 +171,16 @@ func (ma *mongoAccountManager) DeleteUser(email string) error {
 
 // check the db to see if a role with this name already exists. If it does, return it.
 // if not, create and then return.
-func (ma *mongoAccountManager) CreateRole(name string) (r Role, err error) {
+func (ma *mongoAccountManager) CreateRole(name string) (r Role, exists bool, err error) {
 	q := ma.roles.Find(bson.M{"name": name})
+	exists = false
 
 	// test if we have a matching role
 	num, err := q.Count()
 	if err != nil {
 		return
 	} else if num != 0 {
+		exists = true
 		q.One(&r)
 		return
 	}

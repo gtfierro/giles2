@@ -96,3 +96,26 @@ func TestGetUser(t *testing.T) {
 		t.Errorf("Could not delete old test user record")
 	}
 }
+
+func TestCreateRole(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		found bool
+	}{
+		{"asdf", false},
+		{"asdf", true},
+	} {
+		role, exists, err := am.CreateRole(test.name)
+		if err != nil {
+			t.Errorf("Error when creating role (%v) %v", test, err)
+			continue
+		}
+		if exists != test.found {
+			t.Errorf("Expected Role to exist? %v Did it? %v", exists, test.found)
+			continue
+		}
+		if role.Name != test.name {
+			t.Errorf("Returned role did not have the same name (%v)", test)
+		}
+	}
+}

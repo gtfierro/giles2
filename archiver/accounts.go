@@ -50,6 +50,11 @@ type AccountManager interface {
 	GetUser(email, password string) (*user, error)
 	// removes the user with the given email
 	DeleteUser(email string) error
+
+	UserAddRole(*user, role) error
+	UserRemoveRole(*user, role) error
+	UserGetRoles(*user) ([]role, error)
+
 	// Creates a new role with the given name and saves it to the database.
 	// If a role already exists with this name, it will just return that role.
 	// The boolean value is true if the Role already existed, an false otherwise
@@ -197,10 +202,19 @@ func (ma *mongoAccountManager) CreateRole(name string) (r Role, exists bool, err
 	return
 }
 
+// add the given role to the given user
+func (ma *mongoAccountManager) UserAddRole(u *user, r role) error {
+	u.addRole(r)
+	return ma.users.Update(bson.M{"email": u.Email}, u)
+}
+
+func (ma *mongoAccountManager) UserRemoveRole(*user, role) error   { return nil }
+func (ma *mongoAccountManager) UserGetRoles(*user) ([]role, error) { return []role{}, nil }
+
 // remove the role and remove mentions of it from all streams. This is a lengthy
 // operation.
 func (ma *mongoAccountManager) RemoveRole(name string) error {
-	//TODO: remove role from all streams and from all users
+	//TODO: remove role from all streams and from all users and caches
 	_, err := ma.roles.RemoveAll(bson.M{"name": name})
 	return err
 }

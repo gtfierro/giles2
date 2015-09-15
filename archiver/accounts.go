@@ -56,7 +56,7 @@ type AccountManager interface {
 	CreateRole(name string) (Role, bool, error)
 	// Removes the given role and strikes it from the role permissons of all streams
 	// If the role does not exist, this is a noop
-	RemoveRole(role Role) error
+	RemoveRole(name string) error
 }
 
 type mongoAccountManager struct {
@@ -197,10 +197,12 @@ func (ma *mongoAccountManager) CreateRole(name string) (r Role, exists bool, err
 	return
 }
 
-func (ma *mongoAccountManager) RemoveRole(role Role) error {
-	// remove the role and remove mentions of it from all streams. This is a lengthy
-	// operation.
-	return nil
+// remove the role and remove mentions of it from all streams. This is a lengthy
+// operation.
+func (ma *mongoAccountManager) RemoveRole(name string) error {
+	//TODO: remove role from all streams and from all users
+	_, err := ma.roles.RemoveAll(bson.M{"name": name})
+	return err
 }
 
 // generates a new password

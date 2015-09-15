@@ -118,5 +118,8 @@ func TestCreateRole(t *testing.T) {
 			t.Errorf("Returned role did not have the same name (%v)", test)
 		}
 	}
-	//am.RemoveRole("asdf")
+	err := am.RemoveRole("asdf")
+	if err != nil {
+		t.Errorf("Could not remove role %v", err)
+	}
 }

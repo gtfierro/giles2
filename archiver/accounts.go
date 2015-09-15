@@ -18,19 +18,19 @@ import (
 var secretkey = "abdef"
 
 // these are the groups that users belong to
-type Role struct {
+type role struct {
 	Name string
 }
 
 type user struct {
 	Email    string
 	Password []byte
-	Roles    []Role
+	Roles    []role
 }
 
 // add the given Role to user. Returns true if the user already
 // had the role, and false otherwise. This method should always succeed
-func (u *user) AddRole(role Role) bool {
+func (u *user) addRole(role role) bool {
 	for _, r := range u.Roles {
 		if r == role {
 			return true
@@ -38,6 +38,19 @@ func (u *user) AddRole(role Role) bool {
 	}
 	// if we didn't find it, then append to the end
 	u.Roles = append(u.Roles, role)
+	return false
+}
+
+// remove the role from the user. Returns true if user had the role
+// and false otherwise (it is okay to remove a role from a user
+// even if the user doesn't have that role)
+func (u *user) removeRole(role role) bool {
+	for i, r := range u.Roles {
+		if r == role {
+			u.Roles = append(u.Roles[:i], u.Roles[i+1:]...)
+			return true
+		}
+	}
 	return false
 }
 
@@ -58,7 +71,7 @@ type AccountManager interface {
 	// Creates a new role with the given name and saves it to the database.
 	// If a role already exists with this name, it will just return that role.
 	// The boolean value is true if the Role already existed, an false otherwise
-	CreateRole(name string) (Role, bool, error)
+	CreateRole(name string) (role, bool, error)
 	// Removes the given role and strikes it from the role permissons of all streams
 	// If the role does not exist, this is a noop
 	RemoveRole(name string) error
@@ -177,12 +190,13 @@ func (ma *mongoAccountManager) DeleteUser(email string) error {
 	// we use RemoveAll instead of Remove because Remove returns
 	// an error if document isn't found, and we don't care here
 	_, err := ma.users.RemoveAll(bson.M{"email": email})
+	//TODO: purge user from all caches
 	return err
 }
 
 // check the db to see if a role with this name already exists. If it does, return it.
 // if not, create and then return.
-func (ma *mongoAccountManager) CreateRole(name string) (r Role, exists bool, err error) {
+func (ma *mongoAccountManager) CreateRole(name string) (r role, exists bool, err error) {
 	q := ma.roles.Find(bson.M{"name": name})
 	exists = false
 
@@ -197,7 +211,7 @@ func (ma *mongoAccountManager) CreateRole(name string) (r Role, exists bool, err
 	}
 
 	// here, we create a new role with that name
-	r = Role{name}
+	r = role{name}
 	err = ma.roles.Insert(r)
 	return
 }

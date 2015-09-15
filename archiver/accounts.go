@@ -145,6 +145,8 @@ func (ma *mongoAccountManager) GetUser(email, password string) (u *User, err err
 		return
 	}
 
+	u = &User{}
+
 	// have reader, so extract into object
 	err = q.One(u)
 	if err != nil {
@@ -152,7 +154,7 @@ func (ma *mongoAccountManager) GetUser(email, password string) (u *User, err err
 	}
 
 	// match password
-	if verifyPassword(u.Password, []byte(password)) {
+	if !verifyPassword(u.Password, []byte(password)) {
 		// password no match!
 		u = nil
 	}
@@ -160,7 +162,10 @@ func (ma *mongoAccountManager) GetUser(email, password string) (u *User, err err
 }
 
 func (ma *mongoAccountManager) DeleteUser(email string) error {
-	return ma.users.Remove(bson.M{"email": email})
+	// we use RemoveAll instead of Remove because Remove returns
+	// an error if document isn't found, and we don't care here
+	_, err := ma.users.RemoveAll(bson.M{"email": email})
+	return err
 }
 
 // check the db to see if a role with this name already exists. If it does, return it.

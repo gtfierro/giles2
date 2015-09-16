@@ -219,12 +219,25 @@ func (ma *mongoAccountManager) CreateRole(name string) (r role, exists bool, err
 // add the given role to the given user
 //TODO: update caches of ephemeral keys associated w/ this user?
 func (ma *mongoAccountManager) UserAddRole(u *user, r role) error {
-	u.addRole(r)
-	return ma.users.Update(bson.M{"email": u.Email}, u)
+	// if this returns true, then we already have the role
+	if u.addRole(r) {
+		return ma.users.Update(bson.M{"email": u.Email}, u)
+	}
+	return nil
 }
 
-func (ma *mongoAccountManager) UserRemoveRole(*user, role) error   { return nil }
-func (ma *mongoAccountManager) UserGetRoles(*user) ([]role, error) { return []role{}, nil }
+func (ma *mongoAccountManager) UserRemoveRole(*user, role) error { return nil }
+func (ma *mongoAccountManager) UserGetRoles(u *user) ([]role, error) {
+	//TODO: how do we know if our user passed in is up to date?
+	// assume user doesn't know its roles
+	//TODO: messy unmarshalling. Does this require a specialized type?
+	var tmp bson.M
+	err := ma.users.Find(bson.M{"email": u.Email}).Select(bson.M{"roles": 1}).One(&tmp)
+	for _, i := range tmp["roles"].([]interface{}) {
+		u.addRole(role{i.(bson.M)["name"].(string)})
+	}
+	return u.Roles, err
+}
 
 // remove the role and remove mentions of it from all streams. This is a lengthy
 // operation.

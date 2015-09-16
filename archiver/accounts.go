@@ -253,7 +253,14 @@ func (ma *mongoAccountManager) UserAddRole(u *user, r role) error {
 	return nil
 }
 
-func (ma *mongoAccountManager) UserRemoveRole(*user, role) error { return nil }
+func (ma *mongoAccountManager) UserRemoveRole(u *user, r role) error {
+	if u.removeRole(r) { // update happened
+		return ma.users.Update(bson.M{"email": u.Email}, u)
+	}
+	// update didn't happen
+	return nil
+}
+
 func (ma *mongoAccountManager) UserGetRoles(u *user) (roleList, error) {
 	//TODO: how do we know if our user passed in is up to date?
 	// assume user doesn't know its roles

@@ -167,7 +167,51 @@ func TestMongoUserAddGetRole(t *testing.T) {
 
 func TestMongoUserRemoveRole(t *testing.T) {}
 func TestMongoUserGetRoles(t *testing.T)   {}
-func TestMongoRemoveRole(t *testing.T)     {}
+func TestMongoRemoveRole(t *testing.T) {
+	email := "gabe@example.com"
+	pass := "12345"
+	u, err := am.CreateUser(email, pass)
+	if err != nil {
+		t.Errorf("Could not create user record %v", err)
+	}
+	for _, r := range []string{"a", "b", "c"} {
+		err := am.UserAddRole(u, role{r})
+		if err != nil {
+			t.Errorf("Could not add role to user (%v)", err)
+			return
+		}
+	}
+
+	for _, test := range []struct {
+		toDelete role
+		roles    roleList
+		hasError bool
+	}{
+		{role{"a"}, roleList{{"b"}, {"c"}}, false},
+		{role{"a"}, roleList{{"b"}, {"c"}}, false},
+		{role{"b"}, roleList{{"c"}}, false},
+		{role{"c"}, roleList{}, false},
+	} {
+		err := am.UserRemoveRole(u, test.toDelete)
+		if (err != nil) != test.hasError {
+			t.Errorf("Expected err? %v Got err? %v", test.hasError, err)
+			continue
+		}
+		roles, err := am.UserGetRoles(u)
+		if err != nil {
+			t.Errorf("Could not fetch roles %v", err)
+			continue
+		}
+		if !reflect.DeepEqual(roles, test.roles) {
+			t.Errorf("Fetched roles were not equivalent. Has %v Expected %v", roles, test.roles)
+			continue
+		}
+	}
+	//cleanup
+	if am.DeleteUser("gabe@example.com") != nil {
+		t.Errorf("Could not delete old test user record")
+	}
+}
 
 func TestUserAddRole(t *testing.T) {
 	u := &user{}

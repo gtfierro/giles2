@@ -136,12 +136,12 @@ func TestMongoUserAddGetRole(t *testing.T) {
 
 	for _, test := range []struct {
 		role     role
-		roles    []role
+		roles    roleList
 		hasError bool
 	}{
-		{role{"a"}, []role{{"a"}}, false},
-		{role{"a"}, []role{{"a"}}, false},
-		{role{"b"}, []role{{"a"}, {"b"}}, false},
+		{role{"a"}, roleList{{"a"}}, false},
+		{role{"a"}, roleList{{"a"}}, false},
+		{role{"b"}, roleList{{"a"}, {"b"}}, false},
 	} {
 		err = am.UserAddRole(u, test.role)
 		if (err != nil) != test.hasError {
@@ -173,22 +173,22 @@ func TestUserAddRole(t *testing.T) {
 	u := &user{}
 	for _, test := range []struct {
 		toAdd     role
-		goalRoles []role
+		goalRoles roleList
 		duplicate bool
 	}{
 		{
 			role{"a"},
-			[]role{{"a"}},
+			roleList{{"a"}},
 			false,
 		},
 		{
 			role{"b"},
-			[]role{{"a"}, {"b"}},
+			roleList{{"a"}, {"b"}},
 			false,
 		},
 		{
 			role{"a"},
-			[]role{{"a"}, {"b"}},
+			roleList{{"a"}, {"b"}},
 			true,
 		},
 	} {
@@ -206,35 +206,35 @@ func TestUserAddRole(t *testing.T) {
 }
 
 func TestUserRemoveRole(t *testing.T) {
-	u := &user{Roles: []role{{"a"}, {"b"}, {"c"}}}
+	u := &user{Roles: roleList{{"a"}, {"b"}, {"c"}}}
 	for _, test := range []struct {
 		toRemove  role
-		goalRoles []role
+		goalRoles roleList
 		found     bool
 	}{
 		{
 			role{"d"},
-			[]role{{"a"}, {"b"}, {"c"}},
+			roleList{{"a"}, {"b"}, {"c"}},
 			false,
 		},
 		{
 			role{"b"},
-			[]role{{"a"}, {"c"}},
+			roleList{{"a"}, {"c"}},
 			true,
 		},
 		{
 			role{"b"},
-			[]role{{"a"}, {"c"}},
+			roleList{{"a"}, {"c"}},
 			false,
 		},
 		{
 			role{"a"},
-			[]role{{"c"}},
+			roleList{{"c"}},
 			true,
 		},
 		{
 			role{"c"},
-			[]role{},
+			roleList{},
 			true,
 		},
 	} {

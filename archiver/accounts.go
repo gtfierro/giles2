@@ -22,10 +22,37 @@ type role struct {
 	Name string
 }
 
+type roleList []role
+
+func (r roleList) GetBSON() (interface{}, error) {
+	var s = make([]string, len(r))
+	for i, r := range r {
+		s[i] = r.Name
+	}
+	return s, nil
+}
+
+func (r *roleList) SetBSON(raw bson.Raw) error {
+	var (
+		s []string
+		t map[string][]string
+	)
+	err := raw.Unmarshal(&t)
+	if err != nil {
+		return err
+	}
+	s = t["roles"]
+	*r = make(roleList, len(s))
+	for i, name := range s {
+		(*r)[i] = role{name}
+	}
+	return nil
+}
+
 type user struct {
 	Email    string
 	Password []byte
-	Roles    []role
+	Roles    roleList
 }
 
 // add the given Role to user. Returns true if the user already
@@ -66,7 +93,7 @@ type AccountManager interface {
 
 	UserAddRole(*user, role) error
 	UserRemoveRole(*user, role) error
-	UserGetRoles(*user) ([]role, error)
+	UserGetRoles(*user) (roleList, error)
 
 	// Creates a new role with the given name and saves it to the database.
 	// If a role already exists with this name, it will just return that role.
@@ -220,23 +247,23 @@ func (ma *mongoAccountManager) CreateRole(name string) (r role, exists bool, err
 //TODO: update caches of ephemeral keys associated w/ this user?
 func (ma *mongoAccountManager) UserAddRole(u *user, r role) error {
 	// if this returns true, then we already have the role
-	if u.addRole(r) {
+	if !u.addRole(r) {
 		return ma.users.Update(bson.M{"email": u.Email}, u)
 	}
 	return nil
 }
 
 func (ma *mongoAccountManager) UserRemoveRole(*user, role) error { return nil }
-func (ma *mongoAccountManager) UserGetRoles(u *user) ([]role, error) {
+func (ma *mongoAccountManager) UserGetRoles(u *user) (roleList, error) {
 	//TODO: how do we know if our user passed in is up to date?
 	// assume user doesn't know its roles
 	//TODO: messy unmarshalling. Does this require a specialized type?
-	var tmp bson.M
-	err := ma.users.Find(bson.M{"email": u.Email}).Select(bson.M{"roles": 1}).One(&tmp)
-	for _, i := range tmp["roles"].([]interface{}) {
-		u.addRole(role{i.(bson.M)["name"].(string)})
+	var roles roleList
+	err := ma.users.Find(bson.M{"email": u.Email}).Select(bson.M{"roles": 1, "_id": 0}).One(&roles)
+	for _, r := range roles {
+		u.addRole(r)
 	}
-	return u.Roles, err
+	return roles, err
 }
 
 // remove the role and remove mentions of it from all streams. This is a lengthy

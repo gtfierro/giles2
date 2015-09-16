@@ -264,7 +264,6 @@ func (ma *mongoAccountManager) UserRemoveRole(u *user, r role) error {
 func (ma *mongoAccountManager) UserGetRoles(u *user) (roleList, error) {
 	//TODO: how do we know if our user passed in is up to date?
 	// assume user doesn't know its roles
-	//TODO: messy unmarshalling. Does this require a specialized type?
 	var roles roleList
 	err := ma.users.Find(bson.M{"email": u.Email}).Select(bson.M{"roles": 1, "_id": 0}).One(&roles)
 	for _, r := range roles {

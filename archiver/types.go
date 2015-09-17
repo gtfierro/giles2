@@ -1,6 +1,7 @@
 package archiver
 
 import (
+	"crypto/rand"
 	"fmt"
 	"github.com/satori/go.uuid"
 	"gopkg.in/mgo.v2/bson"
@@ -132,6 +133,17 @@ func (st *StreamType) UnmarshalJSON(b []byte) (err error) {
 
 type ApiKey string
 
-type EphemeralKey string
+type EphemeralKey [32]byte
+
+func NewEphemeralKey() EphemeralKey {
+	var key []byte
+	var ekey EphemeralKey
+	_, err := rand.Read(key)
+	if err != nil {
+		panic(err)
+	}
+	copy(ekey[:], key)
+	return ekey
+}
 
 //TODO: we will attach validation/generation methods to this type

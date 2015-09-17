@@ -113,6 +113,7 @@ type permissionsManager interface {
 	// maybe it is worth making permissions manager an actual struct
 	// with backend-independent features, and then having the db-specific
 	// part provide lower level functions
+	//TODO: populate the ephemeral cache upon startup!
 
 	// returns true if the given ephemeral key is valid
 	ValidEphemeralKey(EphemeralKey) bool

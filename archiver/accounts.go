@@ -13,6 +13,10 @@ import (
 // 3. Then, generate an ephemeral key for a user that has an expiry.
 //	Need to think about how to then cache the key->Role->stream lookups
 //  so they are as fast as possible
+// Before this, we need to think about how we will be accessing that. When
+// I receive a message of some sort, I will also receive an ephemeral key.
+// For each stream that I need to access, I need to ask that stream
+// if the provided ephemeral key has permission to do what it wants to do.
 
 //TODO: put this in the config file
 var secretkey = "abdef"

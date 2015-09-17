@@ -104,6 +104,15 @@ func (a *Archiver) startReport() {
 // These last 2 steps happen in parallel
 func (a *Archiver) AddData(msg *SmapMessage, apikey ApiKey) (err error) {
 	//TODO: check api key
+	//TODO: change apikey to an ephemeral key. First thing this method should do
+	// is check to see if the provided ephemeral key is valid or not. We *could*
+	// use a cache for this, but this is also a great place to use a bloom filter.
+	// we are checking the db behind us *anyway*, and the ephemeral key will
+	// have been deleted everywhere, so if we get a false 'its okay' on the bloom filter,
+	// then we will still protect ourselves. The Bloom filter is definitely read-heavy,
+	// so we can use a COW approach (atomic.Value) bc updates will likely be slower and we do not want
+	// to have the hot path lock at all.
+	// so now the question is: go maps? or bloom filter.
 
 	// save metadata
 	err = a.mdStore.SaveTags(msg)

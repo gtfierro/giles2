@@ -59,6 +59,7 @@ type user struct {
 	Email    string
 	Password []byte
 	Roles    roleList
+	Ephkey   EphemeralKey
 }
 
 // add the given Role to user. Returns true if the user already
@@ -121,7 +122,7 @@ type permissionsManager interface {
 	// generates a new ephemeral key for the given user
 	NewEphemeralKey(*user) EphemeralKey
 	// revokes an ephemeral key, either through timeout or administrative intervention
-	RevokeEphemeralKey(EphemeralKey)
+	RevokeEphemeralKey(EphemeralKey) error
 }
 
 type mongoPermissionsManager struct {
@@ -324,6 +325,7 @@ func (ma *mongoPermissionsManager) NewEphemeralKey(u *user) EphemeralKey {
 	// write it to a channel of ephemeral keys that
 	// get flushed every so often. Don't block this method on that.
 	key := NewEphemeralKey()
+	u.Ephkey = key
 	ma.ephKeyLock.Lock()
 	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
 	newCache := make(map[EphemeralKey]*user, len(cache)+1)
@@ -333,10 +335,17 @@ func (ma *mongoPermissionsManager) NewEphemeralKey(u *user) EphemeralKey {
 	newCache[key] = u
 	ma.ephKeyCache.Store(newCache)
 	ma.ephKeyLock.Unlock()
+	go func(u *user) {
+		//TODO: better handle for this?
+		err := ma.users.Update(bson.M{"Email": u.Email}, bson.M{"$set": bson.M{"Ephkey": key}})
+		if err != nil {
+			panic(err)
+		}
+	}(u)
 	return key
 }
 
-func (ma *mongoPermissionsManager) RevokeEphemeralKey(e EphemeralKey) {
+func (ma *mongoPermissionsManager) RevokeEphemeralKey(e EphemeralKey) error {
 	//TODO: remove the ephemeral key from the backing store. Write to the
 	// store before this method returns.
 	ma.ephKeyLock.Lock()
@@ -348,6 +357,7 @@ func (ma *mongoPermissionsManager) RevokeEphemeralKey(e EphemeralKey) {
 	delete(newCache, e)
 	ma.ephKeyCache.Store(newCache)
 	ma.ephKeyLock.Unlock()
+	return ma.users.Update(bson.M{"Ephkey": e}, bson.M{"$unset": bson.M{"Ephkey": ""}})
 }
 
 // generates a new password

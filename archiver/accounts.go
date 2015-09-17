@@ -124,10 +124,10 @@ type permissionsManager interface {
 }
 
 type mongoPermissionsManager struct {
-	session *mgo.Session
-	db      *mgo.Database
-	users   *mgo.Collection
-	roles   *mgo.Collection
+	session     *mgo.Session
+	db          *mgo.Database
+	users       *mgo.Collection
+	roles       *mgo.Collection
 	ephKeyCache atomic.Value //map[EphemeralKey]*user
 	ephKeyLock  sync.Mutex
 }

@@ -5,6 +5,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"sync"
 	"sync/atomic"
 )
 
@@ -115,6 +116,7 @@ type permissionsManager interface {
 
 	// returns true if the given ephemeral key is valid
 	ValidEphemeralKey(EphemeralKey) bool
+	GetUserForKey(EphemeralKey) *user
 	// generates a new ephemeral key for the given user
 	NewEphemeralKey(*user) EphemeralKey
 	// revokes an ephemeral key, either through timeout or administrative intervention
@@ -122,11 +124,12 @@ type permissionsManager interface {
 }
 
 type mongoPermissionsManager struct {
-	session     *mgo.Session
-	db          *mgo.Database
-	users       *mgo.Collection
-	roles       *mgo.Collection
-	ephKeyCache atomic.Value //map[EphemeralKey]struct{}
+	session *mgo.Session
+	db      *mgo.Database
+	users   *mgo.Collection
+	roles   *mgo.Collection
+	ephKeyCache atomic.Value //map[EphemeralKey]*user
+	ephKeyLock  sync.Mutex
 }
 
 func newMongoPermissionsManager(c *mongoConfig) *mongoPermissionsManager {
@@ -143,7 +146,7 @@ func newMongoPermissionsManager(c *mongoConfig) *mongoPermissionsManager {
 	ma.db = ma.session.DB("gilesauth")
 	ma.users = ma.db.C("users")
 	ma.roles = ma.db.C("roles")
-	ma.ephKeyCache.Store(make(map[EphemeralKey]struct{}))
+	ma.ephKeyCache.Store(make(map[EphemeralKey]*user))
 
 	// add indexes. This will fail Fatal
 	ma.addIndexes()
@@ -300,18 +303,40 @@ func (ma *mongoPermissionsManager) RemoveRole(name string) error {
 }
 
 func (ma *mongoPermissionsManager) ValidEphemeralKey(e EphemeralKey) bool {
-	cache := ma.ephKeyCache.Load().(map[EphemeralKey]struct{})
+	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
 	_, isValid := cache[e]
 	return isValid
 }
 
-// TODO: implement this
-func (ma *mongoPermissionsManager) NewEphemeralKey(u *user) EphemeralKey {
-	return EphemeralKey("")
+func (ma *mongoPermissionsManager) GetUserForKey(e EphemeralKey) *user {
+	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
+	return cache[e]
 }
 
-// TODO: implement this
+func (ma *mongoPermissionsManager) NewEphemeralKey(u *user) EphemeralKey {
+	key := NewEphemeralKey()
+	ma.ephKeyLock.Lock()
+	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
+	newCache := make(map[EphemeralKey]*user, len(cache)+1)
+	for k, v := range cache {
+		newCache[k] = v
+	}
+	newCache[key] = u
+	ma.ephKeyCache.Store(newCache)
+	ma.ephKeyLock.Unlock()
+	return key
+}
+
 func (ma *mongoPermissionsManager) RevokeEphemeralKey(e EphemeralKey) {
+	ma.ephKeyLock.Lock()
+	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
+	newCache := make(map[EphemeralKey]*user, len(cache))
+	for k, v := range cache {
+		newCache[k] = v
+	}
+	delete(newCache, e)
+	ma.ephKeyCache.Store(newCache)
+	ma.ephKeyLock.Unlock()
 }
 
 // generates a new password

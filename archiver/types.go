@@ -132,4 +132,6 @@ func (st *StreamType) UnmarshalJSON(b []byte) (err error) {
 
 type ApiKey string
 
+type EphemeralKey string
+
 //TODO: we will attach validation/generation methods to this type

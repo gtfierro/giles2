@@ -303,17 +303,25 @@ func (ma *mongoPermissionsManager) RemoveRole(name string) error {
 }
 
 func (ma *mongoPermissionsManager) ValidEphemeralKey(e EphemeralKey) bool {
+	//TODO: if not in the cache for whatever reason, check the backend store
+	// to see if this key is valid
 	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
 	_, isValid := cache[e]
 	return isValid
 }
 
 func (ma *mongoPermissionsManager) GetUserForKey(e EphemeralKey) *user {
+	//TODO: if not in the cache for whatever reason, check the backend store
+	// to see if this key is valid and fetch the user if there is one. If
+	// user is nil, then this key is invalid.
 	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
 	return cache[e]
 }
 
 func (ma *mongoPermissionsManager) NewEphemeralKey(u *user) EphemeralKey {
+	//TODO: persist this key and associate with the user!
+	// write it to a channel of ephemeral keys that
+	// get flushed every so often. Don't block this method on that.
 	key := NewEphemeralKey()
 	ma.ephKeyLock.Lock()
 	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
@@ -328,6 +336,8 @@ func (ma *mongoPermissionsManager) NewEphemeralKey(u *user) EphemeralKey {
 }
 
 func (ma *mongoPermissionsManager) RevokeEphemeralKey(e EphemeralKey) {
+	//TODO: remove the ephemeral key from the backing store. Write to the
+	// store before this method returns.
 	ma.ephKeyLock.Lock()
 	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
 	newCache := make(map[EphemeralKey]*user, len(cache))

@@ -86,7 +86,7 @@ func (u *user) removeRole(role role) bool {
 }
 
 // this interface for managing user accounts should be implemented over some database
-type AccountManager interface {
+type permissionsManager interface {
 	// creates a new user if one does not already exist with the given
 	// email, returns a pointer to that user and saves it to the database
 	CreateUser(email, password string) (*user, error)
@@ -108,16 +108,16 @@ type AccountManager interface {
 	RemoveRole(name string) error
 }
 
-type mongoAccountManager struct {
-	session *mgo.Session
-	db      *mgo.Database
-	users   *mgo.Collection
-	roles   *mgo.Collection
+type mongoPermissionsManager struct {
+	session     *mgo.Session
+	db          *mgo.Database
+	users       *mgo.Collection
+	roles       *mgo.Collection
 }
 
-func newMongoAccountManager(c *mongoConfig) *mongoAccountManager {
+func newMongoPermissionsManager(c *mongoConfig) *mongoPermissionsManager {
 	var err error
-	ma := &mongoAccountManager{}
+	ma := &mongoPermissionsManager{}
 	ma.session, err = mgo.Dial(c.address.String())
 	log.Notice("Connecting to MongoDB at %v...", c.address.String())
 	if err != nil {
@@ -135,7 +135,7 @@ func newMongoAccountManager(c *mongoConfig) *mongoAccountManager {
 	return ma
 }
 
-func (ma *mongoAccountManager) addIndexes() {
+func (ma *mongoPermissionsManager) addIndexes() {
 	var err error
 	// create indexes
 	index := mgo.Index{
@@ -159,7 +159,7 @@ func (ma *mongoAccountManager) addIndexes() {
 
 // Creates a new user with the given email and password. Email should be unique.
 // Method will error out if user already exists
-func (ma *mongoAccountManager) CreateUser(email, password string) (u *user, err error) {
+func (ma *mongoPermissionsManager) CreateUser(email, password string) (u *user, err error) {
 	if len(email) == 0 || len(password) == 0 {
 		err = fmt.Errorf("Email and password must be of length > 0")
 		return
@@ -189,7 +189,7 @@ func (ma *mongoAccountManager) CreateUser(email, password string) (u *user, err 
 
 // Fetches user with given email only if the password matches. Returns an error
 // if user doesn't exist or if password does not match
-func (ma *mongoAccountManager) GetUser(email, password string) (u *user, err error) {
+func (ma *mongoPermissionsManager) GetUser(email, password string) (u *user, err error) {
 	q := ma.users.Find(bson.M{"email": email})
 
 	// test if we have a user with that email
@@ -217,7 +217,7 @@ func (ma *mongoAccountManager) GetUser(email, password string) (u *user, err err
 	return
 }
 
-func (ma *mongoAccountManager) DeleteUser(email string) error {
+func (ma *mongoPermissionsManager) DeleteUser(email string) error {
 	// we use RemoveAll instead of Remove because Remove returns
 	// an error if document isn't found, and we don't care here
 	_, err := ma.users.RemoveAll(bson.M{"email": email})
@@ -227,7 +227,7 @@ func (ma *mongoAccountManager) DeleteUser(email string) error {
 
 // check the db to see if a role with this name already exists. If it does, return it.
 // if not, create and then return.
-func (ma *mongoAccountManager) CreateRole(name string) (r role, exists bool, err error) {
+func (ma *mongoPermissionsManager) CreateRole(name string) (r role, exists bool, err error) {
 	q := ma.roles.Find(bson.M{"name": name})
 	exists = false
 
@@ -249,7 +249,7 @@ func (ma *mongoAccountManager) CreateRole(name string) (r role, exists bool, err
 
 // add the given role to the given user
 //TODO: update caches of ephemeral keys associated w/ this user?
-func (ma *mongoAccountManager) UserAddRole(u *user, r role) error {
+func (ma *mongoPermissionsManager) UserAddRole(u *user, r role) error {
 	// if this returns true, then we already have the role
 	if !u.addRole(r) {
 		return ma.users.Update(bson.M{"email": u.Email}, u)
@@ -257,7 +257,7 @@ func (ma *mongoAccountManager) UserAddRole(u *user, r role) error {
 	return nil
 }
 
-func (ma *mongoAccountManager) UserRemoveRole(u *user, r role) error {
+func (ma *mongoPermissionsManager) UserRemoveRole(u *user, r role) error {
 	if u.removeRole(r) { // update happened
 		return ma.users.Update(bson.M{"email": u.Email}, u)
 	}
@@ -265,7 +265,7 @@ func (ma *mongoAccountManager) UserRemoveRole(u *user, r role) error {
 	return nil
 }
 
-func (ma *mongoAccountManager) UserGetRoles(u *user) (roleList, error) {
+func (ma *mongoPermissionsManager) UserGetRoles(u *user) (roleList, error) {
 	//TODO: how do we know if our user passed in is up to date?
 	// assume user doesn't know its roles
 	var roles roleList

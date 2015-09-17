@@ -25,6 +25,8 @@ type Archiver struct {
 	tsStore TimeseriesStore
 	// metadata store
 	mdStore MetadataStore
+	// permissions manager
+	pm permissionsManager
 	// transaction coalescer
 	txc *transactionCoalescer
 	// metrics
@@ -38,6 +40,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 	var (
 		mdStore MetadataStore
 		tsStore TimeseriesStore
+		pm      permissionsManager
 	)
 
 	a = &Archiver{}
@@ -53,11 +56,13 @@ func NewArchiver(c *Config) (a *Archiver) {
 			enforceKeys: c.Archiver.EnforceKeys,
 		}
 		mdStore = newMongoStore(config)
+		pm = newMongoPermissionsManager(config)
 	default:
 		log.Fatal(*c.Archiver.MetadataStore, " is not a recognized metadata store")
 	}
 
 	a.mdStore = mdStore
+	a.pm = pm
 
 	switch *c.Archiver.TimeseriesStore {
 	case "quasar":

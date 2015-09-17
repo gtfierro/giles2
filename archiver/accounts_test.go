@@ -5,10 +5,10 @@ import (
 	"testing"
 )
 
-var am AccountManager
+var pm permissionsManager
 
 func TestMongoCreateUser(t *testing.T) {
-	if am.DeleteUser("gabe@example.com") != nil {
+	if pm.DeleteUser("gabe@example.com") != nil {
 		t.Errorf("Could not delete old test user record")
 		return
 	}
@@ -23,7 +23,7 @@ func TestMongoCreateUser(t *testing.T) {
 		{"gabe@example.com", "", true},
 		{"", "", true},
 	} {
-		u, err := am.CreateUser(test.email, test.pass)
+		u, err := pm.CreateUser(test.email, test.pass)
 		if (err != nil) != test.hasError {
 			t.Errorf("Expected error? %v. Got error? %v", test.hasError, err)
 			continue
@@ -42,7 +42,7 @@ func TestMongoCreateUser(t *testing.T) {
 	}
 
 	//cleanup
-	if am.DeleteUser("gabe@example.com") != nil {
+	if pm.DeleteUser("gabe@example.com") != nil {
 		t.Errorf("Could not delete old test user record")
 	}
 }
@@ -51,10 +51,10 @@ func TestMongoGetUser(t *testing.T) {
 	email := "gabe@example.com"
 	pass := "12345"
 	//cleanup
-	if am.DeleteUser(email) != nil {
+	if pm.DeleteUser(email) != nil {
 		t.Errorf("Could not delete old test user record")
 	}
-	_, err := am.CreateUser(email, pass)
+	_, err := pm.CreateUser(email, pass)
 	if err != nil {
 		t.Errorf("Could not create user %v %v %v", email, pass, err)
 		return
@@ -71,7 +71,7 @@ func TestMongoGetUser(t *testing.T) {
 		{"gabe@example.com", "bad", false, false},
 		{"", "", true, false},
 	} {
-		u, err := am.GetUser(test.email, test.pass)
+		u, err := pm.GetUser(test.email, test.pass)
 		if (err != nil) != test.getErr {
 			t.Errorf("Expected error? %v. Got error? %v", test.getErr, err)
 			continue
@@ -93,7 +93,7 @@ func TestMongoGetUser(t *testing.T) {
 	}
 
 	//cleanup
-	if am.DeleteUser("gabe@example.com") != nil {
+	if pm.DeleteUser("gabe@example.com") != nil {
 		t.Errorf("Could not delete old test user record")
 	}
 }
@@ -106,7 +106,7 @@ func TestMongoCreateRole(t *testing.T) {
 		{"asdf", false},
 		{"asdf", true},
 	} {
-		role, exists, err := am.CreateRole(test.name)
+		role, exists, err := pm.CreateRole(test.name)
 		if err != nil {
 			t.Errorf("Error when creating role (%v) %v", test, err)
 			continue
@@ -119,7 +119,7 @@ func TestMongoCreateRole(t *testing.T) {
 			t.Errorf("Returned role did not have the same name (%v)", test)
 		}
 	}
-	err := am.RemoveRole("asdf")
+	err := pm.RemoveRole("asdf")
 	if err != nil {
 		t.Errorf("Could not remove role %v", err)
 	}
@@ -129,7 +129,7 @@ func TestMongoCreateRole(t *testing.T) {
 func TestMongoUserAddGetRole(t *testing.T) {
 	email := "gabe@example.com"
 	pass := "12345"
-	u, err := am.CreateUser(email, pass)
+	u, err := pm.CreateUser(email, pass)
 	if err != nil {
 		t.Errorf("Could not create user record %v", err)
 	}
@@ -143,12 +143,12 @@ func TestMongoUserAddGetRole(t *testing.T) {
 		{role{"a"}, roleList{{"a"}}, false},
 		{role{"b"}, roleList{{"a"}, {"b"}}, false},
 	} {
-		err = am.UserAddRole(u, test.role)
+		err = pm.UserAddRole(u, test.role)
 		if (err != nil) != test.hasError {
 			t.Errorf("Expected err? %v Got err? %v", test.hasError, err)
 			continue
 		}
-		roles, err := am.UserGetRoles(u)
+		roles, err := pm.UserGetRoles(u)
 		if err != nil {
 			t.Errorf("Could not fetch roles %v", err)
 			continue
@@ -160,7 +160,7 @@ func TestMongoUserAddGetRole(t *testing.T) {
 	}
 
 	//cleanup
-	if am.DeleteUser("gabe@example.com") != nil {
+	if pm.DeleteUser("gabe@example.com") != nil {
 		t.Errorf("Could not delete old test user record")
 	}
 }
@@ -170,12 +170,12 @@ func TestMongoUserGetRoles(t *testing.T)   {}
 func TestMongoRemoveRole(t *testing.T) {
 	email := "gabe@example.com"
 	pass := "12345"
-	u, err := am.CreateUser(email, pass)
+	u, err := pm.CreateUser(email, pass)
 	if err != nil {
 		t.Errorf("Could not create user record %v", err)
 	}
 	for _, r := range []string{"a", "b", "c"} {
-		err := am.UserAddRole(u, role{r})
+		err := pm.UserAddRole(u, role{r})
 		if err != nil {
 			t.Errorf("Could not add role to user (%v)", err)
 			return
@@ -192,12 +192,12 @@ func TestMongoRemoveRole(t *testing.T) {
 		{role{"b"}, roleList{{"c"}}, false},
 		{role{"c"}, roleList{}, false},
 	} {
-		err := am.UserRemoveRole(u, test.toDelete)
+		err := pm.UserRemoveRole(u, test.toDelete)
 		if (err != nil) != test.hasError {
 			t.Errorf("Expected err? %v Got err? %v", test.hasError, err)
 			continue
 		}
-		roles, err := am.UserGetRoles(u)
+		roles, err := pm.UserGetRoles(u)
 		if err != nil {
 			t.Errorf("Could not fetch roles %v", err)
 			continue
@@ -208,7 +208,7 @@ func TestMongoRemoveRole(t *testing.T) {
 		}
 	}
 	//cleanup
-	if am.DeleteUser("gabe@example.com") != nil {
+	if pm.DeleteUser("gabe@example.com") != nil {
 		t.Errorf("Could not delete old test user record")
 	}
 }

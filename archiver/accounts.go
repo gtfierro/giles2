@@ -20,9 +20,6 @@ import (
 // For each stream that I need to access, I need to ask that stream
 // if the provided ephemeral key has permission to do what it wants to do.
 
-//TODO: put this in the config file
-var secretkey = "abdef"
-
 // these are the groups that users belong to
 type role struct {
 	Name string
@@ -98,8 +95,11 @@ type permissionsManager interface {
 	// removes the user with the given email
 	DeleteUser(email string) error
 
+	// add the given role to the user
 	UserAddRole(*user, role) error
+	// remove the given role from the user
 	UserRemoveRole(*user, role) error
+	// retrieve all roles this user has
 	UserGetRoles(*user) (roleList, error)
 
 	// Creates a new role with the given name and saves it to the database.
@@ -152,6 +152,7 @@ func newMongoPermissionsManager(c *mongoConfig) *mongoPermissionsManager {
 
 	// add indexes. This will fail Fatal
 	ma.addIndexes()
+	ma.populateEphkeyCache()
 	return ma
 }
 
@@ -174,6 +175,26 @@ func (ma *mongoPermissionsManager) addIndexes() {
 	err = ma.roles.EnsureIndex(index)
 	if err != nil {
 		log.Fatalf("Could not create index on roles.name (%v)", err)
+	}
+}
+
+func (ma *mongoPermissionsManager) populateEphkeyCache() {
+	var u *user
+	q := ma.users.Find(nil)
+	count, err := q.Count()
+	if err != nil {
+		log.Fatalf("Could not fetch users (%v)", err)
+	}
+	if count > 0 {
+		iter := q.Iter()
+		cache := make(map[EphemeralKey]*user)
+		for iter.Next(u) {
+			cache[u.Ephkey] = u
+		}
+		ma.ephKeyCache.Store(cache)
+		if iter.Err() != nil {
+			log.Fatalf("Error while populating ephemeral key cache (%v)", iter.Err())
+		}
 	}
 }
 
@@ -305,26 +326,48 @@ func (ma *mongoPermissionsManager) RemoveRole(name string) error {
 }
 
 func (ma *mongoPermissionsManager) ValidEphemeralKey(e EphemeralKey) bool {
-	//TODO: if not in the cache for whatever reason, check the backend store
-	// to see if this key is valid
+	var (
+		u       *user
+		isValid = false
+	)
 	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
-	_, isValid := cache[e]
+
+	// if not in the cache (implies not valid) for whatever reason, check the
+	// backend store to see if this key is valid
+	if u, isValid = cache[e]; !isValid {
+		//TODO: how to handle error
+		ma.users.Find(bson.M{"Email": u.Email}).One(u)
+		if u != nil && u.Ephkey == e {
+			isValid = true
+		} else {
+			isValid = false
+		}
+	}
 	return isValid
 }
 
+// if not in the cache for whatever reason, check the backend store
+// to see if this key is valid and fetch the user if there is one. If
+// user is nil, then this key is invalid.
 func (ma *mongoPermissionsManager) GetUserForKey(e EphemeralKey) *user {
-	//TODO: if not in the cache for whatever reason, check the backend store
-	// to see if this key is valid and fetch the user if there is one. If
-	// user is nil, then this key is invalid.
+	var (
+		u     *user
+		found bool
+	)
 	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
-	return cache[e]
+	if u, found = cache[e]; !found {
+		//TODO: how to handle error
+		ma.users.Find(bson.M{"Ephkey": e}).One(u)
+	}
+	return u
 }
 
 func (ma *mongoPermissionsManager) NewEphemeralKey(u *user) EphemeralKey {
-	//TODO: persist this key and associate with the user!
-	// write it to a channel of ephemeral keys that
-	// get flushed every so often. Don't block this method on that.
+
+	// TODO: if we are creating a new ephemeral key for a user, we need to revoke
+	// any ephemeral key that user may already have
 	key := NewEphemeralKey()
+	oldkey := u.Ephkey
 	u.Ephkey = key
 	ma.ephKeyLock.Lock()
 	cache := ma.ephKeyCache.Load().(map[EphemeralKey]*user)
@@ -333,8 +376,13 @@ func (ma *mongoPermissionsManager) NewEphemeralKey(u *user) EphemeralKey {
 		newCache[k] = v
 	}
 	newCache[key] = u
+	delete(newCache, oldkey) // revoke old key
 	ma.ephKeyCache.Store(newCache)
 	ma.ephKeyLock.Unlock()
+
+	//TODO: persist this key and associate with the user!
+	// write it to a channel of ephemeral keys that
+	// get flushed every so often. Don't block this method on that.
 	go func(u *user) {
 		//TODO: better handle for this?
 		err := ma.users.Update(bson.M{"Email": u.Email}, bson.M{"$set": bson.M{"Ephkey": key}})

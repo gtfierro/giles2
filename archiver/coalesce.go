@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+//TODO: how do we do throttling? need to ensure that buffers are fairly allocated to streams
+//TODO: place incoming requests into a queue? where does queue go. Need back pressure
+
+// the transaction coalescer, upon startup, will initialize all connections to the backend timeseries database and keep them in a pool.
+// a big problem with the current transaction coalescer is that it does not define clear
+// semantics for what happens when a particular stream saturates -- how are connections fairly allocated to the rest of the streams?
+// The solution is thus: we will have some large map with a static size that is used to shard the UUID namespace. Then, we can use
+// our map approach to storing stream buffers for each individual stream, but hopefully the sharding of the map will decrease
+// any lock contention.
+
 const (
 	COALESCE_TIMEOUT = 1000  // milliseconds
 	COALESCE_MAX     = 16384 // num readings

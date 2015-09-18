@@ -5,4 +5,4 @@
 archiver/archiver.test
 archiver/cpu.out
 archiver/mem.out
-archiver/query.y
+archiver/y.output

@@ -11,6 +11,7 @@ func BenchmarkSmapMessageToBsonBare(b *testing.B) {
 		Path: "/sensor8",
 		UUID: NewUUID(),
 	}
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg.ToBson()
@@ -26,6 +27,7 @@ func BenchmarkSmapMessageToBsonFull(b *testing.B) {
 			"Point|Name": "My Point",
 		},
 	}
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		msg.ToBson()
@@ -115,6 +117,7 @@ func TestSmapMessageFromBson(t *testing.T) {
 
 func BenchmarkSmapMessageFromBson(b *testing.B) {
 	in := bson.M{"uuid": string(NewUUID()), "Path": "/sensor8", "Metadata": bson.M{"System": "HVAC", "Point|Name": "Hey"}}
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		SmapMessageFromBson(in)

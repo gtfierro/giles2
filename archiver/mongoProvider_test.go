@@ -57,6 +57,7 @@ func BenchmarkSaveTagsWithMetadata(b *testing.B) {
 			"Point.Name": "My Point",
 		},
 	}
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ms.SaveTags(msg)
@@ -72,6 +73,7 @@ func BenchmarkSaveTagsWithMetadataParallel(b *testing.B) {
 			"Point.Name": "My Point",
 		},
 	}
+	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -91,6 +93,7 @@ func BenchmarkGetUnitOfTime(b *testing.B) {
 		},
 	}
 	ms.SaveTags(msg)
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ms.GetUnitOfTime(msg.UUID)
@@ -108,6 +111,7 @@ func BenchmarkGetUnitOfTimeParallel(b *testing.B) {
 		},
 	}
 	ms.SaveTags(msg)
+	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -224,6 +228,7 @@ func BenchmarkGetTags(b *testing.B) {
 	tags := []string{"uuid"}
 	where := bson.M{"uuid": msg.UUID}
 	ms.SaveTags(msg)
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ms.GetTags(tags, where)
@@ -242,6 +247,7 @@ func BenchmarkGetTagsParallel(b *testing.B) {
 	tags := []string{"uuid"}
 	where := bson.M{"uuid": msg.UUID}
 	ms.SaveTags(msg)
+	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {

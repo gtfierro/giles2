@@ -133,3 +133,6 @@ func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 	//a.tsStore.AddMessage(msg)
 	return nil
 }
+
+func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) {
+}

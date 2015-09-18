@@ -49,12 +49,12 @@ func Handle(a *archiver.Archiver, port int) {
 
 func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		apikey   archiver.ApiKey
+		ephkey   archiver.EphemeralKey
 		messages archiver.TieredSmapMessage
 		err      error
 		msgSync  sync.WaitGroup
 	)
-	apikey = archiver.ApiKey(ps.ByName("key"))
+	copy(ephkey[:], ps.ByName("key"))
 
 	if messages, err = handleJSON(req.Body); err != nil {
 		log.Error("Error handling JSON: %v", err)
@@ -67,7 +67,7 @@ func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps ht
 	msgSync.Add(len(messages))
 	for _, msg := range messages {
 		go func(msg *archiver.SmapMessage) {
-			if addErr := h.a.AddData(msg, apikey); addErr != nil {
+			if addErr := h.a.AddData(msg, ephkey); addErr != nil {
 				err = addErr
 			}
 			msgSync.Done()

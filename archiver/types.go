@@ -146,4 +146,12 @@ func NewEphemeralKey() EphemeralKey {
 	return ekey
 }
 
-//TODO: we will attach validation/generation methods to this type
+type queryType uint8
+
+const (
+	SELECT_TYPE queryType = iota + 1
+	DELETE_TYPE
+	SET_TYPE
+	DATA_TYPE
+	APPLY_TYPE
+)

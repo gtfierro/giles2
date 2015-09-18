@@ -1,3 +1,4 @@
+//go:generate go tool yacc -o query.go -p SQ query.y
 package archiver
 
 import (
@@ -29,6 +30,7 @@ type Archiver struct {
 	pm permissionsManager
 	// transaction coalescer
 	txc *transactionCoalescer
+	qp  *queryProcessor
 	// metrics
 	metrics metricMap
 }
@@ -83,6 +85,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 	a.tsStore = tsStore
 
 	a.txc = newTransactionCoalescer(&a.tsStore, &a.mdStore)
+	a.qp = &queryProcessor{a}
 
 	a.metrics = make(metricMap)
 	a.metrics.addMetric("adds")

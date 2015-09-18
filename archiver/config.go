@@ -42,6 +42,11 @@ type Config struct {
 		Port    *int
 	}
 
+	MsgPackUDP struct {
+		Enabled bool
+		Port    *int
+	}
+
 	SSH struct {
 		Enabled            bool
 		Port               *string

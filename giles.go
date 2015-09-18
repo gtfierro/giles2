@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/gtfierro/giles2/archiver"
 	"github.com/gtfierro/giles2/http"
+	"github.com/gtfierro/giles2/msgpack"
 	"github.com/op/go-logging"
 	"os"
 	"runtime"
@@ -53,6 +54,10 @@ func main() {
 
 	if config.HTTP.Enabled {
 		go http.Handle(a, *config.HTTP.Port)
+	}
+
+	if config.MsgPackUDP.Enabled {
+		go msgpack.HandleUDP4(a, *config.MsgPackUDP.Port)
 	}
 
 	idx := 0

@@ -2,6 +2,7 @@
 package archiver
 
 import (
+	"fmt"
 	"github.com/op/go-logging"
 	"net"
 	"os"
@@ -33,6 +34,8 @@ type Archiver struct {
 	qp  *queryProcessor
 	// metrics
 	metrics metricMap
+	// enforce ephemral key checks
+	enforceKeys bool
 }
 
 // Returns a new archiver object from a configuration. Will Fatal out of the
@@ -46,6 +49,8 @@ func NewArchiver(c *Config) (a *Archiver) {
 	)
 
 	a = &Archiver{}
+
+	a.enforceKeys = c.Archiver.EnforceKeys
 
 	switch *c.Archiver.MetadataStore {
 	case "mongo":
@@ -110,17 +115,10 @@ func (a *Archiver) startReport() {
 //  - Reevaluates any dynamic subscriptions and pushes to republish clients
 //  - Saves the attached readings (if any) to the timeseries database
 // These last 2 steps happen in parallel
-func (a *Archiver) AddData(msg *SmapMessage, apikey ApiKey) (err error) {
-	//TODO: check api key
-	//TODO: change apikey to an ephemeral key. First thing this method should do
-	// is check to see if the provided ephemeral key is valid or not. We *could*
-	// use a cache for this, but this is also a great place to use a bloom filter.
-	// we are checking the db behind us *anyway*, and the ephemeral key will
-	// have been deleted everywhere, so if we get a false 'its okay' on the bloom filter,
-	// then we will still protect ourselves. The Bloom filter is definitely read-heavy,
-	// so we can use a COW approach (atomic.Value) bc updates will likely be slower and we do not want
-	// to have the hot path lock at all.
-	// so now the question is: go maps? or bloom filter.
+func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
+	if a.enforceKeys && !a.pm.ValidEphemeralKey(ephkey) {
+		return fmt.Errorf("Ephemeral key %v is not valid", ephkey)
+	}
 
 	// save metadata
 	err = a.mdStore.SaveTags(msg)

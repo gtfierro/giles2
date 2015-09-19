@@ -6,6 +6,7 @@ import (
 	"sort"
 )
 
+//TODO: define custom marshal to avoid empty rows
 type smapProperties struct {
 	UnitOfTime    UnitOfTime
 	UnitOfMeasure string
@@ -19,8 +20,8 @@ func (sp smapProperties) IsEmpty() bool {
 }
 
 type SmapMessage struct {
-	Path       string
-	UUID       UUID           `json:"uuid"`
+	Path       string         `json:",omitempty"`
+	UUID       UUID           `json:"uuid,omitempty"`
 	Properties smapProperties `json:",omitempty"`
 	Actuator   Dict           `json:",omitempty"`
 	Metadata   Dict           `json:",omitempty"`

@@ -190,19 +190,19 @@ func TestGetTags(t *testing.T) {
 		msg    *SmapMessage
 		tags   []string
 		where  bson.M
-		result *SmapMessageList
+		result SmapMessageList
 	}{
 		{
 			&SmapMessage{Path: myPath, UUID: myUUID},
 			[]string{"uuid"},
 			bson.M{"uuid": myUUID},
-			&SmapMessageList{{UUID: myUUID}},
+			SmapMessageList{{UUID: myUUID}},
 		},
 		{
 			&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{"System": "HVAC", "Point|Name": "My Point"}},
 			[]string{"Metadata.System", "Path"},
 			bson.M{"uuid": myUUID},
-			&SmapMessageList{{Path: myPath, Metadata: Dict{"System": "HVAC"}}},
+			SmapMessageList{{Path: myPath, Metadata: Dict{"System": "HVAC"}}},
 		},
 	} {
 		ms.SaveTags(test.msg)

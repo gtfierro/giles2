@@ -20,16 +20,25 @@ func (sp SmapProperties) MarshalJSON() ([]byte, error) {
 		empty bool = true
 	)
 	if sp.UnitOfTime != 0 {
-		m["UnitofTime"] = sp.UnitOfTime.String()
 		empty = false
+		if len(m) == 0 {
+			m = make(map[string]string)
+		}
+		m["UnitofTime"] = sp.UnitOfTime.String()
 	}
 	if sp.StreamType != 0 {
 		empty = false
+		if len(m) == 0 {
+			m = make(map[string]string)
+		}
 		m["StreamType"] = sp.StreamType.String()
 	}
 	if len(sp.UnitOfMeasure) != 0 {
-		m["UnitofMeasure"] = sp.UnitOfMeasure
 		empty = false
+		if len(m) == 0 {
+			m = make(map[string]string)
+		}
+		m["UnitofMeasure"] = sp.UnitOfMeasure
 	}
 	if !empty {
 		return json.Marshal(m)

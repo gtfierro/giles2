@@ -82,6 +82,21 @@ func (u UnitOfTime) String() string {
 	}
 }
 
+func (u UnitOfTime) MarshalJSON() ([]byte, error) {
+	switch u {
+	case UOT_NS:
+		return []byte(`"ns"`), nil
+	case UOT_US:
+		return []byte(`"us"`), nil
+	case UOT_MS:
+		return []byte(`"ms"`), nil
+	case UOT_S:
+		return []byte(`"s"`), nil
+	default:
+		return []byte(`"s"`), nil
+	}
+}
+
 func (u *UnitOfTime) UnmarshalJSON(b []byte) (err error) {
 	str := strings.Trim(string(b), `"`)
 	switch str {
@@ -115,6 +130,17 @@ func (st StreamType) String() string {
 		return "numeric"
 	default:
 		return ""
+	}
+}
+
+func (st StreamType) MarshalJSON() ([]byte, error) {
+	switch st {
+	case OBJECT_STREAM:
+		return []byte(`"object"`), nil
+	case NUMERIC_STREAM:
+		return []byte(`"numeric"`), nil
+	default:
+		return []byte(`"numeric"`), nil
 	}
 }
 

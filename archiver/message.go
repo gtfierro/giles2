@@ -20,11 +20,11 @@ func (sp smapProperties) IsEmpty() bool {
 
 type SmapMessage struct {
 	Path       string
-	UUID       UUID `json:"uuid"`
-	Properties smapProperties
-	Actuator   Dict
-	Metadata   Dict
-	Readings   []Reading
+	UUID       UUID           `json:"uuid"`
+	Properties smapProperties `json:",omitempty"`
+	Actuator   Dict           `json:",omitempty"`
+	Metadata   Dict           `json:",omitempty"`
+	Readings   []Reading      `json:",omitempty"`
 }
 
 // returns this struct as BSON for storing the metadata. We ignore Readings
@@ -119,13 +119,17 @@ func SmapMessageFromBson(m bson.M) *SmapMessage {
 		if props, ok := md.(bson.M); ok {
 			ret.Properties = smapProperties{}
 			if uot, fnd := props["UnitofTime"]; fnd {
-				ret.Properties.UnitOfTime = uot.(UnitOfTime)
+				if ret.Properties.UnitOfTime, ok = uot.(UnitOfTime); !ok {
+					ret.Properties.UnitOfTime = UOT_MS
+				}
 			}
 			if uom, fnd := props["UnitofMeasure"]; fnd {
 				ret.Properties.UnitOfMeasure = uom.(string)
 			}
-			if uot, fnd := props["StreamType"]; fnd {
-				ret.Properties.StreamType = uot.(StreamType)
+			if st, fnd := props["StreamType"]; fnd {
+				if ret.Properties.StreamType, ok = st.(StreamType); !ok {
+					ret.Properties.StreamType = NUMERIC_STREAM
+				}
 			}
 		}
 	}

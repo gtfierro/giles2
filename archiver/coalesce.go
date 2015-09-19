@@ -77,8 +77,13 @@ func (sb *streamBuffer) add(sm *SmapMessage) bool {
 		sb.readings = append(sb.readings, make([]*SmapNumberReading, diff)...)
 	}
 	// copy over all the readings
-	for idx, rdg := range sm.Readings {
+	idx := 0
+	for _, rdg := range sm.Readings {
+		if rdg == nil {
+			continue
+		}
 		sb.readings[sb.idx+idx] = rdg.(*SmapNumberReading)
+		idx += 1
 	}
 	// advance our pointer
 	sb.idx += len(sm.Readings)
@@ -131,6 +136,10 @@ func newTransactionCoalescer(tsdb *TimeseriesStore, store *MetadataStore) *trans
 // c) not existing. In the
 func (txc *transactionCoalescer) AddSmapMessage(sm *SmapMessage) {
 	var sb *streamBuffer
+
+	if sm.Readings == nil || len(sm.Readings) == 0 {
+		return
+	}
 
 	// if we find the stream buffer and it is still accepting data, we write to that
 	// stream and then return

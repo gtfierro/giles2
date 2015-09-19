@@ -87,6 +87,7 @@ func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps ht
 		return
 	}
 
+	messages.CollapseToTimeseries()
 	msgSync.Add(len(messages))
 	for _, msg := range messages {
 		go func(msg *archiver.SmapMessage) {

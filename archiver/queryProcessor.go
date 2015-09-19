@@ -42,6 +42,7 @@ func (qp *queryProcessor) Parse(querystring string) *parsedQuery {
 		target:    l.query.Contents,
 		where:     l.query.WhereBson(),
 		set:       l.query.SetBson(),
+		distinct:  l.query.distinct,
 		err:       l.error,
 		errPos:    l.lasttoken,
 	}

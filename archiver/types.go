@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"gopkg.in/mgo.v2/bson"
+	"strconv"
 	"strings"
 )
 
@@ -23,14 +24,18 @@ func NewDict() *Dict {
 	return new(Dict)
 }
 
-func DictFromBson(m bson.M) *Dict {
+func DictFromBson(m bson.M) Dict {
 	d := Dict{}
 	for k, v := range m {
 		if vs, ok := v.(string); ok {
 			d[k] = vs
+		} else if vs, ok := v.(int); ok {
+			d[k] = string(vs)
+		} else if vs, ok := v.(float64); ok {
+			d[k] = strconv.FormatFloat(vs, 'g', -1, 64)
 		}
 	}
-	return &d
+	return d
 }
 
 // unit of time indicators

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
 	"sort"
+	"strings"
 )
 
 //TODO: define custom marshal to avoid empty rows
@@ -62,6 +63,41 @@ type SmapMessage struct {
 	Readings   []Reading       `json:",omitempty"`
 }
 
+// will insert a key string e.g. "Metadata.KeyName" and value e.g. "Value"
+// into a SmapMessage instance, creating one if necessary
+func (msg *SmapMessage) AddTag(key string, value string) {
+	if msg == nil {
+		msg = &SmapMessage{}
+	}
+	switch {
+	case strings.HasPrefix(key, "Metadata."):
+		if len(msg.Metadata) == 0 {
+			msg.Metadata = Dict{}
+		}
+		// len("Metadata.") == 9
+		msg.Metadata[key[9:]] = value
+	case strings.HasPrefix(key, "Actuator."):
+		if len(msg.Actuator) == 0 {
+			msg.Actuator = Dict{}
+		}
+		// len("Actuator.") == 9
+		msg.Actuator[key[9:]] = value
+	case key == "Path":
+		msg.Path = value
+	case key == "UUID":
+		msg.UUID = UUID(value)
+		//case strings.HasPrefix(key, "Properties."):
+		//    if msg.Properties == nil {
+		//        msg.Properties = &SmapProperties{}
+		//    }
+		//    switch key {
+		//    case "Properties.UnitofTime":
+		//        msg.Properties.UnitOfTime = value
+		//    }
+		//    msg.Actuator[key[11:]] = value
+	}
+}
+
 // returns this struct as BSON for storing the metadata. We ignore Readings
 // because they are not part of the metadata store
 //TODO: explore putting this in the mongo-specific file? This isn't general purpose
@@ -106,9 +142,9 @@ func (sm *SmapMessage) UnmarshalJSON(b []byte) (err error) {
 	// copy the values over that we don't need to translate
 	sm.UUID = incoming.UUID
 	sm.Path = incoming.Path
-	sm.Metadata = *DictFromBson(flatten(incoming.Metadata))
+	sm.Metadata = DictFromBson(flatten(incoming.Metadata))
 	sm.Properties = &incoming.Properties
-	sm.Actuator = *DictFromBson(flatten(incoming.Actuator))
+	sm.Actuator = DictFromBson(flatten(incoming.Actuator))
 
 	// convert the readings depending if they are numeric or object
 	sm.Readings = make([]Reading, len(incoming.Readings))
@@ -143,11 +179,11 @@ func SmapMessageFromBson(m bson.M) *SmapMessage {
 	}
 
 	if md, found := m["Metadata"]; found {
-		ret.Metadata = *DictFromBson(md.(bson.M))
+		ret.Metadata = DictFromBson(md.(bson.M))
 	}
 
 	if md, found := m["Actuator"]; found {
-		ret.Actuator = *DictFromBson(md.(bson.M))
+		ret.Actuator = DictFromBson(md.(bson.M))
 	}
 
 	if md, found := m["Properties"]; found {

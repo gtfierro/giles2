@@ -178,9 +178,15 @@ func (a *Archiver) handleSelect(parsed *parsedQuery, ephkey EphemeralKey) (SmapM
 		if err != nil {
 			return result, err
 		}
-		result = make(SmapMessageList, len(results))
-		for idx, val := range results {
-			log.Debug("idx %v val %v", idx, val)
+		result = SmapMessageList{}
+		i := 0
+		for _, val := range results {
+			if len(val) == 0 {
+				continue
+			}
+			result = append(result, &SmapMessage{})
+			result[i].AddTag(parsed.target[0], val)
+			i += 1
 		}
 		return result, err
 	}

@@ -205,8 +205,17 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (SmapMessageList, erro
 			selectTags[tag] = 1
 		}
 	}
+	log.Debug("select Tags %v", selectTags)
 	err := staged.Select(selectTags).All(&x)
-	return SmapMessageListFromBson(x), err
+	// trim down empty rows
+	filtered := x[:0]
+	for _, doc := range x {
+		log.Debug("got doc %v", doc)
+		if len(doc) != 0 {
+			filtered = append(filtered, doc)
+		}
+	}
+	return SmapMessageListFromBson(filtered), err
 }
 
 func (m *mongoStore) GetDistinct(tag string, where bson.M) ([]string, error) {

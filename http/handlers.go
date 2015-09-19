@@ -55,6 +55,8 @@ func Handle(a *archiver.Archiver, port int) {
 	r := httprouter.New()
 	h := &HTTPHandler{a}
 	r.POST("/add/:key", h.handleAdd)
+	r.POST("/api/query/:key", h.handleSingleQuery)
+	r.POST("/api/query", h.handleSingleQuery)
 	address, err := net.ResolveTCPAddr("tcp4", "0.0.0.0:"+strconv.Itoa(port))
 	if err != nil {
 		log.Fatal("Error resolving address %v: %v", "0.0.0.0:"+strconv.Itoa(port), err)
@@ -97,6 +99,38 @@ func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps ht
 
 	msgSync.Wait()
 	rw.WriteHeader(200)
+}
+
+func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	var (
+		ephkey archiver.EphemeralKey
+		err    error
+	)
+	copy(ephkey[:], ps.ByName("key"))
+
+	if req.ContentLength > 1024 {
+		log.Error("HUGE query string with length %v. Aborting!", req.ContentLength)
+		rw.WriteHeader(500)
+		rw.Write([]byte("Your query is too big"))
+		req.Body.Close()
+		return
+	}
+
+	querybuffer := make([]byte, req.ContentLength)
+	_, err = req.Body.Read(querybuffer)
+	res, err := h.a.HandleQuery(string(querybuffer), ephkey)
+	if err != nil {
+		log.Error("Error evaluating query: %v", err)
+		rw.WriteHeader(500)
+		rw.Write([]byte(err.Error()))
+		return
+	}
+	writer := json.NewEncoder(rw)
+	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+	err = writer.Encode(res)
+	if err != nil {
+		log.Error("Error converting query results to JSON: %v", err)
+	}
 }
 
 func handleJSON(r io.Reader) (decoded archiver.TieredSmapMessage, err error) {

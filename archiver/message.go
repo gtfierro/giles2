@@ -7,25 +7,50 @@ import (
 )
 
 //TODO: define custom marshal to avoid empty rows
-type smapProperties struct {
+type SmapProperties struct {
 	UnitOfTime    UnitOfTime
 	UnitOfMeasure string
 	StreamType    StreamType
 }
 
-func (sp smapProperties) IsEmpty() bool {
+func (sp SmapProperties) MarshalJSON() ([]byte, error) {
+	// watch capitals
+	var (
+		m     map[string]string
+		empty bool = true
+	)
+	if sp.UnitOfTime != 0 {
+		m["UnitofTime"] = sp.UnitOfTime.String()
+		empty = false
+	}
+	if sp.StreamType != 0 {
+		empty = false
+		m["StreamType"] = sp.StreamType.String()
+	}
+	if len(sp.UnitOfMeasure) != 0 {
+		m["UnitofMeasure"] = sp.UnitOfMeasure
+		empty = false
+	}
+	if !empty {
+		return json.Marshal(m)
+	} else {
+		return json.Marshal(nil)
+	}
+}
+
+func (sp SmapProperties) IsEmpty() bool {
 	return sp.UnitOfTime == 0 &&
 		sp.UnitOfMeasure == "" &&
 		sp.StreamType == 0
 }
 
 type SmapMessage struct {
-	Path       string         `json:",omitempty"`
-	UUID       UUID           `json:"uuid,omitempty"`
-	Properties smapProperties `json:",omitempty"`
-	Actuator   Dict           `json:",omitempty"`
-	Metadata   Dict           `json:",omitempty"`
-	Readings   []Reading      `json:",omitempty"`
+	Path       string          `json:",omitempty"`
+	UUID       UUID            `json:"uuid,omitempty"`
+	Properties *SmapProperties `json:",omitempty"`
+	Actuator   Dict            `json:",omitempty"`
+	Metadata   Dict            `json:",omitempty"`
+	Readings   []Reading       `json:",omitempty"`
 }
 
 // returns this struct as BSON for storing the metadata. We ignore Readings
@@ -73,7 +98,7 @@ func (sm *SmapMessage) UnmarshalJSON(b []byte) (err error) {
 	sm.UUID = incoming.UUID
 	sm.Path = incoming.Path
 	sm.Metadata = *DictFromBson(flatten(incoming.Metadata))
-	sm.Properties = incoming.Properties
+	sm.Properties = &incoming.Properties
 	sm.Actuator = *DictFromBson(flatten(incoming.Actuator))
 
 	// convert the readings depending if they are numeric or object
@@ -118,7 +143,7 @@ func SmapMessageFromBson(m bson.M) *SmapMessage {
 
 	if md, found := m["Properties"]; found {
 		if props, ok := md.(bson.M); ok {
-			ret.Properties = smapProperties{}
+			ret.Properties = &SmapProperties{}
 			if uot, fnd := props["UnitofTime"]; fnd {
 				if ret.Properties.UnitOfTime, ok = uot.(UnitOfTime); !ok {
 					ret.Properties.UnitOfTime = UOT_MS
@@ -251,7 +276,7 @@ type incomingSmapMessage struct {
 	// Map containing the actuator reference
 	Actuator bson.M `json:",omitempty"`
 	// Map of the properties
-	Properties smapProperties `json:",omitempty"`
+	Properties SmapProperties `json:",omitempty"`
 	// Unique identifier for this stream. Should be empty for Collections
 	UUID UUID `json:"uuid"`
 	// Path of this stream (thus far)

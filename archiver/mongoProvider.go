@@ -190,7 +190,7 @@ func (m *mongoStore) GetUnitOfMeasure(uuid UUID) (string, error) {
 }
 
 // Retrieves all tags in the provided list that match the provided where clause.
-func (m *mongoStore) GetTags(tags []string, where bson.M) (*SmapMessageList, error) {
+func (m *mongoStore) GetTags(tags []string, where bson.M) (SmapMessageList, error) {
 	var (
 		staged     *mgo.Query
 		selectTags bson.M

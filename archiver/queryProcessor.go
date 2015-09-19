@@ -18,6 +18,10 @@ type parsedQuery struct {
 	set bson.M
 	// are we querying distinct values?
 	distinct bool
+	// any error that arose during parsing
+	err error
+	// token where the error in parsing took place
+	errPos string
 }
 
 type queryProcessor struct {
@@ -38,6 +42,8 @@ func (qp *queryProcessor) Parse(querystring string) *parsedQuery {
 		target:    l.query.Contents,
 		where:     l.query.WhereBson(),
 		set:       l.query.SetBson(),
+		err:       l.error,
+		errPos:    l.lasttoken,
 	}
 	i := 0
 	for key, _ := range l._keys {

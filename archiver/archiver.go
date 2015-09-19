@@ -134,5 +134,58 @@ func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 	return nil
 }
 
-func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) {
+// Need to think about how to transfer the results of these queries to the handlers that are
+// asking for them and need to transform them into their own internal representations (e.g.
+// JSON, MsgPack, etc). What are the data patterns we are seeing?
+// Basically everything fits into SmapMessageList
+func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (SmapMessageList, error) {
+	var (
+		err    error
+		result SmapMessageList
+	)
+
+	if a.enforceKeys && !a.pm.ValidEphemeralKey(ephkey) {
+		return result, fmt.Errorf("Ephemeral key %v is not valid", ephkey)
+	}
+
+	// parse the query
+	parsed := a.qp.Parse(querystring)
+	if parsed.err != nil {
+		return result, fmt.Errorf("Error (%v) in query \"%v\" (error at %v)\n", parsed.err, querystring, parsed.errPos)
+	}
+
+	// execute the query
+	switch parsed.queryType {
+	case SELECT_TYPE:
+		return a.handleSelect(parsed, ephkey)
+	case DELETE_TYPE:
+	case SET_TYPE:
+	case DATA_TYPE:
+	default:
+		return result, fmt.Errorf("Could not decide query type %v", querystring)
+	}
+
+	return result, err
+}
+
+func (a *Archiver) handleSelect(parsed *parsedQuery, ephkey EphemeralKey) (SmapMessageList, error) {
+	var (
+		result SmapMessageList
+	)
+	//TODO: filter results by EphKey
+	if parsed.distinct {
+		results, err := a.mdStore.GetDistinct(parsed.target[0], parsed.where)
+		if err != nil {
+			return result, err
+		}
+		result = make(SmapMessageList, len(results))
+		for idx, val := range results {
+			log.Debug("idx %v val %v", idx, val)
+		}
+		return result, err
+	}
+
+	log.Debug("%#v", parsed)
+
+	return a.mdStore.GetTags(parsed.target, parsed.where)
 }

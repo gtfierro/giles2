@@ -154,12 +154,12 @@ func (sml *SmapMessageList) ToBson() []bson.M {
 	return ret
 }
 
-func SmapMessageListFromBson(m []bson.M) *SmapMessageList {
+func SmapMessageListFromBson(m []bson.M) SmapMessageList {
 	ret := make(SmapMessageList, len(m))
 	for idx, doc := range m {
 		ret[idx] = SmapMessageFromBson(doc)
 	}
-	return &ret
+	return ret
 }
 
 type TieredSmapMessage map[string]*SmapMessage

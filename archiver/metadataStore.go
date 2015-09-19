@@ -9,7 +9,7 @@ type MetadataStore interface {
 	GetStreamType(uuid UUID) (StreamType, error)
 	GetUnitOfMeasure(uuid UUID) (string, error)
 
-	GetTags(tags []string, where bson.M) (*SmapMessageList, error)
+	GetTags(tags []string, where bson.M) (SmapMessageList, error)
 	GetDistinct(tag string, where bson.M) ([]string, error)
 	GetUUIDs(where bson.M) ([]UUID, error)
 

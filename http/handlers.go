@@ -1,3 +1,24 @@
+// Package http implements an HTTP interface to the Archiver API at
+// http://godoc.org/github.com/gtfierro/2giles/archiver
+//
+// An example of a valid sMAP object is
+//    {
+//      "/sensor0" : {
+//        "Metadata" : {
+//          "SourceName" : "Test Source",
+//            "Location" : { "City" : "Berkeley" }
+//        },
+//          "Properties": {
+//            "Timezone": "America/Los_Angeles",
+//            "UnitofMeasure": "Watt",
+//            "UnitofTime": "ms",
+//            "StreamType": "numeric",
+//            "ReadingType": "double"
+//          },
+//          "Readings" : [[1351043674000, 0], [1351043675000, 1]],
+//          "uuid" : "d24325e6-1d7d-11e2-ad69-a7c2fa8dba61"
+//      }
+//    }
 package http
 
 import (

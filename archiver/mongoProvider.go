@@ -192,17 +192,24 @@ func (m *mongoStore) GetUnitOfMeasure(uuid UUID) (string, error) {
 // Retrieves all tags in the provided list that match the provided where clause.
 func (m *mongoStore) GetTags(tags []string, where bson.M) (SmapMessageList, error) {
 	var (
-		staged     *mgo.Query
-		selectTags bson.M
-		x          []bson.M
+		staged      *mgo.Query
+		selectTags  bson.M
+		whereClause bson.M
+		x           []bson.M
 	)
-	staged = m.metadata.Find(where)
+	if len(where) != 0 {
+		whereClause = make(bson.M)
+		for wk, wv := range where {
+			whereClause[fixMongoKey(wk)] = wv
+		}
+	}
+	staged = m.metadata.Find(whereClause)
 	if len(tags) == 0 { // select all
 		selectTags = bson.M{"_id": 0, "_api": 0}
 	} else {
 		selectTags = bson.M{"_id": 0}
 		for _, tag := range tags {
-			selectTags[tag] = 1
+			selectTags[fixMongoKey(tag)] = 1
 		}
 	}
 	log.Debug("select Tags %v", selectTags)

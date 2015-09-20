@@ -18,6 +18,15 @@ type parsedQuery struct {
 	set bson.M
 	// are we querying distinct values?
 	distinct bool
+	// reference to data query
+	//  type dataquery struct {
+	//  	dtype		dataqueryType
+	//  	start		_time.Time
+	//  	end			_time.Time
+	//  	limit		datalimit
+	//      timeconv  UnitOfTime
+	//  }
+	data *dataquery
 	// any error that arose during parsing
 	err error
 	// token where the error in parsing took place
@@ -43,6 +52,7 @@ func (qp *queryProcessor) Parse(querystring string) *parsedQuery {
 		where:     l.query.WhereBson(),
 		set:       l.query.SetBson(),
 		distinct:  l.query.distinct,
+		data:      l.query.data,
 		err:       l.error,
 		errPos:    l.lasttoken,
 	}

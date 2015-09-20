@@ -212,7 +212,6 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (SmapMessageList, erro
 			selectTags[fixMongoKey(tag)] = 1
 		}
 	}
-	log.Debug("select Tags %v", selectTags)
 	err := staged.Select(selectTags).All(&x)
 	// trim down empty rows
 	filtered := x[:0]

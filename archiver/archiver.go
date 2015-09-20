@@ -159,6 +159,7 @@ func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (SmapMes
 	case SELECT_TYPE:
 		return a.handleSelect(parsed, ephkey)
 	case DELETE_TYPE:
+		return a.handleData(parsed, ephkey)
 	case SET_TYPE:
 	case DATA_TYPE:
 	default:
@@ -174,4 +175,44 @@ func (a *Archiver) handleSelect(parsed *parsedQuery, ephkey EphemeralKey) (SmapM
 		return a.mdStore.GetDistinct(parsed.target[0], parsed.where)
 	}
 	return a.mdStore.GetTags(parsed.target, parsed.where)
+}
+
+func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMessageList, error) {
+	var (
+		result   SmapMessageList
+		readings []SmapNumbersResponse
+	)
+
+	uuids, err := a.mdStore.GetUUIDs(parsed.where)
+	if err != nil {
+		return result, err
+	}
+
+	result = make(SmapMessageList, len(uuids))
+
+	if parsed.data.limit.streamlimit > 0 && len(uuids) > 0 {
+		uuids = uuids[:parsed.data.limit.streamlimit]
+	}
+
+	start := uint64(parsed.data.start.UnixNano())
+	end := uint64(parsed.data.end.UnixNano())
+
+	switch parsed.data.dtype {
+	case IN_TYPE:
+		log.Debug("Data in start %v end %v", start, end)
+		if start < end {
+			readings, err = a.tsStore.GetData(uuids, start, end, parsed.data.timeconv)
+		} else {
+			readings, err = a.tsStore.GetData(uuids, end, start, parsed.data.timeconv)
+		}
+	case BEFORE_TYPE:
+		log.Debug("Data before time %v", start)
+		readings, err = a.tsStore.Prev(uuids, start, parsed.data.timeconv)
+	case AFTER_TYPE:
+		log.Debug("Data after time %v", start)
+		readings, err = a.tsStore.Next(uuids, start, parsed.data.timeconv)
+	}
+	log.Debug("response %v uuids %v", readings, uuids)
+
+	return result, nil
 }

@@ -169,29 +169,9 @@ func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (SmapMes
 }
 
 func (a *Archiver) handleSelect(parsed *parsedQuery, ephkey EphemeralKey) (SmapMessageList, error) {
-	var (
-		result SmapMessageList
-	)
 	//TODO: filter results by EphKey
 	if parsed.distinct {
-		results, err := a.mdStore.GetDistinct(parsed.target[0], parsed.where)
-		if err != nil {
-			return result, err
-		}
-		result = SmapMessageList{}
-		i := 0
-		for _, val := range results {
-			if len(val) == 0 {
-				continue
-			}
-			result = append(result, &SmapMessage{})
-			result[i].AddTag(fixMongoKey(parsed.target[0]), val)
-			i += 1
-		}
-		return result, err
+		return a.mdStore.GetDistinct(parsed.target[0], parsed.where)
 	}
-
-	log.Debug("%#v", parsed)
-
 	return a.mdStore.GetTags(parsed.target, parsed.where)
 }

@@ -224,10 +224,12 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (SmapMessageList, erro
 	return SmapMessageListFromBson(filtered), err
 }
 
-func (m *mongoStore) GetDistinct(tag string, where bson.M) ([]string, error) {
+func (m *mongoStore) GetDistinct(tag string, where bson.M) (SmapMessageList, error) {
 	var (
-		result      []string
+		strResult   []string
+		result      SmapMessageList
 		whereClause bson.M
+		fixedTag    = fixMongoKey(tag)
 	)
 	if len(where) != 0 {
 		whereClause = make(bson.M)
@@ -235,7 +237,17 @@ func (m *mongoStore) GetDistinct(tag string, where bson.M) ([]string, error) {
 			whereClause[fixMongoKey(wk)] = wv
 		}
 	}
-	err := m.metadata.Find(where).Distinct(fixMongoKey(tag), &result)
+	err := m.metadata.Find(where).Distinct(fixedTag, &strResult)
+	result = SmapMessageList{}
+	i := 0
+	for _, val := range strResult {
+		if len(val) == 0 {
+			continue
+		}
+		result = append(result, &SmapMessage{})
+		result[i].AddTag(fixedTag, val)
+		i += 1
+	}
 	return result, err
 }
 

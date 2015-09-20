@@ -265,20 +265,25 @@ func TestGetDistinct(t *testing.T) {
 	for _, test := range []struct {
 		tag    string
 		where  bson.M
-		result []string
+		result SmapMessageList
 	}{
 		{
 			"Metadata.Tag",
 			bson.M{"Metadata.Shared": commonUUID},
-			[]string{"Value1", "Value2"},
+			SmapMessageList{
+				&SmapMessage{Metadata: Dict{"Tag": "Value1"}},
+				&SmapMessage{Metadata: Dict{"Tag": "Value2"}},
+			},
 		},
 	} {
 		res, err := ms.GetDistinct(test.tag, test.where)
 		if err != nil {
 			t.Errorf("Err during GetDistinct (%v) \n%v", err, test)
 		}
-		if !compareStringSliceAsSet(res, test.result) {
-			t.Errorf("Result should be \n%v\n but was \n%v\n", test.result, res)
+		for i := 0; i < len(test.result); i++ {
+			if !reflect.DeepEqual(res[i], test.result[i]) {
+				t.Errorf("Result should be \n%v\n but was \n%v\n", test.result[i], res[i])
+			}
 		}
 	}
 }

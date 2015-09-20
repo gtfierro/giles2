@@ -226,15 +226,29 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (SmapMessageList, erro
 
 func (m *mongoStore) GetDistinct(tag string, where bson.M) ([]string, error) {
 	var (
-		result []string
+		result      []string
+		whereClause bson.M
 	)
-	err := m.metadata.Find(where).Distinct(tag, &result)
+	if len(where) != 0 {
+		whereClause = make(bson.M)
+		for wk, wv := range where {
+			whereClause[fixMongoKey(wk)] = wv
+		}
+	}
+	err := m.metadata.Find(where).Distinct(fixMongoKey(tag), &result)
 	return result, err
 }
 
 func (m *mongoStore) GetUUIDs(where bson.M) ([]UUID, error) {
 	var results []UUID
 	var x []bson.M
+	var whereClause bson.M
+	if len(where) != 0 {
+		whereClause = make(bson.M)
+		for wk, wv := range where {
+			whereClause[fixMongoKey(wk)] = wv
+		}
+	}
 	selectClause := bson.M{"_id": 0, "uuid": 1}
 	err := m.metadata.Find(where).Select(selectClause).All(&x)
 	results = make([]UUID, len(x))

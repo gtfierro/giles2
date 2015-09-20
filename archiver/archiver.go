@@ -185,7 +185,7 @@ func (a *Archiver) handleSelect(parsed *parsedQuery, ephkey EphemeralKey) (SmapM
 				continue
 			}
 			result = append(result, &SmapMessage{})
-			result[i].AddTag(parsed.target[0], val)
+			result[i].AddTag(fixMongoKey(parsed.target[0]), val)
 			i += 1
 		}
 		return result, err

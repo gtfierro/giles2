@@ -2,6 +2,7 @@ package archiver
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"github.com/satori/go.uuid"
 	"gopkg.in/mgo.v2/bson"
@@ -37,6 +38,27 @@ func DictFromBson(m bson.M) Dict {
 		}
 	}
 	return d
+}
+
+func (d Dict) MarshalJSON() ([]byte, error) {
+	var m = make(map[string]interface{})
+	if len(d) == 0 {
+		return json.Marshal(m)
+	}
+
+	for dk, dv := range d {
+		pieces := strings.Split(dk, "|")
+		plen := len(pieces)
+		var cur = m
+		for _, token := range pieces[:plen-1] {
+			if _, found := cur[token]; !found {
+				cur[token] = make(map[string]interface{})
+			}
+			cur = cur[token].(map[string]interface{})
+		}
+		cur[pieces[plen-1]] = dv
+	}
+	return json.Marshal(m)
 }
 
 // unit of time indicators

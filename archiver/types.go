@@ -27,12 +27,13 @@ func NewDict() *Dict {
 func DictFromBson(m bson.M) Dict {
 	d := Dict{}
 	for k, v := range m {
+		key := fixMongoKey(k)
 		if vs, ok := v.(string); ok {
-			d[k] = vs
-		} else if vs, ok := v.(int); ok {
-			d[k] = string(vs)
+			d[key] = vs
+		} else if vs, ok := v.(int64); ok {
+			d[key] = strconv.FormatInt(vs, 10)
 		} else if vs, ok := v.(float64); ok {
-			d[k] = strconv.FormatFloat(vs, 'g', -1, 64)
+			d[key] = strconv.FormatFloat(vs, 'f', -1, 64)
 		}
 	}
 	return d

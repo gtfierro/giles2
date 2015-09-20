@@ -55,7 +55,7 @@ func TestSmapMessageToBson(t *testing.T) {
 			bson.M{"uuid": myUUID, "Path": myPath, "Actuator.State": "[45, 90]"},
 		},
 		{
-			&SmapMessage{Path: myPath, UUID: myUUID, Properties: smapProperties{UnitOfTime: UOT_NS, UnitOfMeasure: "F", StreamType: NUMERIC_STREAM}},
+			&SmapMessage{Path: myPath, UUID: myUUID, Properties: &SmapProperties{UnitOfTime: UOT_NS, UnitOfMeasure: "F", StreamType: NUMERIC_STREAM}},
 			bson.M{"uuid": myUUID, "Path": myPath, "Properties.UnitofTime": UOT_NS, "Properties.UnitofMeasure": "F", "Properties.StreamType": NUMERIC_STREAM},
 		},
 	} {
@@ -77,8 +77,8 @@ func TestSmapMessageHasMetadata(t *testing.T) {
 		{&SmapMessage{Path: myPath, UUID: NewUUID(), Metadata: Dict{}}, false},
 		{&SmapMessage{Path: myPath, UUID: NewUUID(), Metadata: Dict{"X": "Y"}}, true},
 		{&SmapMessage{Path: myPath, UUID: NewUUID(), Actuator: Dict{"X": "Y"}}, true},
-		{&SmapMessage{Path: myPath, UUID: NewUUID(), Properties: smapProperties{}}, false},
-		{&SmapMessage{Path: myPath, UUID: NewUUID(), Properties: smapProperties{UnitOfTime: UOT_NS}}, true},
+		{&SmapMessage{Path: myPath, UUID: NewUUID(), Properties: &SmapProperties{}}, false},
+		{&SmapMessage{Path: myPath, UUID: NewUUID(), Properties: &SmapProperties{UnitOfTime: UOT_NS}}, true},
 	} {
 		try := test.msg.HasMetadata()
 		if try != test.out {
@@ -105,7 +105,7 @@ func TestSmapMessageFromBson(t *testing.T) {
 		},
 		{
 			bson.M{"uuid": myUUIDstr, "Path": myPath, "Properties": bson.M{"UnitofTime": UOT_NS, "UnitofMeasure": "F", "StreamType": NUMERIC_STREAM}},
-			&SmapMessage{UUID: myUUID, Path: myPath, Properties: smapProperties{UnitOfTime: UOT_NS, UnitOfMeasure: "F", StreamType: NUMERIC_STREAM}},
+			&SmapMessage{UUID: myUUID, Path: myPath, Properties: &SmapProperties{UnitOfTime: UOT_NS, UnitOfMeasure: "F", StreamType: NUMERIC_STREAM}},
 		},
 	} {
 		try := SmapMessageFromBson(test.in)

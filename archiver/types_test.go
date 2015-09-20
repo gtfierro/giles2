@@ -32,7 +32,7 @@ func TestDictFromBson(t *testing.T) {
 		},
 	} {
 		got := DictFromBson(test.in)
-		if !reflect.DeepEqual(*got, test.out) {
+		if !reflect.DeepEqual(got, test.out) {
 			t.Errorf("Dict \n%v\n should be %v but was %v\n", test.in, test.out, got)
 		}
 	}

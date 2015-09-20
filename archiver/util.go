@@ -24,6 +24,17 @@ func flatten(m bson.M) bson.M {
 func fixKey(k string) string {
 	return strings.Replace(k, ".", "|", -1)
 }
+func fixMongoKey(key string) string {
+	switch {
+	case strings.HasPrefix(key, "Metadata"):
+		return "Metadata." + strings.Replace(key[9:], ".", "|", -1)
+	case strings.HasPrefix(key, "Properties"):
+		return "Properties." + strings.Replace(key[11:], ".", "|", -1)
+	case strings.HasPrefix(key, "Actuator"):
+		return "Actuator." + strings.Replace(key[9:], ".", "|", -1)
+	}
+	return key
+}
 
 func compareStringSliceAsSet(s1, s2 []string) bool {
 	var (

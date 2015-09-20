@@ -210,7 +210,6 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (SmapMessageList, erro
 	// trim down empty rows
 	filtered := x[:0]
 	for _, doc := range x {
-		log.Debug("got doc %v", doc)
 		if len(doc) != 0 {
 			filtered = append(filtered, doc)
 		}

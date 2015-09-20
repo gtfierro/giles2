@@ -116,7 +116,7 @@ func (msg *SmapMessage) ToBson() (ret bson.M) {
 			ret["Actuator."+fixKey(k)] = v
 		}
 	}
-	if !msg.Properties.IsEmpty() {
+	if msg.Properties != nil && !msg.Properties.IsEmpty() {
 		ret["Properties.UnitofTime"] = msg.Properties.UnitOfTime
 		ret["Properties.UnitofMeasure"] = msg.Properties.UnitOfMeasure
 		ret["Properties.StreamType"] = msg.Properties.StreamType
@@ -212,7 +212,7 @@ func SmapMessageFromBson(m bson.M) *SmapMessage {
 func (msg *SmapMessage) HasMetadata() bool {
 	return (msg.Actuator != nil && len(msg.Actuator) > 0) ||
 		(msg.Metadata != nil && len(msg.Metadata) > 0) ||
-		(!msg.Properties.IsEmpty())
+		(msg.Properties != nil && !msg.Properties.IsEmpty())
 }
 
 func (msg *SmapMessage) IsTimeseries() bool {

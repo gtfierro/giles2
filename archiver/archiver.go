@@ -201,18 +201,25 @@ func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMes
 	case IN_TYPE:
 		log.Debug("Data in start %v end %v", start, end)
 		if start < end {
-			readings, err = a.tsStore.GetData(uuids, start, end, parsed.data.timeconv)
+			readings, err = a.tsStore.GetData(uuids, start, end)
 		} else {
-			readings, err = a.tsStore.GetData(uuids, end, start, parsed.data.timeconv)
+			readings, err = a.tsStore.GetData(uuids, end, start)
 		}
 	case BEFORE_TYPE:
 		log.Debug("Data before time %v", start)
-		readings, err = a.tsStore.Prev(uuids, start, parsed.data.timeconv)
+		readings, err = a.tsStore.Prev(uuids, start)
 	case AFTER_TYPE:
 		log.Debug("Data after time %v", start)
-		readings, err = a.tsStore.Next(uuids, start, parsed.data.timeconv)
+		readings, err = a.tsStore.Next(uuids, start)
 	}
 	log.Debug("response %v uuids %v", readings, uuids)
+
+	for i, rdgs := range readings {
+		for _, rdg := range rdgs.Readings {
+			result[i].Readings = append(result[i].Readings, rdg)
+		}
+		//result[i].Readings = rdgs.Readings
+	}
 
 	return result, nil
 }

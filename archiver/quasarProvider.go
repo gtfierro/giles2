@@ -99,7 +99,7 @@ func (q *quasarDB) AddMessage(msg *SmapMessage) error {
 	qr.ins.SetValues(rl)
 	qr.req.SetInsertValues(*qr.ins)
 	qr.seg.WriteTo(conn)
-	if _, err = q.receive(conn, -1); err != nil {
+	if _, err = q.receive(conn); err != nil {
 		return fmt.Errorf("Error writing to quasar %v", err)
 	}
 	q.packetpool.Put(qr)
@@ -134,26 +134,76 @@ func (q *quasarDB) AddBuffer(buf *streamBuffer) error {
 	qr.ins.SetValues(rl)
 	qr.req.SetInsertValues(*qr.ins)
 	qr.seg.WriteTo(conn)
-	if _, err = q.receive(conn, -1); err != nil {
+	if _, err = q.receive(conn); err != nil {
 		return fmt.Errorf("Error writing to quasar %v", err)
 	}
 	q.packetpool.Put(qr)
 	return nil
 }
 
-func (q *quasarDB) Prev([]UUID, uint64, UnitOfTime) ([]SmapNumbersResponse, error) {
-	return nil, nil
+func (quasar *quasarDB) queryNearestValue(uuids []UUID, start uint64, backwards bool) ([]SmapNumbersResponse, error) {
+	var ret = make([]SmapNumbersResponse, len(uuids))
+	conn := quasar.connpool.Get()
+	defer quasar.connpool.Put(conn)
+	for i, uu := range uuids {
+		seg := capn.NewBuffer(nil)
+		req := qsr.NewRootRequest(seg)
+		qnv := qsr.NewCmdQueryNearestValue(seg)
+		qnv.SetBackward(backwards)
+		uuid, _ := uuid.FromString(string(uu))
+		qnv.SetUuid(uuid.Bytes())
+		qnv.SetTime(int64(start))
+		req.SetQueryNearestValue(qnv)
+		_, err := seg.WriteTo(conn) // here, ignoring # bytes written
+		if err != nil {
+			return ret, err
+		}
+		sr, err := quasar.receive(conn)
+		if err != nil {
+			return ret, err
+		}
+		sr.UUID = uu
+		ret[i] = sr
+	}
+	return ret, nil
 }
 
-func (q *quasarDB) Next([]UUID, uint64, UnitOfTime) ([]SmapNumbersResponse, error) {
-	return nil, nil
+func (q *quasarDB) Prev(uuids []UUID, start uint64) ([]SmapNumbersResponse, error) {
+	return q.queryNearestValue(uuids, start, true)
 }
 
-func (q *quasarDB) GetData([]UUID, uint64, uint64, UnitOfTime) ([]SmapNumbersResponse, error) {
-	return nil, nil
+func (q *quasarDB) Next(uuids []UUID, start uint64) ([]SmapNumbersResponse, error) {
+	return q.queryNearestValue(uuids, start, false)
 }
 
-func (q *quasarDB) receive(conn *tsConn, limit int32) (SmapNumbersResponse, error) {
+func (q *quasarDB) GetData(uuids []UUID, start uint64, end uint64) ([]SmapNumbersResponse, error) {
+	var ret = make([]SmapNumbersResponse, len(uuids))
+	conn := q.connpool.Get()
+	defer q.connpool.Put(conn)
+	for i, uu := range uuids {
+		seg := capn.NewBuffer(nil)
+		req := qsr.NewRootRequest(seg)
+		qnv := qsr.NewCmdQueryStandardValues(seg)
+		uuid, _ := uuid.FromString(string(uu))
+		qnv.SetUuid(uuid.Bytes())
+		qnv.SetStartTime(int64(start))
+		qnv.SetEndTime(int64(end))
+		req.SetQueryStandardValues(qnv)
+		_, err := seg.WriteTo(conn) // here, ignoring # bytes written
+		if err != nil {
+			return ret, err
+		}
+		sr, err := q.receive(conn)
+		if err != nil {
+			return ret, err
+		}
+		sr.UUID = uu
+		ret[i] = sr
+	}
+	return ret, nil
+}
+
+func (q *quasarDB) receive(conn *tsConn) (SmapNumbersResponse, error) {
 	var sr = SmapNumbersResponse{}
 	seg, err := capn.ReadFromStream(conn, nil)
 	if err != nil {
@@ -173,11 +223,7 @@ func (q *quasarDB) receive(conn *tsConn, limit int32) (SmapNumbersResponse, erro
 			return sr, fmt.Errorf("Error when reading from Quasar: %v", resp.StatusCode().String())
 		}
 		sr.Readings = []*SmapNumberReading{}
-		log.Debug("limit %v, num values %v", limit, len(resp.Records().Values().ToArray()))
-		for i, rec := range resp.Records().Values().ToArray() {
-			if limit > -1 && int32(i) >= limit {
-				break
-			}
+		for _, rec := range resp.Records().Values().ToArray() {
 			sr.Readings = append(sr.Readings, &SmapNumberReading{Time: uint64(rec.Time()), Value: rec.Value()})
 		}
 		return sr, nil

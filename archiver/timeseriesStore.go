@@ -6,16 +6,16 @@ type TimeseriesStore interface {
 	// add the following SmapReading to the timeseries database
 	AddBuffer(*streamBuffer) error
 
-	// list of UUIDs, reference time, units of reference time
+	// list of UUIDs, reference time in nanoseconds
 	// Retrieves data before the reference time for the given streams.
 	//TODO: what is the return type here?
-	Prev([]UUID, uint64, UnitOfTime) ([]SmapNumbersResponse, error)
+	Prev([]UUID, uint64) ([]SmapNumbersResponse, error)
 
-	// list of UUIDs, reference time, units of reference time
+	// list of UUIDs, reference time in nanoseconds
 	// Retrieves data after the reference time for the given streams.
 	//TODO: what is the return type here?
-	Next([]UUID, uint64, UnitOfTime) ([]SmapNumbersResponse, error)
+	Next([]UUID, uint64) ([]SmapNumbersResponse, error)
 
-	// uuids, start time, end time, unit of time
-	GetData([]UUID, uint64, uint64, UnitOfTime) ([]SmapNumbersResponse, error)
+	// uuids, start time, end time (both in nanoseconds)
+	GetData([]UUID, uint64, uint64) ([]SmapNumbersResponse, error)
 }

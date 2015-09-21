@@ -85,6 +85,13 @@ func (m *mongoStore) addIndexes() {
 		log.Fatalf("Could not create index on metadata.uuid (%v)", err)
 	}
 
+	index.Key = []string{"Path"}
+	index.Unique = false
+	err = m.metadata.EnsureIndex(index)
+	if err != nil {
+		log.Fatalf("Could not create index on metadata.Path (%v)", err)
+	}
+
 	//TODO: check capitalization UnitofTime vs UnitOfTime. same with UnitofMeasure
 	index.Key = []string{"Properties.UnitofTime"}
 	index.Unique = false
@@ -283,11 +290,20 @@ func (m *mongoStore) SaveTags(msg *SmapMessage) error {
 }
 
 func (m *mongoStore) RemoveTags(tags []string, where bson.M) error {
-	return nil
+	updates := bson.M{}
+	for _, tag := range tags {
+		updates[tag] = 1
+	}
+	info, updateErr := m.metadata.UpdateAll(where, bson.M{"$unset": updates})
+	log.Info("Updated %v records", info.Updated)
+	return updateErr
 }
 
 func (m *mongoStore) RemoveDocs(where bson.M) error {
-	return nil
+	//TODO: loop through matched UUIDs
+	ci, removeErr := m.metadata.RemoveAll(where)
+	log.Info("Removed %v records", ci.Removed)
+	return removeErr
 }
 
 type mongoSession struct {

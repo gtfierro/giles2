@@ -212,7 +212,6 @@ func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMes
 		log.Debug("Data after time %v", start)
 		readings, err = a.tsStore.Next(uuids, start)
 	}
-	log.Debug("response %v uuids %v", readings, uuids)
 
 	i := 0
 	for _, resp := range readings {

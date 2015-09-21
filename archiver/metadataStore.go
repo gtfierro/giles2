@@ -15,6 +15,8 @@ type MetadataStore interface {
 
 	SaveTags(msg *SmapMessage) error
 
+	UpdateDocs(updates, where bson.M) error
+
 	//TODO: add feedback on how many docs changed/removed/etc. This requires a specialized struct
 	RemoveTags(tags []string, where bson.M) error
 	RemoveDocs(where bson.M) error

@@ -161,6 +161,7 @@ func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (SmapMes
 	case DELETE_TYPE:
 		return result, a.handleDelete(parsed, ephkey)
 	case SET_TYPE:
+		return result, a.handleSet(parsed, ephkey)
 	case DATA_TYPE:
 		return a.handleData(parsed, ephkey)
 	default:
@@ -237,4 +238,12 @@ func (a *Archiver) handleDelete(parsed *parsedQuery, ephkey EphemeralKey) error 
 	}
 	log.Debug("Removing all docs where %v", parsed.where)
 	return a.mdStore.RemoveDocs(parsed.where)
+}
+
+func (a *Archiver) handleSet(parsed *parsedQuery, ephkey EphemeralKey) error {
+	log.Debug("Apply updates %v where %v", parsed.set, parsed.where)
+	if len(parsed.set) == 0 {
+		return nil
+	}
+	return a.mdStore.UpdateDocs(parsed.set, parsed.where)
 }

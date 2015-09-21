@@ -289,7 +289,15 @@ func (m *mongoStore) SaveTags(msg *SmapMessage) error {
 	return err
 }
 
+func (m *mongoStore) UpdateDocs(updates, where bson.M) error {
+	//TODO: loop through matched UUIDs
+	info, updateErr := m.metadata.UpdateAll(where, bson.M{"$set": updates})
+	log.Info("Updated %v records", info.Updated)
+	return updateErr
+}
+
 func (m *mongoStore) RemoveTags(tags []string, where bson.M) error {
+	//TODO: loop through matched UUIDs
 	updates := bson.M{}
 	for _, tag := range tags {
 		updates[tag] = 1

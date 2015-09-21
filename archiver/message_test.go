@@ -1,6 +1,8 @@
 package archiver
 
 import (
+	"bytes"
+	"encoding/json"
 	"gopkg.in/mgo.v2/bson"
 	"reflect"
 	"testing"
@@ -121,5 +123,43 @@ func BenchmarkSmapMessageFromBson(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		SmapMessageFromBson(in)
+	}
+}
+
+func BenchmarkSmapMessageDecodeJSON(b *testing.B) {
+	var jsonstring = []byte(`{
+    "/fast/sensor0": {
+        "Readings": [[9182731928374, 30]],
+        "uuid": "b86df176-6b40-5d58-8f29-3b85f5cfbf1e"
+        }
+    }`)
+	var tsm TieredSmapMessage
+	var buf bytes.Buffer
+	dec := json.NewDecoder(&buf)
+	for i := 0; i < b.N; i++ {
+		buf.Write(jsonstring)
+		buf.WriteByte('\n')
+		buf.WriteByte('\n')
+		buf.WriteByte('\n')
+		dec.Decode(&tsm)
+	}
+}
+
+func BenchmarkSmapMessageGabeDecodeJSON(b *testing.B) {
+	var jsonstring = []byte(`{
+    "/fast/sensor0": {
+        "Readings": [[9182731928374, 30]],
+        "uuid": "b86df176-6b40-5d58-8f29-3b85f5cfbf1e"
+        }
+    }`)
+	var tsm TieredSmapMessage
+	var buf bytes.Buffer
+	dec := NewGabeDecoder(&buf)
+	for i := 0; i < b.N; i++ {
+		buf.Write(jsonstring)
+		buf.WriteByte('\n')
+		buf.WriteByte('\n')
+		buf.WriteByte('\n')
+		dec.Decode(&tsm)
 	}
 }

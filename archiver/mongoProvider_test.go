@@ -10,6 +10,7 @@ import (
 )
 
 var ms *mongoStore
+var testArchiver *Archiver
 
 func TestMain(m *testing.M) {
 	addr, err := net.ResolveTCPAddr("tcp4", "0.0.0.0:27017")
@@ -22,6 +23,8 @@ func TestMain(m *testing.M) {
 	}
 	ms = newMongoStore(config)
 	pm = newMongoPermissionsManager(config)
+	aConfig := LoadConfig("../giles.cfg")
+	testArchiver = NewArchiver(aConfig)
 	flag.Parse()
 	os.Exit(m.Run())
 }

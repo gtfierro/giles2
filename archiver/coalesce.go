@@ -83,6 +83,7 @@ func (sb *streamBuffer) add(sm *SmapMessage) bool {
 			continue
 		}
 		sb.readings[sb.idx+idx] = rdg.(*SmapNumberReading)
+		sb.readings[sb.idx+idx].ConvertTime(sb.unitOfTime, UOT_NS)
 		idx += 1
 	}
 	// advance our pointer

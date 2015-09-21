@@ -68,7 +68,7 @@ func HandleUDP4(a *archiver.Archiver, port int) {
 		for {
 			select {
 			case <-t.C:
-				log.Info("Pkt %v", atomic.LoadUint64(&h.counter))
+				//log.Info("Pkt %v", atomic.LoadUint64(&h.counter))
 				atomic.StoreUint64(&h.counter, 0)
 			}
 		}

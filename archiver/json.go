@@ -14,5 +14,11 @@ func NewGabeDecoder(r io.Reader) *GabeDecoder {
 	return gd
 }
 
+// So what's the plan here? We have defined top level keys, which are:
+//  - uuid/UUID
+//  - Readings
+//  - Metadata
+//  - Properties
+//  - Path
 func (gd *GabeDecoder) Decode(tsm *TieredSmapMessage) {
 }

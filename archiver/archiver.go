@@ -159,9 +159,9 @@ func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (SmapMes
 	case SELECT_TYPE:
 		return a.handleSelect(parsed, ephkey)
 	case DELETE_TYPE:
-		return a.handleData(parsed, ephkey)
 	case SET_TYPE:
 	case DATA_TYPE:
+		return a.handleData(parsed, ephkey)
 	default:
 		return result, fmt.Errorf("Could not decide query type %v", querystring)
 	}
@@ -214,11 +214,16 @@ func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMes
 	}
 	log.Debug("response %v uuids %v", readings, uuids)
 
-	for i, rdgs := range readings {
-		for _, rdg := range rdgs.Readings {
-			result[i].Readings = append(result[i].Readings, rdg)
+	i := 0
+	for _, resp := range readings {
+		if len(resp.Readings) > 0 {
+			result[i] = &SmapMessage{UUID: resp.UUID}
+			for _, rdg := range resp.Readings {
+				rdg.ConvertTime(UOT_NS, parsed.data.timeconv)
+				result[i].Readings = append(result[i].Readings, rdg)
+			}
+			i += 1
 		}
-		//result[i].Readings = rdgs.Readings
 	}
 
 	return result, nil

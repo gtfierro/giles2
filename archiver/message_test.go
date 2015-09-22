@@ -163,3 +163,21 @@ func BenchmarkSmapMessageGabeDecodeJSON(b *testing.B) {
 		dec.Decode(&tsm)
 	}
 }
+
+func TestSmapMessageGabeDecodeJSON(t *testing.T) {
+	var jsonstring = []byte(`{
+    "/fast/sensor0": {
+        "Readings": [[9182731928374, 30]],
+        "uuid": "b86df176-6b40-5d58-8f29-3b85f5cfbf1e"
+        }
+    }`)
+	var tsm TieredSmapMessage
+	var buf bytes.Buffer
+	buf.Write(jsonstring)
+	buf.WriteByte('\n')
+	dec := NewGabeDecoder(&buf)
+	if err := dec.Decode(&tsm); err != nil {
+		t.Errorf("Error decoding JSON %v", err)
+	}
+	log.Debug("RES %#v", tsm)
+}

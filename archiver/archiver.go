@@ -190,8 +190,6 @@ func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMes
 		return result, err
 	}
 
-	result = make(SmapMessageList, len(uuids))
-
 	if parsed.data.limit.streamlimit > 0 && len(uuids) > 0 {
 		uuids = uuids[:parsed.data.limit.streamlimit]
 	}
@@ -208,24 +206,25 @@ func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMes
 			readings, err = a.tsStore.GetData(uuids, end, start)
 		}
 	case BEFORE_TYPE:
-		log.Debug("Data before time %v", start)
+		log.Debug("Data before time %v (%v ns)", parsed.data.start, start)
 		readings, err = a.tsStore.Prev(uuids, start)
 	case AFTER_TYPE:
-		log.Debug("Data after time %v", start)
+		log.Debug("Data after time %v (%v ns)", parsed.data.start, start)
 		readings, err = a.tsStore.Next(uuids, start)
 	}
 
-	i := 0
+	log.Debug("readings %v", readings)
 	for _, resp := range readings {
 		if len(resp.Readings) > 0 {
-			result[i] = &SmapMessage{UUID: resp.UUID}
+			msg := &SmapMessage{UUID: resp.UUID}
 			for _, rdg := range resp.Readings {
 				rdg.ConvertTime(UOT_NS, parsed.data.timeconv)
-				result[i].Readings = append(result[i].Readings, rdg)
+				msg.Readings = append(msg.Readings, rdg)
 			}
-			i += 1
+			result = append(result, msg)
 		}
 	}
+	log.Debug("readings %v", result)
 
 	return result, nil
 }

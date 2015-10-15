@@ -142,9 +142,15 @@ func (sm *SmapMessage) UnmarshalJSON(b []byte) (err error) {
 	// copy the values over that we don't need to translate
 	sm.UUID = incoming.UUID
 	sm.Path = incoming.Path
-	sm.Metadata = DictFromBson(flatten(incoming.Metadata))
-	sm.Properties = &incoming.Properties
-	sm.Actuator = DictFromBson(flatten(incoming.Actuator))
+	if len(incoming.Metadata) > 0 {
+		sm.Metadata = DictFromBson(flatten(incoming.Metadata))
+	}
+	if !incoming.Properties.IsEmpty() {
+		sm.Properties = &incoming.Properties
+	}
+	if len(incoming.Actuator) > 0 {
+		sm.Actuator = DictFromBson(flatten(incoming.Actuator))
+	}
 
 	// convert the readings depending if they are numeric or object
 	sm.Readings = make([]Reading, len(incoming.Readings))

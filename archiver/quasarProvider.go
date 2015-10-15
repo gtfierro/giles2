@@ -216,6 +216,8 @@ func (q *quasarDB) receive(conn *tsConn) (SmapNumbersResponse, error) {
 	}
 	resp := qsr.ReadRootResponse(seg)
 
+	//log.Debug("qsr resp %v", resp.Which())
+	//log.Debug("status code %v", resp.StatusCode())
 	switch resp.Which() {
 	case qsr.RESPONSE_VOID:
 		if resp.StatusCode() != qsr.STATUSCODE_OK {

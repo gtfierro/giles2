@@ -2,6 +2,7 @@ package archiver
 
 import (
 	"encoding/json"
+	"gopkg.in/vmihailenco/msgpack.v2"
 	"strconv"
 )
 
@@ -25,6 +26,14 @@ func (s *SmapNumberReading) MarshalJSON() ([]byte, error) {
 	floatString := strconv.FormatFloat(s.Value, 'f', -1, 64)
 	timeString := strconv.FormatUint(s.Time, 10)
 	return json.Marshal([]json.Number{json.Number(timeString), json.Number(floatString)})
+}
+
+func (s *SmapNumberReading) EncodeMsgpack(enc *msgpack.Encoder) error {
+	return enc.Encode(s.Time, s.Value)
+}
+
+func (s *SmapNumberReading) DecodeMsgpack(enc *msgpack.Decoder) error {
+	return enc.Decode(&s.Time, &s.Value)
 }
 
 func (s *SmapNumberReading) GetTime() uint64 {

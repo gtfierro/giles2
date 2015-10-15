@@ -55,12 +55,12 @@ func (sp SmapProperties) IsEmpty() bool {
 }
 
 type SmapMessage struct {
-	Path       string          `json:",omitempty"`
-	UUID       UUID            `json:"uuid,omitempty"`
-	Properties *SmapProperties `json:",omitempty"`
-	Actuator   Dict            `json:",omitempty"`
-	Metadata   Dict            `json:",omitempty"`
-	Readings   []Reading       `json:",omitempty"`
+	Path       string          `json:",omitempty" msgpack:",omitempty"`
+	UUID       UUID            `json:"uuid,omitempty" msgpack:",omitempty"`
+	Properties *SmapProperties `json:",omitempty" msgpack:",omitempty"`
+	Actuator   Dict            `json:",omitempty" msgpack:",omitempty"`
+	Metadata   Dict            `json:",omitempty" msgpack:",omitempty"`
+	Readings   []Reading       `json:",omitempty" msgpack:",omitempty"`
 }
 
 // will insert a key string e.g. "Metadata.KeyName" and value e.g. "Value"

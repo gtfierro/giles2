@@ -83,6 +83,17 @@ func NewArchiver(c *Config) (a *Archiver) {
 			maxConnections: *c.Archiver.MaxConnections,
 		}
 		tsStore = newQuasarDB(config)
+	case "btrdb":
+		btrdbaddr, err := net.ResolveTCPAddr("tcp4", *c.BtrDB.Address+":"+*c.BtrDB.Port)
+		if err != nil {
+			log.Fatal("Error parsing BtrDB address: %v", err)
+		}
+		config := &btrdbConfig{
+			addr:           btrdbaddr,
+			mdStore:        a.mdStore,
+			maxConnections: *c.Archiver.MaxConnections,
+		}
+		tsStore = newBtrDB(config)
 	default:
 		log.Fatal(*c.Archiver.TimeseriesStore, " is not a recognized timeseries store")
 	}

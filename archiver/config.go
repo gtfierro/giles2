@@ -21,6 +21,11 @@ type Config struct {
 		Address *string
 	}
 
+	BtrDB struct {
+		Port    *string
+		Address *string
+	}
+
 	Quasar struct {
 		Port    *string
 		Address *string

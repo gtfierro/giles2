@@ -98,6 +98,8 @@ func (b *btrdbDB) receiveData(conn *tsConn) (SmapNumbersResponse, error) {
 				sr.Readings = append(sr.Readings, &SmapNumberReading{Time: uint64(rec.Time()), Value: rec.Value()})
 			}
 			finished = resp.Final()
+		default:
+			log.Error("Got unexpected type: %v with status code %v", resp.Which(), resp.StatusCode().String())
 		}
 	}
 	return sr, nil
@@ -206,5 +208,28 @@ func (b *btrdbDB) Next(uuids []UUID, start uint64) ([]SmapNumbersResponse, error
 }
 
 func (b *btrdbDB) GetData(uuids []UUID, start, end uint64) ([]SmapNumbersResponse, error) {
-	return make([]SmapNumbersResponse, 1), nil
+	var ret = make([]SmapNumbersResponse, len(uuids))
+	conn := b.connpool.Get()
+	defer b.connpool.Put(conn)
+	for i, uu := range uuids {
+		seg := capn.NewBuffer(nil)
+		req := btrdb.NewRootRequest(seg)
+		query := btrdb.NewCmdQueryStandardValues(seg)
+		uuid, _ := uuid.FromString(string(uu))
+		query.SetUuid(uuid.Bytes())
+		query.SetStartTime(int64(start))
+		query.SetEndTime(int64(end))
+		req.SetQueryStandardValues(query)
+		_, err := seg.WriteTo(conn) // here, ignoring # bytes written
+		if err != nil {
+			return ret, err
+		}
+		sr, err := b.receiveData(conn)
+		if err != nil {
+			return ret, err
+		}
+		sr.UUID = uu
+		ret[i] = sr
+	}
+	return ret, nil
 }

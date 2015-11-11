@@ -57,6 +57,9 @@ func newQuasarDB(c *quasarConfig) *quasarDB {
 			return bytes.NewBuffer(make([]byte, 0, 200)) // 200 byte buffer
 		},
 	}
+	if tmp := q.getConnection(); tmp == nil {
+		log.Fatal("QuasarDB not found")
+	}
 	q.connpool = NewConnectionPool(q.getConnection, q.maxConnections)
 	return q
 }

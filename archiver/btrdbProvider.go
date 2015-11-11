@@ -30,6 +30,7 @@ type btrdbReading struct {
 }
 
 func newBtrDB(c *btrdbConfig) *btrdbDB {
+	var err error
 	b := &btrdbDB{
 		addr:           c.addr,
 		mdStore:        c.mdStore,
@@ -37,10 +38,6 @@ func newBtrDB(c *btrdbConfig) *btrdbDB {
 	}
 
 	log.Notice("Connecting to BtrDB at %v...", b.addr.String())
-	// check for liveliness
-	if tmp := b.getConnection(); tmp == nil {
-		log.Fatal("BtrDB instance not found")
-	}
 
 	b.packetpool = sync.Pool{
 		New: func() interface{} {
@@ -57,7 +54,9 @@ func newBtrDB(c *btrdbConfig) *btrdbDB {
 		},
 	}
 
-	b.connpool = NewConnectionPool(b.getConnection, b.maxConnections)
+	if b.connpool, err = NewConnectionPool(b.getConnection, b.maxConnections); err != nil {
+		log.Fatal(err)
+	}
 	return b
 }
 

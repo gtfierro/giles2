@@ -1,6 +1,7 @@
 package archiver
 
 import (
+	"fmt"
 	"net"
 	"sync/atomic"
 )
@@ -44,9 +45,18 @@ type connectionPool struct {
 	max     int64
 }
 
-func NewConnectionPool(newConn func() *tsConn, maxConnections int) *connectionPool {
+func NewConnectionPool(newConn func() *tsConn, maxConnections int) (*connectionPool, error) {
 	pool := &connectionPool{newConn: newConn, pool: make(chan *tsConn, maxConnections), count: 0, max: int64(maxConnections)}
-	return pool
+	for i := 0; i < maxConnections/2; i++ { // initialize half of the connections
+		conn := newConn()
+		if conn != nil {
+			pool.pool <- conn
+		} else {
+			return nil, fmt.Errorf("Failed to create connection pool. New connection failed!")
+		}
+		atomic.AddInt64(&pool.count, 1)
+	}
+	return pool, nil
 }
 
 func (pool *connectionPool) Get() *tsConn {

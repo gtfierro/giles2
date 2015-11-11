@@ -32,6 +32,7 @@ type quasarReading struct {
 }
 
 func newQuasarDB(c *quasarConfig) *quasarDB {
+	var err error
 	q := &quasarDB{
 		addr:           c.addr,
 		mdStore:        c.mdStore,
@@ -57,10 +58,9 @@ func newQuasarDB(c *quasarConfig) *quasarDB {
 			return bytes.NewBuffer(make([]byte, 0, 200)) // 200 byte buffer
 		},
 	}
-	if tmp := q.getConnection(); tmp == nil {
-		log.Fatal("QuasarDB not found")
+	if q.connpool, err = NewConnectionPool(q.getConnection, q.maxConnections); err != nil {
+		log.Fatal(err)
 	}
-	q.connpool = NewConnectionPool(q.getConnection, q.maxConnections)
 	return q
 }
 

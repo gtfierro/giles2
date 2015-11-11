@@ -102,10 +102,10 @@ func (q *quasarDB) AddMessage(msg *SmapMessage) error {
 	qr.ins.SetValues(rl)
 	qr.req.SetInsertValues(*qr.ins)
 	qr.seg.WriteTo(conn)
+	q.packetpool.Put(qr)
 	if _, err = q.receive(conn); err != nil {
 		return fmt.Errorf("Error writing to quasar %v", err)
 	}
-	q.packetpool.Put(qr)
 	return nil
 }
 

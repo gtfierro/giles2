@@ -168,6 +168,37 @@ func (b *btrdbDB) AddMessage(msg *SmapMessage) error {
 }
 
 func (b *btrdbDB) AddBuffer(buf *streamBuffer) error {
+	var (
+		parsed_uuid uuid.UUID
+		err         error
+	)
+	if len(buf.readings) == 0 {
+		return nil
+	}
+	conn := b.connpool.Get()
+	defer b.connpool.Put(conn)
+	if parsed_uuid, err = uuid.FromString(string(buf.uuid)); err != nil {
+		return err
+	}
+	pkt := b.packetpool.Get().(btrdbReading)
+	pkt.ins.SetUuid(parsed_uuid.Bytes())
+	rl := btrdb.NewRecordList(pkt.seg, buf.idx)
+	rla := rl.ToArray()
+	for i, val := range buf.readings[:buf.idx] {
+		rla[i].SetTime(int64(val.GetTime()))
+		if num, ok := val.GetValue().(float64); ok {
+			rla[i].SetValue(num)
+		} else {
+			return fmt.Errorf("Bad number in buffer %v %v", buf.uuid, val)
+		}
+	}
+	pkt.ins.SetValues(rl)
+	pkt.req.SetInsertValues(*pkt.ins)
+	pkt.seg.WriteTo(conn)
+	if err = b.receiveStatus(conn); err != nil {
+		return fmt.Errorf("Error writing to btrdb %v", err)
+	}
+	b.packetpool.Put(pkt)
 	return nil
 }
 

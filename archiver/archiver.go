@@ -112,7 +112,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 
 func (a *Archiver) startReport() {
 	go func() {
-		t := time.NewTicker(1 * time.Second)
+		t := time.NewTicker(5 * time.Second)
 		for {
 			log.Info("Adds:%d", a.metrics["adds"].GetAndReset())
 			<-t.C

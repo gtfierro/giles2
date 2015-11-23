@@ -282,7 +282,7 @@ func (tsm *TieredSmapMessage) CollapseToTimeseries() {
 					}
 				}
 			}
-			if !prefixMsg.Properties.IsEmpty() {
+			if prefixMsg.Properties != nil && !prefixMsg.Properties.IsEmpty() {
 				if msg.Properties.UnitOfTime != 0 {
 					msg.Properties.UnitOfTime = prefixMsg.Properties.UnitOfTime
 				}

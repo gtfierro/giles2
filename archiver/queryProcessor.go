@@ -18,6 +18,10 @@ type parsedQuery struct {
 	set bson.M
 	// are we querying distinct values?
 	distinct bool
+	// a unique representation of this query used to compare two different query objects
+	hash queryHash
+	// Track state transitions for the UUIDs that match this query
+	m_uuids map[string]UUIDSTATE
 	// reference to data query
 	//  type dataquery struct {
 	//  	dtype		dataqueryType

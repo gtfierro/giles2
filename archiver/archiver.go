@@ -182,6 +182,23 @@ func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (SmapMes
 	return result, err
 }
 
+func (a *Archiver) HandleNewSubscriber(subscriber Subscriber, querystring string, ephkey EphemeralKey) error {
+	// first evaluate the query when we receive a subscriber
+	result, err := a.HandleQuery(querystring, ephkey)
+	// if there was an error during that evaluation, notify the client and return
+	if err != nil {
+		subscriber.SendError(err)
+		return err
+	}
+	// make sure the client gets the first result
+	subscriber.BlockSend(result)
+	subscriber.query = a.qp.Parse(querystring)
+
+	// TODO: handle the actual subscription
+
+	return nil
+}
+
 func (a *Archiver) handleSelect(parsed *parsedQuery, ephkey EphemeralKey) (SmapMessageList, error) {
 	//TODO: filter results by EphKey
 	if parsed.distinct {

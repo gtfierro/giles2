@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+type QueryResult interface {
+	IsResult()
+}
+
 //TODO: define custom marshal to avoid empty rows
 type SmapProperties struct {
 	UnitOfTime    UnitOfTime
@@ -242,6 +246,8 @@ func SmapMessageListFromBson(m []bson.M) SmapMessageList {
 	}
 	return ret
 }
+
+func (sml SmapMessageList) IsResult() {}
 
 type TieredSmapMessage map[string]*SmapMessage
 

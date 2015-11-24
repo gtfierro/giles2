@@ -149,10 +149,10 @@ func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 // asking for them and need to transform them into their own internal representations (e.g.
 // JSON, MsgPack, etc). What are the data patterns we are seeing?
 // Basically everything fits into SmapMessageList
-func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (SmapMessageList, error) {
+func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (QueryResult, error) {
 	var (
 		err    error
-		result SmapMessageList
+		result QueryResult
 	)
 
 	if a.enforceKeys && !a.pm.ValidEphemeralKey(ephkey) {
@@ -199,7 +199,7 @@ func (a *Archiver) HandleNewSubscriber(subscriber Subscriber, querystring string
 	return nil
 }
 
-func (a *Archiver) handleSelect(parsed *parsedQuery, ephkey EphemeralKey) (SmapMessageList, error) {
+func (a *Archiver) handleSelect(parsed *parsedQuery, ephkey EphemeralKey) (QueryResult, error) {
 	//TODO: filter results by EphKey
 	if parsed.distinct {
 		return a.mdStore.GetDistinct(parsed.target[0], parsed.where)

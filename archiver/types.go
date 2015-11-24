@@ -18,6 +18,11 @@ func NewUUID() UUID {
 	return UUID(uuid.NewV4().String())
 }
 
+type DistinctResult []string
+
+func (dr DistinctResult) IsResult() {
+}
+
 // a flat map for storing key-value pairs
 type Dict map[string]string
 

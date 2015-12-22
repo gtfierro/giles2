@@ -241,8 +241,9 @@ func (q *quasarDB) receive(conn *tsConn) (SmapNumbersResponse, error) {
 }
 
 func (q *quasarDB) ValidTimestamp(time uint64, uot UnitOfTime) bool {
+	var err error
 	if uot != UOT_NS {
-		time = convertTime(time, uot, UOT_NS)
+		time, err = convertTime(time, uot, UOT_NS)
 	}
-	return time >= 0 && time <= qtree.MaximumTime
+	return time >= 0 && time <= qtree.MaximumTime && err == nil
 }

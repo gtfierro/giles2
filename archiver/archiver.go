@@ -126,14 +126,10 @@ func (a *Archiver) startReport() {
 //  - Reevaluates any dynamic subscriptions and pushes to republish clients
 //  - Saves the attached readings (if any) to the timeseries database
 // These last 2 steps happen in parallel
-// TODO: add bounds checking on time. timeseries database should expose a method
-// to check bounds of timestamp. reject WHOLE message if this is the case.
 func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 	if a.enforceKeys && !a.pm.ValidEphemeralKey(ephkey) {
 		return fmt.Errorf("Ephemeral key %v is not valid", ephkey)
 	}
-
-	// TODO: check valid timestamps here
 
 	// save metadata
 	err = a.mdStore.SaveTags(msg)

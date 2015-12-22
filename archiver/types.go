@@ -3,12 +3,15 @@ package archiver
 import (
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/satori/go.uuid"
 	"gopkg.in/mgo.v2/bson"
 	"strconv"
 	"strings"
 )
+
+var TimeConvertErr = errors.New("Over/underflow error in converting time")
 
 // internal unique identifier
 type UUID string
@@ -89,15 +92,23 @@ var unitmultiplier = map[UnitOfTime]uint64{
 
 // Takes a timestamp with accompanying unit of time 'stream_uot' and
 // converts it to the unit of time 'target_uot'
-func convertTime(time uint64, stream_uot, target_uot UnitOfTime) uint64 {
+func convertTime(time uint64, stream_uot, target_uot UnitOfTime) (uint64, error) {
+	var returnTime uint64
 	if stream_uot == target_uot {
-		return time
+		return time, nil
 	}
 	if target_uot < stream_uot { // target/stream is > 1, so we can use uint64
-		return time * (unitmultiplier[target_uot] / unitmultiplier[stream_uot])
+		returnTime = time * (unitmultiplier[target_uot] / unitmultiplier[stream_uot])
+		if returnTime < time {
+			return time, TimeConvertErr
+		}
 	} else {
-		return time / uint64(unitmultiplier[stream_uot]/unitmultiplier[target_uot])
+		returnTime = time / uint64(unitmultiplier[stream_uot]/unitmultiplier[target_uot])
+		if returnTime > time {
+			return time, TimeConvertErr
+		}
 	}
+	return returnTime, nil
 }
 
 func (u UnitOfTime) String() string {

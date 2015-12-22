@@ -17,9 +17,19 @@ func parseAbsTime(num, units string) (time.Time, error) {
 	if err != nil {
 		return d, err
 	}
-	unixseconds := convertTime(i, uot, UOT_S)
-	leftover := i - convertTime(unixseconds, UOT_S, uot)
-	unixns := convertTime(leftover, uot, UOT_NS)
+	unixseconds, err := convertTime(i, uot, UOT_S)
+	if err != nil {
+		return d, err
+	}
+	tmp, err := convertTime(unixseconds, UOT_S, uot)
+	if err != nil {
+		return d, err
+	}
+	leftover := i - tmp
+	unixns, err := convertTime(leftover, uot, UOT_NS)
+	if err != nil {
+		return d, err
+	}
 	d = time.Unix(int64(unixseconds), int64(unixns))
 	return d, err
 }

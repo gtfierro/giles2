@@ -9,7 +9,7 @@ import (
 // interface for sMAP readings
 type Reading interface {
 	GetTime() uint64
-	ConvertTime(from, to UnitOfTime)
+	ConvertTime(from, to UnitOfTime) error
 	GetValue() interface{}
 	IsObject() bool
 }
@@ -40,8 +40,9 @@ func (s *SmapNumberReading) GetTime() uint64 {
 	return s.Time
 }
 
-func (s *SmapNumberReading) ConvertTime(from_uot, to_uot UnitOfTime) {
-	s.Time = convertTime(s.Time, from_uot, to_uot)
+func (s *SmapNumberReading) ConvertTime(from_uot, to_uot UnitOfTime) (err error) {
+	s.Time, err = convertTime(s.Time, from_uot, to_uot)
+	return
 }
 
 func (s *SmapNumberReading) IsObject() bool {
@@ -69,8 +70,9 @@ func (s *SmapObjectReading) GetTime() uint64 {
 	return s.Time
 }
 
-func (s *SmapObjectReading) ConvertTime(from_uot, to_uot UnitOfTime) {
-	s.Time = convertTime(s.Time, from_uot, to_uot)
+func (s *SmapObjectReading) ConvertTime(from_uot, to_uot UnitOfTime) (err error) {
+	s.Time, err = convertTime(s.Time, from_uot, to_uot)
+	return
 }
 
 func (s *SmapObjectReading) IsObject() bool {

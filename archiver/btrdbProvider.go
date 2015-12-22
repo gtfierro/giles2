@@ -266,8 +266,9 @@ func (b *btrdbDB) GetData(uuids []UUID, start, end uint64) ([]SmapNumbersRespons
 }
 
 func (b *btrdbDB) ValidTimestamp(time uint64, uot UnitOfTime) bool {
+	var err error
 	if uot != UOT_NS {
-		time = convertTime(time, uot, UOT_NS)
+		time, err = convertTime(time, uot, UOT_NS)
 	}
-	return time >= 0 && time <= qtree.MaximumTime
+	return time >= 0 && time <= qtree.MaximumTime && err == nil
 }

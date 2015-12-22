@@ -1,6 +1,7 @@
 package archiver
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -135,11 +136,11 @@ func newTransactionCoalescer(tsdb *TimeseriesStore, store *MetadataStore) *trans
 // an array of Readings and the UUID for the stream the readings belong to. The Readings must be added to
 // a StreamBuffer for coalescing. This StreamBuffer is either a) pre-existing and still open, b) pre-existing and committing or
 // c) not existing. In the
-func (txc *transactionCoalescer) AddSmapMessage(sm *SmapMessage) {
+func (txc *transactionCoalescer) AddSmapMessage(sm *SmapMessage) error {
 	var sb *streamBuffer
 
 	if sm.Readings == nil || len(sm.Readings) == 0 {
-		return
+		return nil
 	}
 
 	// if we find the stream buffer and it is still accepting data, we write to that
@@ -147,7 +148,7 @@ func (txc *transactionCoalescer) AddSmapMessage(sm *SmapMessage) {
 	streams := txc.streams.Load().(streamMap)
 	if sb, found := streams[sm.UUID]; found && sb != nil {
 		if sb.add(sm) {
-			return
+			return nil
 		}
 	}
 
@@ -157,12 +158,15 @@ func (txc *transactionCoalescer) AddSmapMessage(sm *SmapMessage) {
 	if sb, found := streams[sm.UUID]; found && sb != nil {
 		if sb.add(sm) {
 			txc.Unlock()
-			return
+			return nil
 		}
 	}
 	uot, err := (*txc.store).GetUnitOfTime(sm.UUID)
 	if err != nil {
-		panic(err)
+		return err
+	}
+	if !(*txc.tsdb).ValidTimestamp(sm.Readings[0].GetTime(), uot) {
+		return fmt.Errorf("Bad Timestamp: %v", sm.Readings[0].GetTime())
 	}
 	sb = newStreamBuf(sm.UUID, uot, txc)
 	newStreams := make(streamMap, len(streams)+1)
@@ -173,6 +177,7 @@ func (txc *transactionCoalescer) AddSmapMessage(sm *SmapMessage) {
 	txc.streams.Store(newStreams)
 	txc.Unlock()
 	txc.AddSmapMessage(sm)
+	return nil
 }
 
 func (txc *transactionCoalescer) Commit(sb *streamBuffer) {

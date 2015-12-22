@@ -143,10 +143,10 @@ func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 
 	//TODO reevaluate subscriptions, push to clients
 	//save timeseries data
-	a.txc.AddSmapMessage(msg)
+	err = a.txc.AddSmapMessage(msg)
 	a.metrics["adds"].Mark(1)
 	//a.tsStore.AddMessage(msg)
-	return nil
+	return err
 }
 
 // Need to think about how to transfer the results of these queries to the handlers that are

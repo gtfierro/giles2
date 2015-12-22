@@ -158,7 +158,8 @@ func (sm *SmapMessage) UnmarshalJSON(b []byte) (err error) {
 
 	// convert the readings depending if they are numeric or object
 	sm.Readings = make([]Reading, len(incoming.Readings))
-	for idx, reading := range incoming.Readings {
+	idx := 0
+	for _, reading := range incoming.Readings {
 		if len(reading) == 0 {
 			continue
 		}
@@ -177,7 +178,9 @@ func (sm *SmapMessage) UnmarshalJSON(b []byte) (err error) {
 		} else {
 			sm.Readings[idx] = &SmapNumberReading{time, value_num}
 		}
+		idx += 1
 	}
+	sm.Readings = sm.Readings[:idx]
 	return
 }
 

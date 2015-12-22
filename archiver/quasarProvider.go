@@ -3,6 +3,7 @@ package archiver
 import (
 	"bytes"
 	"fmt"
+	qtree "github.com/SoftwareDefinedBuildings/btrdb/qtree"
 	capn "github.com/glycerine/go-capnproto"
 	qsr "github.com/gtfierro/giles2/archiver/quasarcapnp"
 	"github.com/satori/go.uuid"
@@ -237,4 +238,11 @@ func (q *quasarDB) receive(conn *tsConn) (SmapNumbersResponse, error) {
 	}
 	return sr, nil
 
+}
+
+func (q *quasarDB) ValidTimestamp(time uint64, uot UnitOfTime) bool {
+	if uot != UOT_NS {
+		time = convertTime(time, uot, UOT_NS)
+	}
+	return time >= 0 && time <= qtree.MaximumTime
 }

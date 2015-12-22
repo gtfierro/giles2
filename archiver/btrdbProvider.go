@@ -2,6 +2,7 @@ package archiver
 
 import (
 	"fmt"
+	qtree "github.com/SoftwareDefinedBuildings/btrdb/qtree"
 	capn "github.com/glycerine/go-capnproto"
 	btrdb "github.com/gtfierro/giles2/archiver/btrdbcapnp"
 	"github.com/satori/go.uuid"
@@ -262,4 +263,11 @@ func (b *btrdbDB) GetData(uuids []UUID, start, end uint64) ([]SmapNumbersRespons
 		ret[i] = sr
 	}
 	return ret, nil
+}
+
+func (b *btrdbDB) ValidTimestamp(time uint64, uot UnitOfTime) bool {
+	if uot != UOT_NS {
+		time = convertTime(time, uot, UOT_NS)
+	}
+	return time >= 0 && time <= qtree.MaximumTime
 }

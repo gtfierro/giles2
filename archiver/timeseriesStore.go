@@ -18,4 +18,7 @@ type TimeseriesStore interface {
 
 	// uuids, start time, end time (both in nanoseconds)
 	GetData([]UUID, uint64, uint64) ([]SmapNumbersResponse, error)
+
+	// returns true if the timestamp can be represented in the database
+	ValidTimestamp(uint64, UnitOfTime) bool
 }

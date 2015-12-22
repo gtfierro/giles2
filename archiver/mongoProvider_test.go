@@ -268,15 +268,12 @@ func TestGetDistinct(t *testing.T) {
 	for _, test := range []struct {
 		tag    string
 		where  bson.M
-		result SmapMessageList
+		result []string
 	}{
 		{
 			"Metadata.Tag",
 			bson.M{"Metadata.Shared": commonUUID},
-			SmapMessageList{
-				&SmapMessage{Metadata: Dict{"Tag": "Value1"}},
-				&SmapMessage{Metadata: Dict{"Tag": "Value2"}},
-			},
+			[]string{"Value1", "Value2"},
 		},
 	} {
 		res, err := ms.GetDistinct(test.tag, test.where)

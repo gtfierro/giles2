@@ -31,7 +31,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 )
 
 // logger
@@ -48,12 +47,22 @@ func init() {
 }
 
 type HTTPHandler struct {
-	a *archiver.Archiver
+	a       *archiver.Archiver
+	handler http.Handler
+}
+
+func NewHTTPHandler(a *archiver.Archiver) *HTTPHandler {
+	r := httprouter.New()
+	h := &HTTPHandler{a, r}
+	r.POST("/add/:key", h.handleAdd)
+	r.POST("/api/query/:key", h.handleSingleQuery)
+	r.POST("/api/query", h.handleSingleQuery)
+	return h
 }
 
 func Handle(a *archiver.Archiver, port int) {
 	r := httprouter.New()
-	h := &HTTPHandler{a}
+	h := &HTTPHandler{a, r}
 	r.POST("/add/:key", h.handleAdd)
 	r.POST("/api/query/:key", h.handleSingleQuery)
 	r.POST("/api/query", h.handleSingleQuery)
@@ -75,30 +84,28 @@ func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps ht
 		ephkey   archiver.EphemeralKey
 		messages archiver.TieredSmapMessage
 		err      error
-		msgSync  sync.WaitGroup
 	)
 	copy(ephkey[:], ps.ByName("key"))
 
 	if messages, err = handleJSON(req.Body); err != nil {
 		log.Error("Error handling JSON: %v", err)
-		rw.WriteHeader(500)
+		rw.WriteHeader(400)
 		rw.Write([]byte(err.Error()))
 		req.Body.Close()
 		return
 	}
 
 	messages.CollapseToTimeseries()
-	msgSync.Add(len(messages))
+	// TODO: fail whole message if anything here fails
 	for _, msg := range messages {
-		go func(msg *archiver.SmapMessage) {
-			if addErr := h.a.AddData(msg, ephkey); addErr != nil {
-				err = addErr
-			}
-			msgSync.Done()
-		}(msg)
+		if addErr := h.a.AddData(msg, ephkey); addErr != nil {
+			rw.WriteHeader(500)
+			rw.Write([]byte(addErr.Error()))
+			req.Body.Close()
+			return
+		}
 	}
 
-	msgSync.Wait()
 	rw.WriteHeader(200)
 }
 

@@ -211,7 +211,7 @@ func (a *Archiver) handleSelect(parsed *parsedQuery, ephkey EphemeralKey) (Query
 
 func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMessageList, error) {
 	var (
-		result   SmapMessageList
+		result   = SmapMessageList{}
 		readings []SmapNumbersResponse
 	)
 

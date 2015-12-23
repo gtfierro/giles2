@@ -1,6 +1,7 @@
 package archiver
 
 import (
+	"errors"
 	"fmt"
 	qtree "github.com/SoftwareDefinedBuildings/btrdb/qtree"
 	capn "github.com/glycerine/go-capnproto"
@@ -9,6 +10,8 @@ import (
 	"net"
 	"sync"
 )
+
+var BtrDBReadErr = errors.New("Error receiving data from BtrDB")
 
 type btrdbDB struct {
 	addr           *net.TCPAddr
@@ -84,7 +87,7 @@ func (b *btrdbDB) receiveData(conn *tsConn) (SmapNumbersResponse, error) {
 		if err != nil {
 			conn.Close()
 			log.Error("Error receiving data from BtrDB %v", err)
-			return sr, err
+			return sr, BtrDBReadErr
 		}
 		resp := btrdb.ReadRootResponse(seg)
 		switch resp.Which() {
@@ -111,7 +114,7 @@ func (b *btrdbDB) receiveStatus(conn *tsConn) error {
 	if err != nil {
 		conn.Close()
 		log.Error("Error receiving data from BtrDB %v", err)
-		return err
+		return BtrDBReadErr
 	}
 	resp := btrdb.ReadRootResponse(seg)
 
@@ -160,12 +163,9 @@ func (b *btrdbDB) AddMessage(msg *SmapMessage) error {
 	pkt.req.SetInsertValues(*pkt.ins)
 
 	// write to the database
-	pkt.seg.WriteTo(conn)
+	err = b.reliableWriteStatus(&pkt)
 	b.packetpool.Put(pkt)
-	if err = b.receiveStatus(conn); err != nil {
-		return fmt.Errorf("Error writing to btrdb %v", err)
-	}
-	return nil
+	return err
 }
 
 func (b *btrdbDB) AddBuffer(buf *streamBuffer) error {
@@ -176,8 +176,6 @@ func (b *btrdbDB) AddBuffer(buf *streamBuffer) error {
 	if len(buf.readings) == 0 {
 		return nil
 	}
-	conn := b.connpool.Get()
-	defer b.connpool.Put(conn)
 	if parsed_uuid, err = uuid.FromString(string(buf.uuid)); err != nil {
 		return err
 	}
@@ -195,12 +193,10 @@ func (b *btrdbDB) AddBuffer(buf *streamBuffer) error {
 	}
 	pkt.ins.SetValues(rl)
 	pkt.req.SetInsertValues(*pkt.ins)
-	pkt.seg.WriteTo(conn)
-	if err = b.receiveStatus(conn); err != nil {
-		return fmt.Errorf("Error writing to btrdb %v", err)
-	}
+	// write to the database
+	err = b.reliableWriteStatus(&pkt)
 	b.packetpool.Put(pkt)
-	return nil
+	return err
 }
 
 func (b *btrdbDB) queryNearestValue(uuids []UUID, start uint64, backwards bool) ([]SmapNumbersResponse, error) {
@@ -240,8 +236,6 @@ func (b *btrdbDB) Next(uuids []UUID, start uint64) ([]SmapNumbersResponse, error
 
 func (b *btrdbDB) GetData(uuids []UUID, start, end uint64) ([]SmapNumbersResponse, error) {
 	var ret = make([]SmapNumbersResponse, len(uuids))
-	conn := b.connpool.Get()
-	defer b.connpool.Put(conn)
 	for i, uu := range uuids {
 		seg := capn.NewBuffer(nil)
 		req := btrdb.NewRootRequest(seg)
@@ -251,11 +245,7 @@ func (b *btrdbDB) GetData(uuids []UUID, start, end uint64) ([]SmapNumbersRespons
 		query.SetStartTime(int64(start))
 		query.SetEndTime(int64(end))
 		req.SetQueryStandardValues(query)
-		_, err := seg.WriteTo(conn) // here, ignoring # bytes written
-		if err != nil {
-			return ret, err
-		}
-		sr, err := b.receiveData(conn)
+		sr, err := b.reliableWriteData(seg)
 		if err != nil {
 			return ret, err
 		}
@@ -271,4 +261,51 @@ func (b *btrdbDB) ValidTimestamp(time uint64, uot UnitOfTime) bool {
 		time, err = convertTime(time, uot, UOT_NS)
 	}
 	return time >= 0 && time <= qtree.MaximumTime && err == nil
+}
+
+func (b *btrdbDB) reliableWriteStatus(pkt *btrdbReading) error {
+	var (
+		conn *tsConn
+		err  error
+	)
+	for {
+		conn = b.connpool.Get()
+		if !conn.IsClosed() {
+			pkt.seg.WriteTo(conn)
+			if err = b.receiveStatus(conn); err == BtrDBReadErr {
+				b.connpool.Put(conn)
+				//fmt.Errorf("Error writing to btrdb %v", err)
+				continue
+			} else if err != nil { // if not read error
+				return err
+			}
+		}
+		break
+	}
+	b.connpool.Put(conn)
+	return nil
+}
+
+func (b *btrdbDB) reliableWriteData(seg *capn.Segment) (SmapNumbersResponse, error) {
+	var (
+		sr   SmapNumbersResponse
+		conn *tsConn
+		err  error
+	)
+	for {
+		conn = b.connpool.Get()
+		if !conn.IsClosed() {
+			seg.WriteTo(conn)
+			if sr, err = b.receiveData(conn); err == BtrDBReadErr {
+				b.connpool.Put(conn)
+				//fmt.Errorf("Error writing to btrdb %v", err)
+				continue
+			} else if err != nil { // if not read error
+				return sr, err
+			}
+		}
+		break
+	}
+	b.connpool.Put(conn)
+	return sr, nil
 }

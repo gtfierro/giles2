@@ -63,6 +63,9 @@ func (pool *connectionPool) Get() *tsConn {
 	var c *tsConn
 	select {
 	case c = <-pool.pool:
+		if c.IsClosed() {
+			return pool.Get()
+		}
 	default:
 		if atomic.LoadInt64(&pool.count) < pool.max {
 			c = pool.newConn()

@@ -106,7 +106,9 @@ func NewArchiver(c *Config) (a *Archiver) {
 	a.metrics = make(metricMap)
 	a.metrics.addMetric("adds")
 
-	a.startReport()
+	if c.Archiver.PeriodicReport {
+		a.startReport()
+	}
 	return
 }
 

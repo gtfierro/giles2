@@ -96,7 +96,6 @@ func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps ht
 	}
 
 	messages.CollapseToTimeseries()
-	// TODO: fail whole message if anything here fails
 	for _, msg := range messages {
 		if addErr := h.a.AddData(msg, ephkey); addErr != nil {
 			rw.WriteHeader(500)

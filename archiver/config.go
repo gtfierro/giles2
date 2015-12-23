@@ -14,6 +14,7 @@ type Config struct {
 		EnforceKeys     bool
 		LogLevel        *string
 		MaxConnections  *int
+		PeriodicReport  bool
 	}
 
 	ReadingDB struct {

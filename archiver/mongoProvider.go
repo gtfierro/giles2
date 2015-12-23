@@ -274,8 +274,12 @@ func (m *mongoStore) SaveTags(msg *SmapMessage) error {
 	_, err := m.metadata.Upsert(bson.M{"uuid": msg.UUID}, bson.M{"$set": msg.ToBson()})
 	// and save to the uuid cache
 	m.uuidCache.Set(string(msg.UUID), struct{}{}, m.cacheExpiry)
-	m.uotCache.Delete(string(msg.UUID))
-	m.uomCache.Delete(string(msg.UUID))
+	if msg.Properties != nil && msg.Properties.UnitOfTime != 0 {
+		m.uotCache.Delete(string(msg.UUID))
+	}
+	if msg.Properties != nil && msg.Properties.UnitOfMeasure != "" {
+		m.uomCache.Delete(string(msg.UUID))
+	}
 	return err
 }
 

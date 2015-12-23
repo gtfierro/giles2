@@ -274,7 +274,8 @@ func (m *mongoStore) SaveTags(msg *SmapMessage) error {
 	_, err := m.metadata.Upsert(bson.M{"uuid": msg.UUID}, bson.M{"$set": msg.ToBson()})
 	// and save to the uuid cache
 	m.uuidCache.Set(string(msg.UUID), struct{}{}, m.cacheExpiry)
-	//TODO: invalidate special properties keys in the cache or reset them to latest value
+	m.uotCache.Delete(string(msg.UUID))
+	m.uomCache.Delete(string(msg.UUID))
 	return err
 }
 

@@ -132,10 +132,6 @@ func (b *btrdbDB) AddMessage(msg *SmapMessage) error {
 		err         error
 	)
 
-	// fetch the connection we're going to use
-	conn := b.connpool.Get()
-	defer b.connpool.Put(conn)
-
 	// turn the string representation into UUID bytes
 	if parsed_uuid, err = uuid.FromString(string(msg.UUID)); err != nil {
 		return err
@@ -273,10 +269,12 @@ func (b *btrdbDB) reliableWriteStatus(pkt *btrdbReading) error {
 		if !conn.IsClosed() {
 			pkt.seg.WriteTo(conn)
 			if err = b.receiveStatus(conn); err == BtrDBReadErr {
+				conn.Close()
 				b.connpool.Put(conn)
 				//fmt.Errorf("Error writing to btrdb %v", err)
 				continue
 			} else if err != nil { // if not read error
+				b.connpool.Put(conn)
 				return err
 			}
 		}
@@ -297,10 +295,12 @@ func (b *btrdbDB) reliableWriteData(seg *capn.Segment) (SmapNumbersResponse, err
 		if !conn.IsClosed() {
 			seg.WriteTo(conn)
 			if sr, err = b.receiveData(conn); err == BtrDBReadErr {
+				conn.Close()
 				b.connpool.Put(conn)
 				//fmt.Errorf("Error writing to btrdb %v", err)
 				continue
 			} else if err != nil { // if not read error
+				b.connpool.Put(conn)
 				return sr, err
 			}
 		}

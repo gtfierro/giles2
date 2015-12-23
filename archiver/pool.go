@@ -40,13 +40,14 @@ func (c *tsConn) IsClosed() bool {
 type connectionPool struct {
 	pool chan *tsConn
 	// connectionPool will call this function when it needs a new connection
-	newConn func() *tsConn
-	count   int64
-	max     int64
+	newConn   func() *tsConn
+	count     int64
+	max       int64
+	waitTimer *ExponentialTimer
 }
 
 func NewConnectionPool(newConn func() *tsConn, maxConnections int) (*connectionPool, error) {
-	pool := &connectionPool{newConn: newConn, pool: make(chan *tsConn, maxConnections), count: 0, max: int64(maxConnections)}
+	pool := &connectionPool{newConn: newConn, pool: make(chan *tsConn, maxConnections), count: 0, max: int64(maxConnections), waitTimer: NewExponentialTimer(600)}
 	for i := 0; i < maxConnections/2; i++ { // initialize half of the connections
 		conn := newConn()
 		if conn != nil {
@@ -68,9 +69,15 @@ func (pool *connectionPool) Get() *tsConn {
 		}
 	default:
 		if atomic.LoadInt64(&pool.count) < pool.max {
-			c = pool.newConn()
+			for {
+				c = pool.newConn()
+				if c != nil {
+					break
+				}
+				pool.waitTimer.Wait(true)
+			}
 			atomic.AddInt64(&pool.count, 1)
-			log.Info("Creating new connection in pool %v, %v", &c.conn, pool.count)
+			log.Info("Creating new connection in pool %v", c.conn, pool.count)
 		}
 	}
 	return c

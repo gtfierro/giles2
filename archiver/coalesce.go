@@ -163,9 +163,11 @@ func (txc *transactionCoalescer) AddSmapMessage(sm *SmapMessage) error {
 	}
 	uot, err := (*txc.store).GetUnitOfTime(sm.UUID)
 	if err != nil {
+		txc.Unlock()
 		return err
 	}
 	if !(*txc.tsdb).ValidTimestamp(sm.Readings[0].GetTime(), uot) {
+		txc.Unlock()
 		return fmt.Errorf("Bad Timestamp: %v", sm.Readings[0].GetTime())
 	}
 	sb = newStreamBuf(sm.UUID, uot, txc)

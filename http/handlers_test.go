@@ -69,6 +69,24 @@ func TestHandleAdd(t *testing.T) {
 			400,
 			"unexpected EOF",
 		},
+		{
+			"Bad Readings 1: negative timestamp",
+			fmt.Sprintf(`{"/sensor/0": {"Path": "/sensor/0", "uuid": "%v", "Readings": [[-1, 0]]}}`, uuid),
+			400,
+			"json: cannot unmarshal number -1 into Go value of type uint64",
+		},
+		{
+			"Bad Readings 2: too big timestamp",
+			fmt.Sprintf(`{"/sensor/0": {"Path": "/sensor/0", "uuid": "%v", "Readings": [[1000000000000000000, 0]]}}`, uuid),
+			500,
+			"Bad Timestamp: 1000000000000000000",
+		},
+		{
+			"Bad Readings 3: too big timestamp",
+			fmt.Sprintf(`{"/sensor/0": {"Path": "/sensor/0", "uuid": "%v", "Readings": [[3458764513820540929, 0]]}}`, uuid),
+			500,
+			"Bad Timestamp: 3458764513820540929",
+		},
 	} {
 
 		testflight.WithServer(h.handler, func(r *testflight.Requester) {

@@ -10,11 +10,11 @@ Client:1:
             {
                 "/notstream": {
                     "Metadata": {
-                        "Tag1": "ABC",
-                        "Tag2": "DEF"
+                        "Tag1": "$UUID(2)",
+                        "Tag2": "$UUID(3)"
                     },
-                    "uuid": "94078c7e-f9d3-11e4-bcda-0cc47a0f7eea",
-                    "Readings": [[$TIME_MS(1), 0]]
+                    "uuid": "$UUID(1)",
+                    "Readings": [[$TIME_S(1), 0]]
                 }
             }
     Output:
@@ -27,12 +27,12 @@ Client:2:
         Method: POST
         URI: http://localhost:8079/api/query
         Format: string
-        Data: "select uuid where Metadata/Tag1 = 'ABC' and not Metadata/Tag2 = 'ABC'"
+        Data: "select uuid where Metadata/Tag1 = '$UUID(2)' and not Metadata/Tag2 = '$UUID(2)'"
     Output:
         Code: 200
         Format: JSON
         Contents: >
-            [{"uuid":  "94078c7e-f9d3-11e4-bcda-0cc47a0f7eea"}]
+            [{"uuid":  "$UUID(1)"}]
 
 Client:3:
     Interface: HTTP
@@ -40,9 +40,9 @@ Client:3:
         Method: POST
         URI: http://localhost:8079/api/query
         Format: string
-        Data: "select uuid where (not Metadata/Tag2 = 'ABC') and Metadata/Tag1 = 'ABC'"
+        Data: "select uuid where (not Metadata/Tag2 = '$UUID(2)') and Metadata/Tag1 = '$UUID(2)'"
     Output:
         Code: 200
         Format: JSON
         Contents: >
-            [{"uuid":  "94078c7e-f9d3-11e4-bcda-0cc47a0f7eea"}]
+            [{"uuid":  "$UUID(1)"}]

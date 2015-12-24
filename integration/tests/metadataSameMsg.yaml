@@ -13,7 +13,7 @@ Client:1:
                         "sensors"
                     ],
                     "Metadata": {
-                        "XYZ": 123
+                        "XYZ": "123"
                     }
                 },
                 "/root/sensors": {
@@ -31,7 +31,7 @@ Client:1:
                             1
                         ]
                     ],
-                    "uuid": "44e79444-f902-11e4-bcda-0cc47a0f7eea"
+                    "uuid": "$UUID(1)"
                 }
             }
     Output:
@@ -45,14 +45,14 @@ Client:2:
         Method: POST
         URI: http://localhost:8079/api/query
         Format: string
-        Data: select * where uuid = "44e79444-f902-11e4-bcda-0cc47a0f7eea"
+        Data: select * where uuid = "$UUID(1)"
     Output:
         Code: 200
         Format: JSON
         Contents: >
             [{
-             "uuid": "44e79444-f902-11e4-bcda-0cc47a0f7eea",
+             "uuid": "$UUID(1)",
              "Path": "/root/sensors/0",
-             "Metadata": {"XYZ": 123},
+             "Metadata": {"XYZ": "123"},
              "Properties": {"UnitofTime": "ms", "StreamType": "numeric"}
              }]

@@ -34,7 +34,8 @@ type Republisher struct {
 	queriesLock sync.RWMutex
 
 	// query -> list of clients
-	queryConcern map[queryHash][](*Subscriber)
+	queryConcern    map[queryHash][](*Subscriber)
+	subscribersLock sync.RWMutex
 
 	// key -> list of queries
 	keyConcern     map[string][]queryHash
@@ -78,6 +79,15 @@ func (r *Republisher) handleSubscriber(subscriber *Subscriber) {
 		return // abort!
 	}
 
+	r.subscribersLock.Lock()
+	if subscribers, found := r.queryConcern[q.hash]; found {
+		subscribers = append(subscribers, subscriber)
+		r.queryConcern[q.hash] = subscribers
+	} else {
+		r.queryConcern[q.hash] = [](*Subscriber){subscriber}
+	}
+	r.subscribersLock.Unlock()
+
 	for _, uuid := range initialUUIDs {
 		q.matchedUUIDs[uuid] = OLD
 	}
@@ -116,4 +126,17 @@ func (r *Republisher) handleSubscriber(subscriber *Subscriber) {
 	log.Debug("waiting...")
 	<-subscriber.closed
 	log.Debug("CLOSED!")
+}
+
+func (r *Republisher) Republish(msg *SmapMessage) {
+	if queries, found := r.uuidConcern[msg.UUID]; found {
+		log.Debug("found %v", queries)
+		for _, hash := range queries {
+			log.Debug("hash %v", hash)
+			for _, client := range r.queryConcern[hash] {
+				log.Debug("push to client %v", msg)
+				client.QueueToSend(msg)
+			}
+		}
+	}
 }

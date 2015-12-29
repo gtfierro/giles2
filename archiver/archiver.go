@@ -148,6 +148,7 @@ func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 	err = a.txc.AddSmapMessage(msg)
 	a.metrics["adds"].Mark(1)
 	//a.tsStore.AddMessage(msg)
+	a.repub.Republish(msg)
 	return err
 }
 

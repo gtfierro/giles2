@@ -32,6 +32,8 @@ type Archiver struct {
 	// transaction coalescer
 	txc *transactionCoalescer
 	qp  *queryProcessor
+	// republisher
+	repub *Republisher
 	// metrics
 	metrics metricMap
 	// enforce ephemral key checks
@@ -103,6 +105,8 @@ func NewArchiver(c *Config) (a *Archiver) {
 	a.txc = newTransactionCoalescer(&a.tsStore, &a.mdStore)
 	a.qp = &queryProcessor{a}
 
+	a.repub = NewRepublisher(a)
+
 	a.metrics = make(metricMap)
 	a.metrics.addMetric("adds")
 
@@ -152,11 +156,7 @@ func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 // JSON, MsgPack, etc). What are the data patterns we are seeing?
 // Basically everything fits into SmapMessageList
 func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (QueryResult, error) {
-	var (
-		err    error
-		result QueryResult
-	)
-
+	var result QueryResult
 	if a.enforceKeys && !a.pm.ValidEphemeralKey(ephkey) {
 		return result, fmt.Errorf("Ephemeral key %v is not valid", ephkey)
 	}
@@ -166,7 +166,12 @@ func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (QueryRe
 	if parsed.err != nil {
 		return result, fmt.Errorf("Error (%v) in query \"%v\" (error at %v)\n", parsed.err, querystring, parsed.errPos)
 	}
+	return a.evaluateQuery(parsed, ephkey)
 
+}
+
+func (a *Archiver) evaluateQuery(parsed *parsedQuery, ephkey EphemeralKey) (QueryResult, error) {
+	var result QueryResult
 	// execute the query
 	switch parsed.queryType {
 	case SELECT_TYPE:
@@ -178,13 +183,11 @@ func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (QueryRe
 	case DATA_TYPE:
 		return a.handleData(parsed, ephkey)
 	default:
-		return result, fmt.Errorf("Could not decide query type %v", querystring)
+		return result, fmt.Errorf("Could not decide query type %v", parsed.querystring)
 	}
-
-	return result, err
 }
 
-func (a *Archiver) HandleNewSubscriber(subscriber Subscriber, querystring string, ephkey EphemeralKey) error {
+func (a *Archiver) HandleNewSubscriber(subscriber *Subscriber, querystring string, ephkey EphemeralKey) error {
 	// first evaluate the query when we receive a subscriber
 	result, err := a.HandleQuery(querystring, ephkey)
 	// if there was an error during that evaluation, notify the client and return
@@ -197,6 +200,7 @@ func (a *Archiver) HandleNewSubscriber(subscriber Subscriber, querystring string
 	subscriber.query = a.qp.Parse(querystring)
 
 	// TODO: handle the actual subscription
+	a.repub.handleSubscriber(subscriber)
 
 	return nil
 }

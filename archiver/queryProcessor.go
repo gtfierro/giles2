@@ -21,7 +21,7 @@ type parsedQuery struct {
 	// a unique representation of this query used to compare two different query objects
 	hash queryHash
 	// Track state transitions for the UUIDs that match this query
-	m_uuids map[string]UUIDSTATE
+	matchedUUIDs map[UUID]UUIDSTATE
 	// reference to data query
 	//  type dataquery struct {
 	//  	dtype		dataqueryType
@@ -34,7 +34,8 @@ type parsedQuery struct {
 	// any error that arose during parsing
 	err error
 	// token where the error in parsing took place
-	errPos string
+	errPos      string
+	querystring string
 }
 
 type queryProcessor struct {
@@ -59,6 +60,10 @@ func (qp *queryProcessor) Parse(querystring string) *parsedQuery {
 		data:      l.query.data,
 		err:       l.error,
 		errPos:    l.lasttoken,
+		//TODO: have a more robust hash function
+		hash:         queryHash(querystring),
+		matchedUUIDs: make(map[UUID]UUIDSTATE),
+		querystring:  querystring,
 	}
 	i := 0
 	for key, _ := range l._keys {

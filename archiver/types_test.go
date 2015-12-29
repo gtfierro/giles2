@@ -51,7 +51,10 @@ func TestConvertTime(t *testing.T) {
 		{123456789876, UOT_NS, 123456, UOT_MS},
 		{123456789876, UOT_S, 123456789876000000, UOT_US},
 	} {
-		res := convertTime(test.time, test.inUnit, test.outUnit)
+		res, err := convertTime(test.time, test.inUnit, test.outUnit)
+		if err != nil {
+			t.Error(err)
+		}
 		if res != test.result {
 			t.Errorf("Converting %v %v to %v should be %v but was %v", test.time, test.inUnit, test.outUnit, test.result, res)
 		}

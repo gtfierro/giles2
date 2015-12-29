@@ -5,6 +5,7 @@ import (
 	"github.com/drewolson/testflight"
 	"github.com/gtfierro/giles2/archiver"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 )
 
@@ -86,6 +87,30 @@ func TestHandleAdd(t *testing.T) {
 			fmt.Sprintf(`{"/sensor/0": {"Path": "/sensor/0", "uuid": "%v", "Readings": [[3458764513820540929, 0]]}}`, uuid),
 			500,
 			"Bad Timestamp: 3458764513820540929",
+		},
+		{
+			"Good readings: 1 reading max timestamp",
+			fmt.Sprintf(`{"/sensor/0": {"Path": "/sensor/0", "uuid": "%v", "Properties": {"UnitofTime": "ns"}, "Readings": [[3458764513820540928, 0]]}}`, uuid),
+			200,
+			"",
+		},
+		{
+			"Good readings: 2 repeat readings",
+			fmt.Sprintf(`{"/sensor/0": {"Path": "/sensor/0", "uuid": "%v", "Properties": {"UnitofTime": "ns"}, "Readings": [[1000000000000000000, 0], [1000000000000000000, 0]]}}`, uuid),
+			200,
+			"",
+		},
+		{
+			"Good readings: 2 repeat readings diff values",
+			fmt.Sprintf(`{"/sensor/0": {"Path": "/sensor/0", "uuid": "%v", "Properties": {"UnitofTime": "ns"}, "Readings": [[2000000000000000000, 0], [2000000000000000000, 1]]}}`, uuid),
+			200,
+			"",
+		},
+		{
+			"Lots of readings",
+			fmt.Sprintf(`{"/sensor/0": {"Path": "/sensor/0", "uuid": "%v", "Properties": {"UnitofTime": "ns"}, "Readings": [ %v [1000000000000000000, 0]]}}`, uuid, strings.Repeat("[1000000000000000000, 0],", 1000)),
+			200,
+			"",
 		},
 	} {
 

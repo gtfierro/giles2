@@ -57,6 +57,8 @@ func NewHTTPHandler(a *archiver.Archiver) *HTTPHandler {
 	r.POST("/add/:key", h.handleAdd)
 	r.POST("/api/query/:key", h.handleSingleQuery)
 	r.POST("/api/query", h.handleSingleQuery)
+	r.POST("/republish", h.handleSubscriber)
+	r.POST("/republish/:key", h.handleSubscriber)
 	return h
 }
 
@@ -66,6 +68,8 @@ func Handle(a *archiver.Archiver, port int) {
 	r.POST("/add/:key", h.handleAdd)
 	r.POST("/api/query/:key", h.handleSingleQuery)
 	r.POST("/api/query", h.handleSingleQuery)
+	r.POST("/republish", h.handleSubscriber)
+	r.POST("/republish/:key", h.handleSubscriber)
 	address, err := net.ResolveTCPAddr("tcp4", "0.0.0.0:"+strconv.Itoa(port))
 	if err != nil {
 		log.Fatal("Error resolving address %v: %v", "0.0.0.0:"+strconv.Itoa(port), err)
@@ -138,6 +142,35 @@ func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Reques
 	if err != nil {
 		log.Error("Error converting query results to JSON: %v", err)
 	}
+}
+
+func (h *HTTPHandler) handleSubscriber(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	var (
+		ephkey archiver.EphemeralKey
+		err    error
+	)
+	copy(ephkey[:], ps.ByName("key"))
+
+	if req.ContentLength > 1024 {
+		log.Error("HUGE query string with length %v. Aborting!", req.ContentLength)
+		rw.WriteHeader(500)
+		rw.Write([]byte("Your query is too big"))
+		req.Body.Close()
+		return
+	}
+
+	querybuffer := make([]byte, req.ContentLength)
+	_, err = req.Body.Read(querybuffer)
+	if err != nil && err.Error() != "EOF" {
+		log.Error("Error reading subscription: %v", err)
+		rw.WriteHeader(500)
+		rw.Write([]byte(err.Error()))
+		return
+	}
+
+	subscription := StartHTTPSubscriber(rw)
+
+	h.a.HandleNewSubscriber(subscription, string(querybuffer), ephkey)
 }
 
 func handleJSON(r io.Reader) (decoded archiver.TieredSmapMessage, err error) {

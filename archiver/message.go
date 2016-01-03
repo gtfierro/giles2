@@ -11,7 +11,6 @@ type QueryResult interface {
 	IsResult()
 }
 
-//TODO: define custom marshal to avoid empty rows
 type SmapProperties struct {
 	UnitOfTime    UnitOfTime
 	UnitOfMeasure string
@@ -202,7 +201,6 @@ func SmapMessageFromBson(m bson.M) *SmapMessage {
 		ret.Actuator = DictFromBson(md.(bson.M))
 	}
 
-	//TODO: we need a way to assign a default unit of time
 	if md, found := m["Properties"]; found {
 		if props, ok := md.(bson.M); ok {
 			ret.Properties = &SmapProperties{}

@@ -148,6 +148,7 @@ func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 	err = a.txc.AddSmapMessage(msg)
 	a.metrics["adds"].Mark(1)
 	//a.tsStore.AddMessage(msg)
+	a.repub.TriggerChangesMessage(msg)
 	a.repub.Republish(msg)
 	return err
 }
@@ -189,21 +190,9 @@ func (a *Archiver) evaluateQuery(parsed *parsedQuery, ephkey EphemeralKey) (Quer
 }
 
 func (a *Archiver) HandleNewSubscriber(subscriber *Subscriber, querystring string, ephkey EphemeralKey) error {
-	// first evaluate the query when we receive a subscriber
-	result, err := a.HandleQuery(querystring, ephkey)
-	// if there was an error during that evaluation, notify the client and return
-	if err != nil {
-		subscriber.SendError(err)
-		return err
-	}
-	// make sure the client gets the first result
-	subscriber.BlockSend(result)
 	subscriber.query = a.qp.Parse(querystring)
-
 	// TODO: handle the actual subscription
-	a.repub.handleSubscriber(subscriber)
-
-	return nil
+	return a.repub.handleSubscriber(subscriber)
 }
 
 func (a *Archiver) handleSelect(parsed *parsedQuery, ephkey EphemeralKey) (QueryResult, error) {

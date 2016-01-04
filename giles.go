@@ -5,6 +5,7 @@ import (
 	"github.com/gtfierro/giles2/archiver"
 	"github.com/gtfierro/giles2/http"
 	"github.com/gtfierro/giles2/msgpack"
+	"github.com/gtfierro/giles2/websocket"
 	"github.com/op/go-logging"
 	"os"
 	"runtime"
@@ -54,6 +55,10 @@ func main() {
 
 	if config.HTTP.Enabled {
 		go http.Handle(a, *config.HTTP.Port)
+	}
+
+	if config.WebSocket.Enabled {
+		go websocket.Handle(a, *config.WebSocket.Port)
 	}
 
 	if config.MsgPackUDP.Enabled {

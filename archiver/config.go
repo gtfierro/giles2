@@ -48,6 +48,11 @@ type Config struct {
 		Port    *int
 	}
 
+	WebSocket struct {
+		Enabled bool
+		Port    *int
+	}
+
 	MsgPackUDP struct {
 		Enabled bool
 		Port    *int

@@ -56,7 +56,7 @@ Client:2:
             [{
              "uuid": "$UUID(1)",
              "Path": "/root/sensors/0",
-             "Metadata": {"tag1/base/first": 123,
-                          "tag1/base/second/name": 456},
-             "Properties": {"UnitofTime": "ms"}
+             "Metadata": {"tag1/base/first": "123",
+                          "tag1/base/second/name": "456"},
+             "Properties": {"UnitofTime": "ms", "StreamType": "numeric"}
              }]

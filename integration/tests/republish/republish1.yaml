@@ -11,7 +11,7 @@ Client:1:
     Output:
         1:
             Code: 200
-            Contents: '{"/sensor0": {"uuid": "$UUID(2)", "Readings": [[$TIME_MS(1), 0]]}}'
+            Contents: '[]'
             Format: JSON
 
 Client:2:

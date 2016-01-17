@@ -48,7 +48,7 @@ func StartHTTPSubscriber(rw http.ResponseWriter) *giles.Subscriber {
 	writer := json.NewEncoder(rw)
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	go func() {
+	go func(hs *HTTPSubscriber, writer *json.Encoder) {
 		for val := range hs.subscription.C {
 			hs.Lock()
 			if hs.closed {
@@ -66,7 +66,7 @@ func StartHTTPSubscriber(rw http.ResponseWriter) *giles.Subscriber {
 			}
 			hs.Unlock()
 		}
-	}()
+	}(hs, writer)
 
 	return hs.subscription
 }

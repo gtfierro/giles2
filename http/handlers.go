@@ -195,7 +195,7 @@ func (h *HTTPHandler) handleRepublisher(rw http.ResponseWriter, req *http.Reques
 
 	subscription := StartHTTPSubscriber(rw)
 
-	h.a.HandleNewSubscriber(subscription, "select * where"+string(querybuffer), ephkey)
+	h.a.HandleNewSubscriber(subscription, "select * where "+string(querybuffer), ephkey)
 }
 
 func handleJSON(r io.Reader) (decoded archiver.TieredSmapMessage, err error) {

@@ -113,6 +113,9 @@ func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Reques
 		ephkey archiver.EphemeralKey
 		err    error
 	)
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+
 	copy(ephkey[:], ps.ByName("key"))
 
 	if req.ContentLength > 1024 {
@@ -145,6 +148,8 @@ func (h *HTTPHandler) handleSubscriber(rw http.ResponseWriter, req *http.Request
 		ephkey archiver.EphemeralKey
 		err    error
 	)
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 	copy(ephkey[:], ps.ByName("key"))
 
 	if req.ContentLength > 1024 {
@@ -174,6 +179,8 @@ func (h *HTTPHandler) handleRepublisher(rw http.ResponseWriter, req *http.Reques
 		ephkey archiver.EphemeralKey
 		err    error
 	)
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 	copy(ephkey[:], ps.ByName("key"))
 
 	if req.ContentLength > 1024 {

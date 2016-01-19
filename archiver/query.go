@@ -1102,43 +1102,43 @@ SQdefault:
 		SQDollar = SQS[SQpt-3 : SQpt+1]
 		//line query.y:328
 		{
-			SQVAL.dict = qDict{SQDollar[1].str: qDict{"$regex": SQDollar[3].str}}
+			SQVAL.dict = qDict{fixMongoKey(SQDollar[1].str): qDict{"$regex": SQDollar[3].str}}
 		}
 	case 44:
 		SQDollar = SQS[SQpt-3 : SQpt+1]
 		//line query.y:332
 		{
-			SQVAL.dict = qDict{SQDollar[1].str: SQDollar[3].str}
+			SQVAL.dict = qDict{fixMongoKey(SQDollar[1].str): SQDollar[3].str}
 		}
 	case 45:
 		SQDollar = SQS[SQpt-3 : SQpt+1]
 		//line query.y:336
 		{
-			SQVAL.dict = qDict{SQDollar[1].str: SQDollar[3].str}
+			SQVAL.dict = qDict{fixMongoKey(SQDollar[1].str): SQDollar[3].str}
 		}
 	case 46:
 		SQDollar = SQS[SQpt-3 : SQpt+1]
 		//line query.y:340
 		{
-			SQVAL.dict = qDict{SQDollar[1].str: qDict{"$neq": SQDollar[3].str}}
+			SQVAL.dict = qDict{fixMongoKey(SQDollar[1].str): qDict{"$neq": SQDollar[3].str}}
 		}
 	case 47:
 		SQDollar = SQS[SQpt-2 : SQpt+1]
 		//line query.y:344
 		{
-			SQVAL.dict = qDict{SQDollar[2].str: qDict{"$exists": true}}
+			SQVAL.dict = qDict{fixMongoKey(SQDollar[2].str): qDict{"$exists": true}}
 		}
 	case 48:
 		SQDollar = SQS[SQpt-3 : SQpt+1]
 		//line query.y:348
 		{
-			SQVAL.dict = qDict{SQDollar[3].str: qDict{"$in": SQDollar[1].list}}
+			SQVAL.dict = qDict{fixMongoKey(SQDollar[3].str): qDict{"$in": SQDollar[1].list}}
 		}
 	case 49:
 		SQDollar = SQS[SQpt-4 : SQpt+1]
 		//line query.y:352
 		{
-			SQVAL.dict = qDict{SQDollar[3].str: qDict{"$not": qDict{"$in": SQDollar[1].list}}}
+			SQVAL.dict = qDict{fixMongoKey(SQDollar[3].str): qDict{"$not": qDict{"$in": SQDollar[1].list}}}
 		}
 	case 50:
 		SQDollar = SQS[SQpt-1 : SQpt+1]

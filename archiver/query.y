@@ -326,31 +326,31 @@ whereClause : WHERE whereList
 
 whereTerm : lvalue LIKE qstring
 			{
-				$$ = qDict{$1: qDict{"$regex": $3}}
+				$$ = qDict{fixMongoKey($1): qDict{"$regex": $3}}
 			}
 		  | lvalue EQ qstring
 			{
-				$$ = qDict{$1: $3}
+				$$ = qDict{fixMongoKey($1): $3}
 			}
           | lvalue EQ NUMBER
             {
-				$$ = qDict{$1: $3}
+				$$ = qDict{fixMongoKey($1): $3}
             }
 		  | lvalue NEQ qstring
 			{
-				$$ = qDict{$1: qDict{"$neq": $3}}
+				$$ = qDict{fixMongoKey($1): qDict{"$neq": $3}}
 			}
 		  | HAS lvalue
 			{
-				$$ = qDict{$2: qDict{"$exists": true}}
+				$$ = qDict{fixMongoKey($2): qDict{"$exists": true}}
 			}
           | valueListBrack IN lvalue
             {
-                $$ = qDict{$3: qDict{"$in": $1}}
+                $$ = qDict{fixMongoKey($3): qDict{"$in": $1}}
             }
           | valueListBrack NOT IN lvalue
             {
-                $$ = qDict{$3: qDict{"$not": qDict{"$in": $1}}}
+                $$ = qDict{fixMongoKey($3): qDict{"$not": qDict{"$in": $1}}}
             }
 		  ;
 

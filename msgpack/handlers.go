@@ -15,7 +15,6 @@ package msgpack
 import (
 	"github.com/gtfierro/giles2/archiver"
 	"github.com/op/go-logging"
-	"gopkg.in/vmihailenco/msgpack.v2"
 	"net"
 	"os"
 	"strconv"
@@ -73,11 +72,11 @@ func HandleUDP4(a *archiver.Archiver, port int) {
 			}
 		}
 	}()
-	udpAddr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:"+strconv.Itoa(port))
+	udpAddr, err := net.ResolveUDPAddr("udp6", "[::]:"+strconv.Itoa(port))
 	if err != nil {
 		log.Fatal("Error resolving UDP address for msgpack %v", err)
 	}
-	conn, err := net.ListenUDP("udp4", udpAddr)
+	conn, err := net.ListenUDP("udp6", udpAddr)
 	if err != nil {
 		log.Fatal("Error on listening (%v)", err)
 	}
@@ -97,36 +96,71 @@ func (h *MsgPackUdpHandler) handleAdd(buffer []byte, num int, from *net.UDPAddr,
 	}
 	//log.Notice("num %v, from %v, buf %v", num, from, string(buffer))
 
-	msg, ephkey := h.decode(buffer)
-	h.a.AddData(msg, ephkey)
-	atomic.AddUint64(&h.counter, 1)
+	msg, ephkey, err := h.decode(buffer)
+	if err == nil {
+		h.a.AddData(msg, ephkey)
+		atomic.AddUint64(&h.counter, 1)
+	}
 	h.msgpool.Put(msg)
 	h.bufpool.Put(buffer)
 }
 
-func (h *MsgPackUdpHandler) decode(buffer []byte) (*archiver.SmapMessage, archiver.EphemeralKey) {
+//TODO: distinguish between READINGS (which have <time, val>) and VALUE (which is just the val)
+func (h *MsgPackUdpHandler) decode(buffer []byte) (*archiver.SmapMessage, archiver.EphemeralKey, error) {
 	var (
 		ephkey archiver.EphemeralKey
-		msgMap map[string]interface{}
+		uuid   string
 	)
 	msg := h.msgpool.Get().(*archiver.SmapMessage)
-	err := msgpack.Unmarshal(buffer, &msgMap)
+
+	msgMap, err := doDecode(buffer)
+
 	if err != nil {
 		log.Error("Error decoding msgpack %v", err)
-		return nil, ephkey
+		return nil, ephkey, err
 	}
-	log.Debug("got msg %v", msgMap)
-	msg.Path = msgMap["Path"].(string)
-	msg.UUID = archiver.UUID(msgMap["uuid"].(string))
-	//msg.Metadata = archiver.Dict(msgMap["Metadata"].(map[string]string))
-	//msg.Readings[0] = *archiver.SmapNumberReading{}
-	log.Debug("got msg %#v", msg)
-	//  map:
-	//      path => message
-	//  message:
-	//      metadata => map (flat key/value)
-	//      properties => map (flat key/value)
-	//      readings => array
-	//      uuid => string?
-	return msg, ephkey
+
+	// get Path
+	if msg.Path, err = getStringValue(msgMap, "Path"); err != nil {
+		return msg, ephkey, err
+	}
+
+	// get UUID
+	if uuid, err = getStringValue(msgMap, "uuid"); err != nil {
+		return msg, ephkey, err
+	}
+	msg.UUID = archiver.UUID(uuid)
+
+	// test for readings
+	rdgs, err := getReadings(msgMap)
+	if err != nil && err != ReadingsNotFound {
+		return msg, ephkey, err // return early if we found readings and it still gave error
+	} else if err == ReadingsNotFound { // otherwise look for Value field
+		var value float64
+		if value, err = getValue(msgMap); err != nil {
+			return msg, ephkey, err
+		}
+		msg.Readings = []archiver.Reading{&archiver.SmapNumberReading{Time: archiver.GetNow(archiver.UOT_MS), Value: value}}
+	} else if err == nil { // readings are ok
+		msg.Readings = rdgs
+	}
+
+	//get Metadata
+	md, err := getMetadata(msgMap)
+	if err != nil && err != MetadataNotFound {
+		return msg, ephkey, err
+	} else if err == nil {
+		msg.Metadata = md
+	}
+
+	//get Properties
+	props, err := getProperties(msgMap)
+	if err != nil && err != PropertiesNotFound {
+		return msg, ephkey, err
+	} else if err == nil {
+		msg.Properties = props
+	}
+
+	log.Debug("DECODED! %#v", msg)
+	return msg, ephkey, nil
 }

@@ -13,7 +13,7 @@ func parseAbsTime(num, units string) (time.Time, error) {
 	if err != nil {
 		return d, err
 	}
-	uot, err := parseUOT(units)
+	uot, err := ParseUOT(units)
 	if err != nil {
 		return d, err
 	}
@@ -62,7 +62,7 @@ func parseReltime(num, units string) (time.Duration, error) {
 	return d, err
 }
 
-func parseUOT(units string) (UnitOfTime, error) {
+func ParseUOT(units string) (UnitOfTime, error) {
 	switch units {
 	case "s", "sec", "second", "seconds":
 		return UOT_S, nil

@@ -1086,7 +1086,7 @@ SQdefault:
 		SQDollar = SQS[SQpt-2 : SQpt+1]
 		//line query.y:309
 		{
-			uot, err := parseUOT(SQDollar[2].str)
+			uot, err := ParseUOT(SQDollar[2].str)
 			if err != nil {
 				SQlex.(*SQLex).Error(fmt.Sprintf("Could not parse unit of time %v (%v)", SQDollar[2].str, err))
 			}

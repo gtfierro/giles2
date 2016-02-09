@@ -307,7 +307,7 @@ timeconv    : /* empty */
             }
             | AS LVALUE
             {
-                uot, err := parseUOT($2)
+                uot, err := ParseUOT($2)
                 if err != nil {
                     SQlex.(*SQLex).Error(fmt.Sprintf("Could not parse unit of time %v (%v)", $2, err))
                 }

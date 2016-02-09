@@ -3,6 +3,7 @@ package archiver
 import (
 	"gopkg.in/mgo.v2/bson"
 	"strings"
+	"time"
 )
 
 // Takes a dictionary that contains nested dictionaries and
@@ -98,4 +99,13 @@ func cleantagstring(inp string) string {
 	tmp := strings.TrimSuffix(inp, ",")
 	tmp = strings.Replace(tmp, "/", ".", -1)
 	return tmp
+}
+
+// get current time
+func GetNow(units UnitOfTime) uint64 {
+	now, err := convertTime(uint64(time.Now().UnixNano()), UOT_NS, units)
+	if err != nil {
+		panic(err) // "This should never ever happen" - Gabe Fierro, 8 February 2016
+	}
+	return now
 }

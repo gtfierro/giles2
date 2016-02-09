@@ -67,7 +67,6 @@ func HandleUDP4(a *archiver.Archiver, port int) {
 		for {
 			select {
 			case <-t.C:
-				//log.Info("Pkt %v", atomic.LoadUint64(&h.counter))
 				atomic.StoreUint64(&h.counter, 0)
 			}
 		}
@@ -94,7 +93,6 @@ func (h *MsgPackUdpHandler) handleAdd(buffer []byte, num int, from *net.UDPAddr,
 	if err != nil {
 		log.Debug("Got err handling MsgPack packet", err)
 	}
-	//log.Notice("num %v, from %v, buf %v", num, from, string(buffer))
 
 	msg, ephkey, err := h.decode(buffer)
 	if err == nil {
@@ -105,7 +103,6 @@ func (h *MsgPackUdpHandler) handleAdd(buffer []byte, num int, from *net.UDPAddr,
 	h.bufpool.Put(buffer)
 }
 
-//TODO: distinguish between READINGS (which have <time, val>) and VALUE (which is just the val)
 func (h *MsgPackUdpHandler) decode(buffer []byte) (*archiver.SmapMessage, archiver.EphemeralKey, error) {
 	var (
 		ephkey archiver.EphemeralKey
@@ -161,6 +158,5 @@ func (h *MsgPackUdpHandler) decode(buffer []byte) (*archiver.SmapMessage, archiv
 		msg.Properties = props
 	}
 
-	log.Debug("DECODED! %#v", msg)
 	return msg, ephkey, nil
 }

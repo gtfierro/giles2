@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/gtfierro/giles2/archiver"
 	"gopkg.in/vmihailenco/msgpack.v2"
+	"strings"
 )
 
 var KeyNotFound = errors.New("Key not found")
@@ -56,6 +57,8 @@ func getMetadata(msg map[string]interface{}) (archiver.Dict, error) {
 			metadata = make(archiver.Dict, len(stringmap))
 			for k, v := range stringmap {
 				if vs, ok := v.(string); ok {
+					k = strings.Replace(k, ".", "|", -1)
+					k = strings.Replace(k, "/", "|", -1)
 					metadata[k] = vs
 				}
 			}
@@ -152,7 +155,6 @@ func doDecode(buffer []byte) (map[string]interface{}, error) {
 	}
 
 	msgMap, ok := iface.(map[string]interface{})
-	log.Debug("decoded %v", iface)
 	if !ok {
 		return msgMap, errors.New("Decoded packet wasn't map[string]interface{}")
 	}

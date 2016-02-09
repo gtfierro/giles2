@@ -130,6 +130,12 @@ func (m *mongoStore) GetUnitOfTime(uuid UUID) (UnitOfTime, error) {
 		err = query.One(&res)
 		if props, found := res.(bson.M)["Properties"]; found {
 			if entry, found := props.(bson.M)["UnitofTime"]; found {
+				if uotInt, isInt := entry.(int); isInt {
+					uot = UnitOfTime(uotInt)
+				} else {
+					err = fmt.Errorf("Invalid UnitOfTime retrieved? %v", entry)
+					return
+				}
 				uot = UnitOfTime(entry.(int))
 			}
 		}
@@ -266,6 +272,9 @@ func (m *mongoStore) GetUUIDs(where bson.M) ([]UUID, error) {
 }
 
 func (m *mongoStore) SaveTags(msg *SmapMessage) error {
+	if msg == nil {
+		return fmt.Errorf("Message is null")
+	}
 	// if the message has no metadata and is already in cache, then skip writing
 	if !msg.HasMetadata() && m.uuidCache.Get(string(msg.UUID)) != nil {
 		return nil

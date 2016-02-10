@@ -39,6 +39,10 @@ func NewWebSocketHandler(a *giles.Archiver) *WebSocketHandler {
 	r := httprouter.New()
 	h := &WebSocketHandler{a, r}
 	r.GET("/add/:key", h.handleAdd)
+	r.GET("/republish", h.handleRepublish)
+
+	go m.start()
+
 	return h
 }
 
@@ -83,4 +87,58 @@ func (h *WebSocketHandler) handleAdd(rw http.ResponseWriter, req *http.Request, 
 		log.Debug("got %v", messages)
 	}
 
+}
+
+func (h *WebSocketHandler) handleRepublish(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	var (
+		ephkey giles.EphemeralKey
+		//messages giles.TieredSmapMessage
+		err error
+	)
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	ws, err := upgrader.Upgrade(rw, req, nil)
+	if err != nil {
+		log.Error("Error establishing websocket: %v", err)
+		return
+	}
+	copy(ephkey[:], ps.ByName("key"))
+	msgtype, msg, err := ws.ReadMessage()
+	log.Debug("msgtype: %v, msg: %v, err: %v, ephkey: %v", msgtype, string(msg), err, ephkey)
+
+	subscription := StartSubscriber(ws)
+	h.a.HandleNewSubscriber(subscription, "select * where "+string(msg), ephkey)
+}
+
+type manager struct {
+	// registered connections
+	subscribers map[*WebSocketSubscriber]bool
+
+	// new connection request
+	initialize chan *WebSocketSubscriber
+
+	// get rid of old connections
+	remove chan *WebSocketSubscriber
+}
+
+var m = manager{
+	subscribers: make(map[*WebSocketSubscriber]bool),
+	initialize:  make(chan *WebSocketSubscriber),
+	remove:      make(chan *WebSocketSubscriber),
+}
+
+func (m *manager) start() {
+	for {
+		select {
+		case s := <-m.initialize:
+			m.subscribers[s] = true
+		case s := <-m.remove:
+			if _, found := m.subscribers[s]; found {
+				s.closed = true
+				s.notify <- true
+				delete(m.subscribers, s)
+				//close(s.outbound)
+			}
+		}
+	}
 }

@@ -37,9 +37,22 @@ func StartSubscriber(ws *websocket.Conn) *giles.Subscriber {
 
 	go func(wss *WebSocketSubscriber) {
 		log.Debug("start repub for %v", wss)
-		for val := range wss.subscription.C {
-			log.Debug("repub %v", val)
-			wss.ws.WriteJSON(val)
+		ticker := time.NewTicker(pingPeriod)
+		defer func() {
+			ticker.Stop()
+			m.remove <- wss
+			wss.ws.Close()
+		}()
+		for {
+			select {
+			case val := <-wss.subscription.C:
+				log.Debug("repub %v", val)
+				wss.ws.WriteJSON(val)
+			case <-ticker.C:
+				if err := wss.ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+					return
+				}
+			}
 		}
 	}(wss)
 

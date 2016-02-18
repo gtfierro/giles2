@@ -35,6 +35,8 @@ type Archiver struct {
 	qp  *querylang.QueryProcessor
 	// republisher
 	repub *Republisher
+	// broker
+	broker *Broker
 	// metrics
 	metrics metricMap
 	// enforce ephemral key checks
@@ -107,6 +109,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 	a.qp = querylang.NewQueryProcessor()
 
 	a.repub = NewRepublisher(a)
+	a.broker = NewBroker(a)
 
 	a.metrics = make(metricMap)
 	a.metrics.addMetric("adds")
@@ -149,8 +152,9 @@ func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 	err = a.txc.AddSmapMessage(msg)
 	a.metrics["adds"].Mark(1)
 	//a.tsStore.AddMessage(msg)
-	a.repub.TriggerChangesMessage(msg)
-	a.repub.Republish(msg)
+	//a.repub.TriggerChangesMessage(msg)
+	//a.repub.Republish(msg)
+	a.broker.ForwardMessage(msg)
 	return err
 }
 
@@ -193,7 +197,8 @@ func (a *Archiver) evaluateQuery(parsed *querylang.ParsedQuery, ephkey Ephemeral
 func (a *Archiver) HandleNewSubscriber(subscriber *Subscriber, querystring string, ephkey EphemeralKey) error {
 	subscriber.query = a.qp.Parse(querystring)
 	// TODO: handle the actual subscription
-	return a.repub.handleSubscriber(subscriber)
+	return a.broker.NewSubscriber(subscriber)
+	//return a.repub.handleSubscriber(subscriber)
 }
 
 func (a *Archiver) handleSelect(parsed *querylang.ParsedQuery, ephkey EphemeralKey) (QueryResult, error) {

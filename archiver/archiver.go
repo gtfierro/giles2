@@ -3,6 +3,7 @@ package archiver
 
 import (
 	"fmt"
+	"github.com/gtfierro/giles2/archiver/internal/querylang"
 	"github.com/op/go-logging"
 	"net"
 	"os"
@@ -31,7 +32,7 @@ type Archiver struct {
 	pm permissionsManager
 	// transaction coalescer
 	txc *transactionCoalescer
-	qp  *queryProcessor
+	qp  *querylang.QueryProcessor
 	// republisher
 	repub *Republisher
 	// metrics
@@ -103,7 +104,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 	a.tsStore = tsStore
 
 	a.txc = newTransactionCoalescer(&a.tsStore, &a.mdStore)
-	a.qp = &queryProcessor{a}
+	a.qp = querylang.NewQueryProcessor()
 
 	a.repub = NewRepublisher(a)
 
@@ -165,27 +166,27 @@ func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (QueryRe
 
 	// parse the query
 	parsed := a.qp.Parse(querystring)
-	if parsed.err != nil {
-		return result, fmt.Errorf("Error (%v) in query \"%v\" (error at %v)\n", parsed.err, querystring, parsed.errPos)
+	if parsed.Err != nil {
+		return result, fmt.Errorf("Error (%v) in query \"%v\" (error at %v)\n", parsed.Err, querystring, parsed.ErrPos)
 	}
 	return a.evaluateQuery(parsed, ephkey)
 
 }
 
-func (a *Archiver) evaluateQuery(parsed *parsedQuery, ephkey EphemeralKey) (QueryResult, error) {
+func (a *Archiver) evaluateQuery(parsed *querylang.ParsedQuery, ephkey EphemeralKey) (QueryResult, error) {
 	var result QueryResult
 	// execute the query
-	switch parsed.queryType {
-	case SELECT_TYPE:
+	switch parsed.QueryType {
+	case querylang.SELECT_TYPE:
 		return a.handleSelect(parsed, ephkey)
-	case DELETE_TYPE:
+	case querylang.DELETE_TYPE:
 		return result, a.handleDelete(parsed, ephkey)
-	case SET_TYPE:
+	case querylang.SET_TYPE:
 		return result, a.handleSet(parsed, ephkey)
-	case DATA_TYPE:
+	case querylang.DATA_TYPE:
 		return a.handleData(parsed, ephkey)
 	default:
-		return result, fmt.Errorf("Could not decide query type %v", parsed.querystring)
+		return result, fmt.Errorf("Could not decide query type %v", parsed.Querystring)
 	}
 }
 
@@ -195,45 +196,45 @@ func (a *Archiver) HandleNewSubscriber(subscriber *Subscriber, querystring strin
 	return a.repub.handleSubscriber(subscriber)
 }
 
-func (a *Archiver) handleSelect(parsed *parsedQuery, ephkey EphemeralKey) (QueryResult, error) {
+func (a *Archiver) handleSelect(parsed *querylang.ParsedQuery, ephkey EphemeralKey) (QueryResult, error) {
 	//TODO: filter results by EphKey
-	if parsed.distinct {
-		return a.mdStore.GetDistinct(parsed.target[0], parsed.where)
+	if parsed.Distinct {
+		return a.mdStore.GetDistinct(parsed.Target[0], parsed.Where)
 	}
-	return a.mdStore.GetTags(parsed.target, parsed.where)
+	return a.mdStore.GetTags(parsed.Target, parsed.Where)
 }
 
-func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMessageList, error) {
+func (a *Archiver) handleData(parsed *querylang.ParsedQuery, ephkey EphemeralKey) (SmapMessageList, error) {
 	var (
 		result   = SmapMessageList{}
 		readings []SmapNumbersResponse
 	)
 
-	uuids, err := a.mdStore.GetUUIDs(parsed.where)
+	uuids, err := a.mdStore.GetUUIDs(parsed.Where)
 	if err != nil {
 		return result, err
 	}
 
-	if parsed.data.limit.streamlimit > 0 && len(uuids) > 0 {
-		uuids = uuids[:parsed.data.limit.streamlimit]
+	if parsed.Data.Limit.Streamlimit > 0 && len(uuids) > 0 {
+		uuids = uuids[:parsed.Data.Limit.Streamlimit]
 	}
 
-	start := uint64(parsed.data.start.UnixNano())
-	end := uint64(parsed.data.end.UnixNano())
+	start := uint64(parsed.Data.Start.UnixNano())
+	end := uint64(parsed.Data.End.UnixNano())
 
-	switch parsed.data.dtype {
-	case IN_TYPE:
+	switch parsed.Data.Dtype {
+	case querylang.IN_TYPE:
 		log.Debugf("Data in start %v end %v", start, end)
 		if start < end {
 			readings, err = a.tsStore.GetData(uuids, start, end)
 		} else {
 			readings, err = a.tsStore.GetData(uuids, end, start)
 		}
-	case BEFORE_TYPE:
-		log.Debugf("Data before time %v (%v ns)", parsed.data.start, start)
+	case querylang.BEFORE_TYPE:
+		log.Debugf("Data before time %v (%v ns)", parsed.Data.Start, start)
 		readings, err = a.tsStore.Prev(uuids, start)
-	case AFTER_TYPE:
-		log.Debugf("Data after time %v (%v ns)", parsed.data.start, start)
+	case querylang.AFTER_TYPE:
+		log.Debugf("Data after time %v (%v ns)", parsed.Data.Start, start)
 		readings, err = a.tsStore.Next(uuids, start)
 	}
 
@@ -242,7 +243,7 @@ func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMes
 		if len(resp.Readings) > 0 {
 			msg := &SmapMessage{UUID: resp.UUID}
 			for _, rdg := range resp.Readings {
-				rdg.ConvertTime(UOT_NS, parsed.data.timeconv)
+				rdg.ConvertTime(UOT_NS, UnitOfTime(parsed.Data.Timeconv))
 				msg.Readings = append(msg.Readings, rdg)
 			}
 			result = append(result, msg)
@@ -253,20 +254,20 @@ func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMes
 	return result, nil
 }
 
-func (a *Archiver) handleDelete(parsed *parsedQuery, ephkey EphemeralKey) error {
-	if len(parsed.target) > 0 {
+func (a *Archiver) handleDelete(parsed *querylang.ParsedQuery, ephkey EphemeralKey) error {
+	if len(parsed.Target) > 0 {
 		// remove tags
-		log.Debugf("Removing tags %v docs where %v", parsed.target, parsed.where)
-		return a.mdStore.RemoveTags(parsed.target, parsed.where)
+		log.Debugf("Removing tags %v docs where %v", parsed.Target, parsed.Where)
+		return a.mdStore.RemoveTags(parsed.Target, parsed.Where)
 	}
-	log.Debugf("Removing all docs where %v", parsed.where)
-	return a.mdStore.RemoveDocs(parsed.where)
+	log.Debugf("Removing all docs where %v", parsed.Where)
+	return a.mdStore.RemoveDocs(parsed.Where)
 }
 
-func (a *Archiver) handleSet(parsed *parsedQuery, ephkey EphemeralKey) error {
-	log.Debugf("Apply updates %v where %v", parsed.set, parsed.where)
-	if len(parsed.set) == 0 {
+func (a *Archiver) handleSet(parsed *querylang.ParsedQuery, ephkey EphemeralKey) error {
+	log.Debugf("Apply updates %v where %v", parsed.Set, parsed.Where)
+	if len(parsed.Set) == 0 {
 		return nil
 	}
-	return a.mdStore.UpdateDocs(parsed.set, parsed.where)
+	return a.mdStore.UpdateDocs(parsed.Set, parsed.Where)
 }

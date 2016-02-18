@@ -215,13 +215,3 @@ func NewEphemeralKey() EphemeralKey {
 	copy(ekey[:], key)
 	return ekey
 }
-
-type queryType uint8
-
-const (
-	SELECT_TYPE queryType = iota + 1
-	DELETE_TYPE
-	SET_TYPE
-	DATA_TYPE
-	APPLY_TYPE
-)

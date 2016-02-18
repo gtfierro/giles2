@@ -94,13 +94,6 @@ func isStringSliceEqual(x, y []string) bool {
 	return true
 }
 
-// remove trailing commas, replace all / with .
-func cleantagstring(inp string) string {
-	tmp := strings.TrimSuffix(inp, ",")
-	tmp = strings.Replace(tmp, "/", ".", -1)
-	return tmp
-}
-
 // get current time
 func GetNow(units UnitOfTime) uint64 {
 	now, err := convertTime(uint64(time.Now().UnixNano()), UOT_NS, units)

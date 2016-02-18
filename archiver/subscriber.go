@@ -2,13 +2,14 @@ package archiver
 
 import (
 	"fmt"
+	"github.com/gtfierro/giles2/archiver/internal/querylang"
 )
 
 type Subscriber struct {
 	C            chan interface{}
 	closed       <-chan bool
 	errorHandler func(error)
-	query        *parsedQuery
+	query        *querylang.ParsedQuery
 }
 
 // The [closed] argument is a channel provided by the protocol adapter
@@ -41,4 +42,8 @@ func (s *Subscriber) BlockSend(v interface{}) {
 // sends error to the client
 func (s *Subscriber) SendError(e error) {
 	s.errorHandler(e)
+}
+
+func (s *Subscriber) Close() {
+	close(s.C)
 }

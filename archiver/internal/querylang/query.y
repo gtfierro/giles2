@@ -21,8 +21,8 @@ Notes here
 %union{
 	str string
 	dict qDict
-	data *dataquery
-	limit datalimit
+	data *DataQuery
+	limit Limit
     timeconv unitoftime.UnitOfTime
 	list List
 	time _time.Time
@@ -175,19 +175,19 @@ selector	: tagList
 
 dataClause : DATA IN LPAREN timeref COMMA timeref RPAREN limit timeconv
 			{
-				$$ = &dataquery{dtype: IN_TYPE, start: $4, end: $6, limit: $8, timeconv: $9}
+				$$ = &DataQuery{Dtype: IN_TYPE, Start: $4, End: $6, Limit: $8, Timeconv: $9}
 			}
 		   | DATA IN timeref COMMA timeref limit timeconv
 			{
-				$$ = &dataquery{dtype: IN_TYPE, start: $3, end: $5, limit: $6, timeconv: $7}
+				$$ = &DataQuery{Dtype: IN_TYPE, Start: $3, End: $5, Limit: $6, Timeconv: $7}
 			}
 		   | DATA BEFORE timeref limit timeconv
 			{
-				$$ = &dataquery{dtype: BEFORE_TYPE, start: $3, limit: $4, timeconv: $5}
+				$$ = &DataQuery{Dtype: BEFORE_TYPE, Start: $3, Limit: $4, Timeconv: $5}
 			}
 		   | DATA AFTER timeref limit timeconv
 			{
-				$$ = &dataquery{dtype: AFTER_TYPE, start: $3, limit: $4, timeconv: $5}
+				$$ = &DataQuery{Dtype: AFTER_TYPE, Start: $3, Limit: $4, Timeconv: $5}
 			}
 		   ;
 
@@ -259,7 +259,7 @@ reltime		: NUMBER lvalue
 
 limit		: /* empty */
 			{
-				$$ = datalimit{limit: -1, streamlimit: -1}
+				$$ = Limit{Limit: -1, Streamlimit: -1}
 			}
 			| LIMIT NUMBER
 			{
@@ -267,7 +267,7 @@ limit		: /* empty */
                 if err != nil {
 				    sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse integer \"%v\" (%v)", $2, err.Error()))
                 }
-				$$ = datalimit{limit: num, streamlimit: -1}
+				$$ = Limit{Limit: num, Streamlimit: -1}
 			}
 			| STREAMLIMIT NUMBER
 			{
@@ -275,7 +275,7 @@ limit		: /* empty */
                 if err != nil {
 				    sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse integer \"%v\" (%v)", $2, err.Error()))
                 }
-				$$ = datalimit{limit: -1, streamlimit: num}
+				$$ = Limit{Limit: -1, Streamlimit: num}
 			}
 			| LIMIT NUMBER STREAMLIMIT NUMBER
 			{
@@ -287,7 +287,7 @@ limit		: /* empty */
                 if err != nil {
 				    sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse integer \"%v\" (%v)", $2, err.Error()))
                 }
-				$$ = datalimit{limit: limit_num, streamlimit: slimit_num}
+				$$ = Limit{Limit: limit_num, Streamlimit: slimit_num}
 			}
 			;
 
@@ -415,7 +415,7 @@ type query struct {
 	// the type of query we are doing
 	qtype	   QueryType
 	// information about a data query if we are one
-	data	   *dataquery
+	data	   *DataQuery
     // key-value pairs to add
     set         qDict
 	// where clause for query
@@ -429,11 +429,11 @@ type query struct {
 func (q *query) Print() {
 	fmt.Printf("Type: %v\n", q.qtype.String())
 	if q.qtype == DATA_TYPE {
-		fmt.Printf("Data Query Type: %v\n", q.data.dtype.String())
-		fmt.Printf("Start: %v\n", q.data.start)
-		fmt.Printf("End: %v\n", q.data.end)
-		fmt.Printf("Limit: %v\n", q.data.limit.limit)
-		fmt.Printf("Streamlimit: %v\n", q.data.limit.streamlimit)
+		fmt.Printf("Data Query Type: %v\n", q.data.Dtype.String())
+		fmt.Printf("Start: %v\n", q.data.Start)
+		fmt.Printf("End: %v\n", q.data.End)
+		fmt.Printf("Limit: %v\n", q.data.Limit.Limit)
+		fmt.Printf("Streamlimit: %v\n", q.data.Limit.Streamlimit)
 	}
 	fmt.Printf("Contents: %v\n", q.Contents)
 	fmt.Printf("Distinct? %v\n", q.distinct)
@@ -455,40 +455,6 @@ func (q *query) WhereBson() bson.M {
 func (q *query) SetBson() bson.M {
     return bson.M(q.set)
 }
-
-
-type dataqueryType uint
-const (
-	IN_TYPE dataqueryType = iota
-	BEFORE_TYPE
-	AFTER_TYPE
-)
-func (dt dataqueryType) String() string {
-	ret := ""
-	switch dt {
-	case IN_TYPE:
-		ret = "in"
-	case BEFORE_TYPE:
-		ret = "before"
-	case AFTER_TYPE:
-		ret = "after"
-	}
-	return ret
-}
-
-type dataquery struct {
-	dtype		dataqueryType
-	start		_time.Time
-	end			_time.Time
-	limit		datalimit
-    timeconv  unitoftime.UnitOfTime
-}
-
-type datalimit struct {
-	limit		int64
-	streamlimit int64
-}
-
 
 type sqLex struct {
 	querystring string
@@ -541,7 +507,7 @@ func NewSQLex(s string) *sqLex {
 			{Token: QSTRING, Pattern: "(\"[^\"\\\\]*?(\\.[^\"\\\\]*?)*?\")|('[^'\\\\]*?(\\.[^'\\\\]*?)*?')"},
 		})
 	scanner.SetInput(s)
-	q := &query{Contents: []string{}, distinct: false, data: &dataquery{}}
+	q := &query{Contents: []string{}, distinct: false, data: &DataQuery{}}
 	return &sqLex{query: q, querystring: s, scanner: scanner, error: nil, lasttoken: "", _keys: map[string]struct{}{}, tokens: []string{}}
 }
 

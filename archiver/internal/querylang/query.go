@@ -23,8 +23,8 @@ type sqSymType struct {
 	yys      int
 	str      string
 	dict     qDict
-	data     *dataquery
-	limit    datalimit
+	data     *DataQuery
+	limit    Limit
 	timeconv unitoftime.UnitOfTime
 	list     List
 	time     _time.Time
@@ -146,7 +146,7 @@ type query struct {
 	// the type of query we are doing
 	qtype QueryType
 	// information about a data query if we are one
-	data *dataquery
+	data *DataQuery
 	// key-value pairs to add
 	set qDict
 	// where clause for query
@@ -160,11 +160,11 @@ type query struct {
 func (q *query) Print() {
 	fmt.Printf("Type: %v\n", q.qtype.String())
 	if q.qtype == DATA_TYPE {
-		fmt.Printf("Data Query Type: %v\n", q.data.dtype.String())
-		fmt.Printf("Start: %v\n", q.data.start)
-		fmt.Printf("End: %v\n", q.data.end)
-		fmt.Printf("Limit: %v\n", q.data.limit.limit)
-		fmt.Printf("Streamlimit: %v\n", q.data.limit.streamlimit)
+		fmt.Printf("Data Query Type: %v\n", q.data.Dtype.String())
+		fmt.Printf("Start: %v\n", q.data.Start)
+		fmt.Printf("End: %v\n", q.data.End)
+		fmt.Printf("Limit: %v\n", q.data.Limit.Limit)
+		fmt.Printf("Streamlimit: %v\n", q.data.Limit.Streamlimit)
 	}
 	fmt.Printf("Contents: %v\n", q.Contents)
 	fmt.Printf("Distinct? %v\n", q.distinct)
@@ -185,40 +185,6 @@ func (q *query) WhereBson() bson.M {
 
 func (q *query) SetBson() bson.M {
 	return bson.M(q.set)
-}
-
-type dataqueryType uint
-
-const (
-	IN_TYPE dataqueryType = iota
-	BEFORE_TYPE
-	AFTER_TYPE
-)
-
-func (dt dataqueryType) String() string {
-	ret := ""
-	switch dt {
-	case IN_TYPE:
-		ret = "in"
-	case BEFORE_TYPE:
-		ret = "before"
-	case AFTER_TYPE:
-		ret = "after"
-	}
-	return ret
-}
-
-type dataquery struct {
-	dtype    dataqueryType
-	start    _time.Time
-	end      _time.Time
-	limit    datalimit
-	timeconv unitoftime.UnitOfTime
-}
-
-type datalimit struct {
-	limit       int64
-	streamlimit int64
 }
 
 type sqLex struct {
@@ -272,7 +238,7 @@ func NewSQLex(s string) *sqLex {
 			{Token: QSTRING, Pattern: "(\"[^\"\\\\]*?(\\.[^\"\\\\]*?)*?\")|('[^'\\\\]*?(\\.[^'\\\\]*?)*?')"},
 		})
 	scanner.SetInput(s)
-	q := &query{Contents: []string{}, distinct: false, data: &dataquery{}}
+	q := &query{Contents: []string{}, distinct: false, data: &DataQuery{}}
 	return &sqLex{query: q, querystring: s, scanner: scanner, error: nil, lasttoken: "", _keys: map[string]struct{}{}, tokens: []string{}}
 }
 
@@ -908,25 +874,25 @@ sqdefault:
 		sqDollar = sqS[sqpt-9 : sqpt+1]
 		//line query.y:177
 		{
-			sqVAL.data = &dataquery{dtype: IN_TYPE, start: sqDollar[4].time, end: sqDollar[6].time, limit: sqDollar[8].limit, timeconv: sqDollar[9].timeconv}
+			sqVAL.data = &DataQuery{Dtype: IN_TYPE, Start: sqDollar[4].time, End: sqDollar[6].time, Limit: sqDollar[8].limit, Timeconv: sqDollar[9].timeconv}
 		}
 	case 24:
 		sqDollar = sqS[sqpt-7 : sqpt+1]
 		//line query.y:181
 		{
-			sqVAL.data = &dataquery{dtype: IN_TYPE, start: sqDollar[3].time, end: sqDollar[5].time, limit: sqDollar[6].limit, timeconv: sqDollar[7].timeconv}
+			sqVAL.data = &DataQuery{Dtype: IN_TYPE, Start: sqDollar[3].time, End: sqDollar[5].time, Limit: sqDollar[6].limit, Timeconv: sqDollar[7].timeconv}
 		}
 	case 25:
 		sqDollar = sqS[sqpt-5 : sqpt+1]
 		//line query.y:185
 		{
-			sqVAL.data = &dataquery{dtype: BEFORE_TYPE, start: sqDollar[3].time, limit: sqDollar[4].limit, timeconv: sqDollar[5].timeconv}
+			sqVAL.data = &DataQuery{Dtype: BEFORE_TYPE, Start: sqDollar[3].time, Limit: sqDollar[4].limit, Timeconv: sqDollar[5].timeconv}
 		}
 	case 26:
 		sqDollar = sqS[sqpt-5 : sqpt+1]
 		//line query.y:189
 		{
-			sqVAL.data = &dataquery{dtype: AFTER_TYPE, start: sqDollar[3].time, limit: sqDollar[4].limit, timeconv: sqDollar[5].timeconv}
+			sqVAL.data = &DataQuery{Dtype: AFTER_TYPE, Start: sqDollar[3].time, Limit: sqDollar[4].limit, Timeconv: sqDollar[5].timeconv}
 		}
 	case 27:
 		sqDollar = sqS[sqpt-1 : sqpt+1]
@@ -1008,7 +974,7 @@ sqdefault:
 		sqDollar = sqS[sqpt-0 : sqpt+1]
 		//line query.y:261
 		{
-			sqVAL.limit = datalimit{limit: -1, streamlimit: -1}
+			sqVAL.limit = Limit{Limit: -1, Streamlimit: -1}
 		}
 	case 36:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
@@ -1018,7 +984,7 @@ sqdefault:
 			if err != nil {
 				sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse integer \"%v\" (%v)", sqDollar[2].str, err.Error()))
 			}
-			sqVAL.limit = datalimit{limit: num, streamlimit: -1}
+			sqVAL.limit = Limit{Limit: num, Streamlimit: -1}
 		}
 	case 37:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
@@ -1028,7 +994,7 @@ sqdefault:
 			if err != nil {
 				sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse integer \"%v\" (%v)", sqDollar[2].str, err.Error()))
 			}
-			sqVAL.limit = datalimit{limit: -1, streamlimit: num}
+			sqVAL.limit = Limit{Limit: -1, Streamlimit: num}
 		}
 	case 38:
 		sqDollar = sqS[sqpt-4 : sqpt+1]
@@ -1042,7 +1008,7 @@ sqdefault:
 			if err != nil {
 				sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse integer \"%v\" (%v)", sqDollar[2].str, err.Error()))
 			}
-			sqVAL.limit = datalimit{limit: limit_num, streamlimit: slimit_num}
+			sqVAL.limit = Limit{Limit: limit_num, Streamlimit: slimit_num}
 		}
 	case 39:
 		sqDollar = sqS[sqpt-0 : sqpt+1]

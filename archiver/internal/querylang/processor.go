@@ -19,7 +19,7 @@ func NewQueryProcessor() *QueryProcessor {
 	}
 }
 
-func (qp *QueryProcessor) Parse(querystring string) ParsedQuery {
+func (qp *QueryProcessor) Parse(querystring string) *ParsedQuery {
 	pq, _ := qp.parsedQueries.Fetch(querystring, 10*time.Minute, func() (interface{}, error) {
 		if !strings.HasSuffix(querystring, ";") {
 			querystring = querystring + ";"
@@ -27,50 +27,50 @@ func (qp *QueryProcessor) Parse(querystring string) ParsedQuery {
 		l := NewSQLex(querystring)
 		sqParse(l)
 		pq := ParsedQuery{
-			queryType: l.query.qtype,
-			keys:      make([]string, len(l._keys)),
-			target:    l.query.Contents,
-			where:     l.query.WhereBson(),
-			set:       l.query.SetBson(),
-			distinct:  l.query.distinct,
-			data:      l.query.data,
-			err:       l.error,
-			errPos:    l.lasttoken,
+			QueryType: l.query.qtype,
+			Keys:      make([]string, len(l._keys)),
+			Target:    l.query.Contents,
+			Where:     l.query.WhereBson(),
+			Set:       l.query.SetBson(),
+			Distinct:  l.query.distinct,
+			Data:      l.query.data,
+			Err:       l.error,
+			ErrPos:    l.lasttoken,
 			//TODO: have a more robust hash function
-			hash:        queryHash(querystring),
-			querystring: querystring,
+			Hash:        QueryHash(querystring),
+			Querystring: querystring,
 		}
 		i := 0
 		for key, _ := range l._keys {
-			pq.keys[i] = cleantagstring(key)
+			pq.Keys[i] = cleantagstring(key)
 			i += 1
 		}
-		return pq, nil
+		return &pq, nil
 	})
-	return pq.Value().(ParsedQuery)
+	return pq.Value().(*ParsedQuery)
 }
 
 type ParsedQuery struct {
-	queryType QueryType
+	QueryType QueryType
 	// all the keys contained in this query
-	keys []string
+	Keys []string
 	// list of tags to target for deletion or selection
-	target []string
+	Target []string
 	//TODO: replace these with with something that's not bson.M
 	// where clause for query
-	where bson.M
+	Where bson.M
 	// key-value pairs to add
-	set bson.M
+	Set bson.M
 	// are we querying distinct values?
-	distinct bool
+	Distinct bool
 	// a unique representation of this query used to compare two different query objects
-	hash queryHash
-	data *dataquery
+	Hash QueryHash
+	Data *DataQuery
 	// any error that arose during parsing
-	err error
+	Err error
 	// token where the error in parsing took place
-	errPos      string
-	querystring string
+	ErrPos      string
+	Querystring string
 }
 
 type QueryType uint8
@@ -83,7 +83,7 @@ const (
 	APPLY_TYPE
 )
 
-type queryHash string
+type QueryHash string
 
 func fixMongoKey(key string) string {
 	switch {

@@ -51,10 +51,10 @@ func Handle(a *giles.Archiver, port int) {
 
 	address, err := net.ResolveTCPAddr("tcp4", "0.0.0.0:"+strconv.Itoa(port))
 	if err != nil {
-		log.Fatal("Error resolving address %v: %v", "0.0.0.0:"+strconv.Itoa(port), err)
+		log.Fatalf("Error resolving address %v: %v", "0.0.0.0:"+strconv.Itoa(port), err)
 	}
 
-	log.Notice("Starting WebSockets on %v", address.String())
+	log.Noticef("Starting WebSockets on %v", address.String())
 	srv := &http.Server{
 		Addr:    address.String(),
 		Handler: h.handler,
@@ -72,7 +72,7 @@ func (h *WebSocketHandler) handleAdd(rw http.ResponseWriter, req *http.Request, 
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
 	ws, err := upgrader.Upgrade(rw, req, nil)
 	if err != nil {
-		log.Error("Error establishing websocket: %v", err)
+		log.Errorf("Error establishing websocket: %v", err)
 		return
 	}
 	copy(ephkey[:], ps.ByName("key"))
@@ -80,11 +80,11 @@ func (h *WebSocketHandler) handleAdd(rw http.ResponseWriter, req *http.Request, 
 	for {
 		err = ws.ReadJSON(messages)
 		if err != nil {
-			log.Error("Error reading JSON: %v", err)
+			log.Errorf("Error reading JSON: %v", err)
 			ws.Close()
 			return
 		}
-		log.Debug("got %v", messages)
+		log.Debugf("got %v", messages)
 	}
 
 }
@@ -99,12 +99,12 @@ func (h *WebSocketHandler) handleRepublish(rw http.ResponseWriter, req *http.Req
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
 	ws, err := upgrader.Upgrade(rw, req, nil)
 	if err != nil {
-		log.Error("Error establishing websocket: %v", err)
+		log.Errorf("Error establishing websocket: %v", err)
 		return
 	}
 	copy(ephkey[:], ps.ByName("key"))
 	msgtype, msg, err := ws.ReadMessage()
-	log.Debug("msgtype: %v, msg: %v, err: %v, ephkey: %v", msgtype, string(msg), err, ephkey)
+	log.Debugf("msgtype: %v, msg: %v, err: %v, ephkey: %v", msgtype, string(msg), err, ephkey)
 
 	subscription := StartSubscriber(ws)
 	h.a.HandleNewSubscriber(subscription, "select * where "+string(msg), ephkey)

@@ -73,14 +73,14 @@ func HandleUDP4(a *archiver.Archiver, port int) {
 	}()
 	udpAddr, err := net.ResolveUDPAddr("udp6", "[::]:"+strconv.Itoa(port))
 	if err != nil {
-		log.Fatal("Error resolving UDP address for msgpack %v", err)
+		log.Fatalf("Error resolving UDP address for msgpack %v", err)
 	}
 	conn, err := net.ListenUDP("udp6", udpAddr)
 	if err != nil {
-		log.Fatal("Error on listening (%v)", err)
+		log.Fatalf("Error on listening (%v)", err)
 	}
 
-	log.Notice("Starting MsgPack on UDP %v", udpAddr.String())
+	log.Noticef("Starting MsgPack on UDP %v", udpAddr.String())
 
 	for {
 		buf := h.bufpool.Get().([]byte)
@@ -91,7 +91,7 @@ func HandleUDP4(a *archiver.Archiver, port int) {
 
 func (h *MsgPackUdpHandler) handleAdd(buffer []byte, num int, from *net.UDPAddr, err error) {
 	if err != nil {
-		log.Debug("Got err handling MsgPack packet", err)
+		log.Debugf("Got err handling MsgPack packet", err)
 	}
 
 	msg, ephkey, err := h.decode(buffer)
@@ -113,7 +113,7 @@ func (h *MsgPackUdpHandler) decode(buffer []byte) (*archiver.SmapMessage, archiv
 	msgMap, err := doDecode(buffer)
 
 	if err != nil {
-		log.Error("Error decoding msgpack %v", err)
+		log.Errorf("Error decoding msgpack %v", err)
 		return nil, ephkey, err
 	}
 

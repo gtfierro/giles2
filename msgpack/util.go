@@ -42,7 +42,7 @@ func getReadings(msg map[string]interface{}) ([]archiver.Reading, error) {
 	}
 
 	for _, rdg := range readings {
-		log.Debug("got rdg %#v", rdg)
+		log.Debugf("got rdg %#v", rdg)
 	}
 
 	return ret, nil

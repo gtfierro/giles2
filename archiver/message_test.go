@@ -179,5 +179,5 @@ func TestSmapMessageGabeDecodeJSON(t *testing.T) {
 	if err := dec.Decode(&tsm); err != nil {
 		t.Errorf("Error decoding JSON %v", err)
 	}
-	log.Debug("RES %#v", tsm)
+	log.Debugf("RES %#v", tsm)
 }

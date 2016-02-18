@@ -68,10 +68,10 @@ func Handle(a *archiver.Archiver, port int) {
 	h := NewHTTPHandler(a)
 	address, err := net.ResolveTCPAddr("tcp4", "0.0.0.0:"+strconv.Itoa(port))
 	if err != nil {
-		log.Fatal("Error resolving address %v: %v", "0.0.0.0:"+strconv.Itoa(port), err)
+		log.Fatalf("Error resolving address %v: %v", "0.0.0.0:"+strconv.Itoa(port), err)
 	}
 	http.Handle("/", h.handler)
-	log.Notice("Starting HTTP on %v", address.String())
+	log.Noticef("Starting HTTP on %v", address.String())
 
 	srv := &http.Server{
 		Addr: address.String(),
@@ -88,7 +88,7 @@ func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps ht
 	copy(ephkey[:], ps.ByName("key"))
 
 	if messages, err = handleJSON(req.Body); err != nil {
-		log.Error("Error handling JSON: %v", err)
+		log.Errorf("Error handling JSON: %v", err)
 		rw.WriteHeader(400)
 		rw.Write([]byte(err.Error()))
 		req.Body.Close()
@@ -119,7 +119,7 @@ func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Reques
 	copy(ephkey[:], ps.ByName("key"))
 
 	if req.ContentLength > 1024 {
-		log.Error("HUGE query string with length %v. Aborting!", req.ContentLength)
+		log.Errorf("HUGE query string with length %v. Aborting!", req.ContentLength)
 		rw.WriteHeader(500)
 		rw.Write([]byte("Your query is too big"))
 		req.Body.Close()
@@ -130,7 +130,7 @@ func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Reques
 	_, err = req.Body.Read(querybuffer)
 	res, err := h.a.HandleQuery(string(querybuffer), ephkey)
 	if err != nil {
-		log.Error("Error evaluating query: %v", err)
+		log.Errorf("Error evaluating query: %v", err)
 		rw.WriteHeader(500)
 		rw.Write([]byte(err.Error()))
 		return
@@ -139,7 +139,7 @@ func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Reques
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 	err = writer.Encode(res)
 	if err != nil {
-		log.Error("Error converting query results to JSON: %v", err)
+		log.Errorf("Error converting query results to JSON: %v", err)
 	}
 }
 
@@ -153,7 +153,7 @@ func (h *HTTPHandler) handleSubscriber(rw http.ResponseWriter, req *http.Request
 	copy(ephkey[:], ps.ByName("key"))
 
 	if req.ContentLength > 1024 {
-		log.Error("HUGE query string with length %v. Aborting!", req.ContentLength)
+		log.Errorf("HUGE query string with length %v. Aborting!", req.ContentLength)
 		rw.WriteHeader(500)
 		rw.Write([]byte("Your query is too big"))
 		req.Body.Close()
@@ -163,7 +163,7 @@ func (h *HTTPHandler) handleSubscriber(rw http.ResponseWriter, req *http.Request
 	querybuffer := make([]byte, req.ContentLength)
 	_, err = req.Body.Read(querybuffer)
 	if err != nil && err.Error() != "EOF" {
-		log.Error("Error reading subscription: %v", err)
+		log.Errorf("Error reading subscription: %v", err)
 		rw.WriteHeader(500)
 		rw.Write([]byte(err.Error()))
 		return
@@ -184,7 +184,7 @@ func (h *HTTPHandler) handleRepublisher(rw http.ResponseWriter, req *http.Reques
 	copy(ephkey[:], ps.ByName("key"))
 
 	if req.ContentLength > 1024 {
-		log.Error("HUGE query string with length %v. Aborting!", req.ContentLength)
+		log.Errorf("HUGE query string with length %v. Aborting!", req.ContentLength)
 		rw.WriteHeader(500)
 		rw.Write([]byte("Your query is too big"))
 		req.Body.Close()
@@ -194,7 +194,7 @@ func (h *HTTPHandler) handleRepublisher(rw http.ResponseWriter, req *http.Reques
 	querybuffer := make([]byte, req.ContentLength)
 	_, err = req.Body.Read(querybuffer)
 	if err != nil && err.Error() != "EOF" {
-		log.Error("Error reading subscription: %v", err)
+		log.Errorf("Error reading subscription: %v", err)
 		rw.WriteHeader(500)
 		rw.Write([]byte(err.Error()))
 		return

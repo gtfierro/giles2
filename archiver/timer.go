@@ -23,7 +23,7 @@ func (et *ExponentialTimer) Wait(showTime bool) {
 		et.currentTime = tmp
 	}
 	if showTime {
-		log.Debug("Waiting %v seconds for new connection", oldTime)
+		log.Debugf("Waiting %v seconds for new connection", oldTime)
 	}
 	time.Sleep(time.Duration(oldTime) * time.Second)
 }

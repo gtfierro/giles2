@@ -138,9 +138,9 @@ func newMongoPermissionsManager(c *mongoConfig) *mongoPermissionsManager {
 	var err error
 	ma := &mongoPermissionsManager{}
 	ma.session, err = mgo.Dial(c.address.String())
-	log.Notice("Connecting to MongoDB at %v...", c.address.String())
+	log.Noticef("Connecting to MongoDB at %v...", c.address.String())
 	if err != nil {
-		log.Critical("Could not connect to MongoDB: %v", err)
+		log.Criticalf("Could not connect to MongoDB: %v", err)
 		return nil
 	}
 	log.Notice("...connected!")

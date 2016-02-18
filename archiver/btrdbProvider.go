@@ -41,7 +41,7 @@ func newBtrDB(c *btrdbConfig) *btrdbDB {
 		maxConnections: c.maxConnections,
 	}
 
-	log.Notice("Connecting to BtrDB at %v...", b.addr.String())
+	log.Noticef("Connecting to BtrDB at %v...", b.addr.String())
 
 	b.packetpool = sync.Pool{
 		New: func() interface{} {
@@ -67,7 +67,7 @@ func newBtrDB(c *btrdbConfig) *btrdbDB {
 func (b *btrdbDB) getConnection() *tsConn {
 	conn, err := net.DialTCP("tcp", nil, b.addr)
 	if err != nil {
-		log.Error("Error getting connection to BtrDB (%v)", err)
+		log.Errorf("Error getting connection to BtrDB (%v)", err)
 		return nil
 	}
 	conn.SetKeepAlive(true)
@@ -86,7 +86,7 @@ func (b *btrdbDB) receiveData(conn *tsConn) (SmapNumbersResponse, error) {
 		seg, err := capn.ReadFromStream(conn, nil)
 		if err != nil {
 			conn.Close()
-			log.Error("Error receiving data from BtrDB %v", err)
+			log.Errorf("Error receiving data from BtrDB %v", err)
 			return sr, BtrDBReadErr
 		}
 		resp := btrdb.ReadRootResponse(seg)
@@ -102,7 +102,7 @@ func (b *btrdbDB) receiveData(conn *tsConn) (SmapNumbersResponse, error) {
 			}
 			finished = resp.Final()
 		default:
-			log.Error("Got unexpected type: %v with status code %v", resp.Which(), resp.StatusCode().String())
+			log.Errorf("Got unexpected type: %v with status code %v", resp.Which(), resp.StatusCode().String())
 		}
 	}
 	return sr, nil
@@ -113,7 +113,7 @@ func (b *btrdbDB) receiveStatus(conn *tsConn) error {
 	seg, err := capn.ReadFromStream(conn, nil)
 	if err != nil {
 		conn.Close()
-		log.Error("Error receiving data from BtrDB %v", err)
+		log.Errorf("Error receiving data from BtrDB %v", err)
 		return BtrDBReadErr
 	}
 	resp := btrdb.ReadRootResponse(seg)

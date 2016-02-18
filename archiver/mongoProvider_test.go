@@ -15,7 +15,7 @@ var testArchiver *Archiver
 func TestMain(m *testing.M) {
 	addr, err := net.ResolveTCPAddr("tcp4", "0.0.0.0:27017")
 	if err != nil {
-		log.Fatal("%v", err)
+		log.Fatalf("%v", err)
 	}
 	config := &mongoConfig{
 		address:     addr,

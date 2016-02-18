@@ -47,7 +47,7 @@ func (qp *queryProcessor) Parse(querystring string) *parsedQuery {
 		querystring = querystring + ";"
 	}
 	l := NewSQLex(querystring)
-	log.Debug("Parsing query: %v\n", querystring)
+	log.Debugf("Parsing query: %v\n", querystring)
 	SQParse(l)
 
 	pq := &parsedQuery{

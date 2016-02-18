@@ -81,7 +81,7 @@ func LoadConfig(filename string) *Config {
 	var configuration Config
 	err := gcfg.ReadFileInto(&configuration, filename)
 	if err != nil {
-		log.Error("No configuration file found at %v, so checking current directory for giles.cfg (%v)", filename, err)
+		log.Errorf("No configuration file found at %v, so checking current directory for giles.cfg (%v)", filename, err)
 	} else {
 		return &configuration
 	}

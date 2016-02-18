@@ -43,10 +43,10 @@ type mongoConfig struct {
 func newMongoStore(c *mongoConfig) *mongoStore {
 	var err error
 	m := &mongoStore{}
-	log.Notice("Connecting to MongoDB at %v...", c.address.String())
+	log.Noticef("Connecting to MongoDB at %v...", c.address.String())
 	m.session, err = mgo.Dial(c.address.String())
 	if err != nil {
-		log.Critical("Could not connect to MongoDB: %v", err)
+		log.Criticalf("Could not connect to MongoDB: %v", err)
 		return nil
 	}
 	log.Notice("...connected!")
@@ -295,7 +295,7 @@ func (m *mongoStore) SaveTags(msg *SmapMessage) error {
 func (m *mongoStore) UpdateDocs(updates, where bson.M) error {
 	//TODO: loop through matched UUIDs
 	info, updateErr := m.metadata.UpdateAll(where, bson.M{"$set": updates})
-	log.Info("Updated %v records", info.Updated)
+	log.Infof("Updated %v records", info.Updated)
 	return updateErr
 }
 
@@ -306,14 +306,14 @@ func (m *mongoStore) RemoveTags(tags []string, where bson.M) error {
 		updates[tag] = 1
 	}
 	info, updateErr := m.metadata.UpdateAll(where, bson.M{"$unset": updates})
-	log.Info("Updated %v records", info.Updated)
+	log.Infof("Updated %v records", info.Updated)
 	return updateErr
 }
 
 func (m *mongoStore) RemoveDocs(where bson.M) error {
 	//TODO: loop through matched UUIDs
 	ci, removeErr := m.metadata.RemoveAll(where)
-	log.Info("Removed %v records", ci.Removed)
+	log.Infof("Removed %v records", ci.Removed)
 	return removeErr
 }
 

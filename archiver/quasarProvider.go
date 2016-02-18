@@ -39,7 +39,7 @@ func newQuasarDB(c *quasarConfig) *quasarDB {
 		mdStore:        c.mdStore,
 		maxConnections: c.maxConnections,
 	}
-	log.Notice("Connecting to Quasar at %v...", q.addr.String())
+	log.Noticef("Connecting to Quasar at %v...", q.addr.String())
 	q.packetpool = sync.Pool{
 		New: func() interface{} {
 			seg := capn.NewBuffer(nil)
@@ -68,7 +68,7 @@ func newQuasarDB(c *quasarConfig) *quasarDB {
 func (q *quasarDB) getConnection() *tsConn {
 	conn, err := net.DialTCP("tcp", nil, q.addr)
 	if err != nil {
-		log.Error("Error getting connection to Quasar (%v)", err)
+		log.Errorf("Error getting connection to Quasar (%v)", err)
 		return nil
 	}
 	conn.SetKeepAlive(true)
@@ -212,7 +212,7 @@ func (q *quasarDB) receive(conn *tsConn) (SmapNumbersResponse, error) {
 	seg, err := capn.ReadFromStream(conn, nil)
 	if err != nil {
 		conn.Close()
-		log.Error("Error receiving data from Quasar %v", err)
+		log.Errorf("Error receiving data from Quasar %v", err)
 		return sr, err
 	}
 	resp := qsr.ReadRootResponse(seg)

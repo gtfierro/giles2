@@ -55,7 +55,7 @@ func StartHTTPSubscriber(rw http.ResponseWriter) *giles.Subscriber {
 				hs.Unlock()
 				break
 			}
-			log.Debug("repub %v", val)
+			log.Debugf("repub %v", val)
 			err = writer.Encode(val)
 			hs.Unlock()
 			hs.handleError(err)

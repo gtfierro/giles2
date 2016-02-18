@@ -77,7 +77,7 @@ func (pool *connectionPool) Get() *tsConn {
 				pool.waitTimer.Wait(true)
 			}
 			atomic.AddInt64(&pool.count, 1)
-			log.Info("Creating new connection in pool %v", c.conn, pool.count)
+			log.Infof("Creating new connection in pool %v", c.conn, pool.count)
 		}
 	}
 	return c
@@ -93,6 +93,6 @@ func (pool *connectionPool) Put(c *tsConn) {
 	default:
 		c.Close()
 		atomic.AddInt64(&pool.count, -1)
-		log.Info("Releasing connection in pool, now %v", pool.count)
+		log.Infof("Releasing connection in pool, now %v", pool.count)
 	}
 }

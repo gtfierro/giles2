@@ -35,7 +35,7 @@ func main() {
 
 	/** Configure CPU profiling */
 	if config.Profile.Enabled {
-		log.Info("Benchmarking for %v seconds\n", *config.Profile.BenchmarkTimer)
+		log.Infof("Benchmarking for %v seconds\n", *config.Profile.BenchmarkTimer)
 		f, err := os.Create(*config.Profile.CpuProfile)
 		if err != nil {
 			log.Fatal(err)

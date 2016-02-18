@@ -58,7 +58,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 	case "mongo":
 		mongoaddr, err := net.ResolveTCPAddr("tcp4", *c.Mongo.Address+":"+*c.Mongo.Port)
 		if err != nil {
-			log.Fatal("Error parsing Mongo address: %v", err)
+			log.Fatalf("Error parsing Mongo address: %v", err)
 		}
 		config := &mongoConfig{
 			address:     mongoaddr,
@@ -67,7 +67,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 		mdStore = newMongoStore(config)
 		pm = newMongoPermissionsManager(config)
 	default:
-		log.Fatal(*c.Archiver.MetadataStore, " is not a recognized metadata store")
+		log.Fatalf(*c.Archiver.MetadataStore, " is not a recognized metadata store")
 	}
 
 	a.mdStore = mdStore
@@ -77,7 +77,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 	case "quasar":
 		qsraddr, err := net.ResolveTCPAddr("tcp4", *c.Quasar.Address+":"+*c.Quasar.Port)
 		if err != nil {
-			log.Fatal("Error parsing Quasar address: %v", err)
+			log.Fatalf("Error parsing Quasar address: %v", err)
 		}
 		config := &quasarConfig{
 			addr:           qsraddr,
@@ -88,7 +88,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 	case "btrdb":
 		btrdbaddr, err := net.ResolveTCPAddr("tcp4", *c.BtrDB.Address+":"+*c.BtrDB.Port)
 		if err != nil {
-			log.Fatal("Error parsing BtrDB address: %v", err)
+			log.Fatalf("Error parsing BtrDB address: %v", err)
 		}
 		config := &btrdbConfig{
 			addr:           btrdbaddr,
@@ -97,7 +97,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 		}
 		tsStore = newBtrDB(config)
 	default:
-		log.Fatal(*c.Archiver.TimeseriesStore, " is not a recognized timeseries store")
+		log.Fatalf(*c.Archiver.TimeseriesStore, " is not a recognized timeseries store")
 	}
 
 	a.tsStore = tsStore
@@ -120,7 +120,7 @@ func (a *Archiver) startReport() {
 	go func() {
 		t := time.NewTicker(5 * time.Second)
 		for {
-			log.Info("Adds:%d", a.metrics["adds"].GetAndReset())
+			log.Infof("Adds:%d", a.metrics["adds"].GetAndReset())
 			<-t.C
 		}
 	}()
@@ -223,21 +223,21 @@ func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMes
 
 	switch parsed.data.dtype {
 	case IN_TYPE:
-		log.Debug("Data in start %v end %v", start, end)
+		log.Debugf("Data in start %v end %v", start, end)
 		if start < end {
 			readings, err = a.tsStore.GetData(uuids, start, end)
 		} else {
 			readings, err = a.tsStore.GetData(uuids, end, start)
 		}
 	case BEFORE_TYPE:
-		log.Debug("Data before time %v (%v ns)", parsed.data.start, start)
+		log.Debugf("Data before time %v (%v ns)", parsed.data.start, start)
 		readings, err = a.tsStore.Prev(uuids, start)
 	case AFTER_TYPE:
-		log.Debug("Data after time %v (%v ns)", parsed.data.start, start)
+		log.Debugf("Data after time %v (%v ns)", parsed.data.start, start)
 		readings, err = a.tsStore.Next(uuids, start)
 	}
 
-	log.Debug("readings %v", readings)
+	log.Debugf("readings %v", readings)
 	for _, resp := range readings {
 		if len(resp.Readings) > 0 {
 			msg := &SmapMessage{UUID: resp.UUID}
@@ -248,7 +248,7 @@ func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMes
 			result = append(result, msg)
 		}
 	}
-	log.Debug("readings %v", result)
+	log.Debugf("readings %v", result)
 
 	return result, nil
 }
@@ -256,15 +256,15 @@ func (a *Archiver) handleData(parsed *parsedQuery, ephkey EphemeralKey) (SmapMes
 func (a *Archiver) handleDelete(parsed *parsedQuery, ephkey EphemeralKey) error {
 	if len(parsed.target) > 0 {
 		// remove tags
-		log.Debug("Removing tags %v docs where %v", parsed.target, parsed.where)
+		log.Debugf("Removing tags %v docs where %v", parsed.target, parsed.where)
 		return a.mdStore.RemoveTags(parsed.target, parsed.where)
 	}
-	log.Debug("Removing all docs where %v", parsed.where)
+	log.Debugf("Removing all docs where %v", parsed.where)
 	return a.mdStore.RemoveDocs(parsed.where)
 }
 
 func (a *Archiver) handleSet(parsed *parsedQuery, ephkey EphemeralKey) error {
-	log.Debug("Apply updates %v where %v", parsed.set, parsed.where)
+	log.Debugf("Apply updates %v where %v", parsed.set, parsed.where)
 	if len(parsed.set) == 0 {
 		return nil
 	}

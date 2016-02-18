@@ -1,7 +1,7 @@
 package querylang
 
 import (
-	"github.com/gtfierro/giles2/archiver/internal/unitoftime"
+	"github.com/gtfierro/giles2/internal/unitoftime"
 	"time"
 )
 

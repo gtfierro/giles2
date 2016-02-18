@@ -99,6 +99,7 @@ func (h *MsgPackUdpHandler) handleAdd(buffer []byte, num int, from *net.UDPAddr,
 		h.a.AddData(msg, ephkey)
 		atomic.AddUint64(&h.counter, 1)
 	}
+	msg.Metadata = archiver.Dict{}
 	h.msgpool.Put(msg)
 	h.bufpool.Put(buffer)
 }

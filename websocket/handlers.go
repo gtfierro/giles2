@@ -84,7 +84,6 @@ func (h *WebSocketHandler) handleAdd(rw http.ResponseWriter, req *http.Request, 
 			ws.Close()
 			return
 		}
-		log.Debugf("got %v", messages)
 	}
 
 }
@@ -130,13 +129,16 @@ var m = manager{
 func (m *manager) start() {
 	for {
 		select {
-		case s := <-m.initialize:
-			m.subscribers[s] = true
-		case s := <-m.remove:
-			if _, found := m.subscribers[s]; found {
-				s.closed = true
-				s.notify <- true
-				delete(m.subscribers, s)
+		case wss := <-m.initialize:
+			m.subscribers[wss] = true
+		case wss := <-m.remove:
+			if _, found := m.subscribers[wss]; found {
+				wss.closeC <- true
+				wss.Lock()
+				wss.ws.Close()
+				wss.Unlock()
+				//s.notify <- true
+				delete(m.subscribers, wss)
 				//close(s.outbound)
 			}
 		}

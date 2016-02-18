@@ -154,7 +154,7 @@ func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 	//a.tsStore.AddMessage(msg)
 	//a.repub.TriggerChangesMessage(msg)
 	//a.repub.Republish(msg)
-	a.broker.ForwardMessage(msg)
+	a.broker.HandleMessage(msg)
 	return err
 }
 
@@ -196,9 +196,7 @@ func (a *Archiver) evaluateQuery(parsed *querylang.ParsedQuery, ephkey Ephemeral
 
 func (a *Archiver) HandleNewSubscriber(subscriber *Subscriber, querystring string, ephkey EphemeralKey) error {
 	subscriber.query = a.qp.Parse(querystring)
-	// TODO: handle the actual subscription
 	return a.broker.NewSubscriber(subscriber)
-	//return a.repub.handleSubscriber(subscriber)
 }
 
 func (a *Archiver) handleSelect(parsed *querylang.ParsedQuery, ephkey EphemeralKey) (QueryResult, error) {

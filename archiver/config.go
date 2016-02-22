@@ -58,6 +58,13 @@ type Config struct {
 		Port    *int
 	}
 
+	TCPJSON struct {
+		Enabled       bool
+		AddPort       *int
+		QueryPort     *int
+		SubscribePort *int
+	}
+
 	SSH struct {
 		Enabled            bool
 		Port               *string

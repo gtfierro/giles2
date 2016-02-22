@@ -256,7 +256,7 @@ func (b *Broker) NewSubscriber(sub *Subscriber) error {
 		sub.errorHandler(err)
 		return err
 	}
-	log.Debugf("NEW Subscriber %v", sub)
+	log.Debugf("NEW Subscriber %v with query %v", sub, sub.query)
 	query.subscribers.addSubscriber(sub)
 	for uuid, _ := range query.Streams {
 		b.addSubscriberToStream(uuid, sub)

@@ -234,6 +234,8 @@ func (msg *SmapMessage) IsTimeseries() bool {
 	return msg.UUID != ""
 }
 
+func (msg SmapMessage) IsResult() {}
+
 type SmapMessageList []*SmapMessage
 
 func (sml *SmapMessageList) ToBson() []bson.M {

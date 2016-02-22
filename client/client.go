@@ -2,10 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/fatih/color"
 	giles "github.com/gtfierro/giles2/archiver"
 	"github.com/op/go-logging"
-	"github.com/parnurzeal/gorequest"
+	"net"
 	"os"
 )
 
@@ -23,13 +24,23 @@ func init() {
 }
 
 type Client struct {
-	Addr          string
+	QueryAddr     *net.TCPAddr
+	SubscribeAddr *net.TCPAddr
 	Subscriptions map[string]chan giles.SmapMessage
 }
 
-func NewClient(addr string) *Client {
+func NewClient(queryAddr, subAddr string) *Client {
+	qA, err := net.ResolveTCPAddr("tcp", queryAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	sA, err := net.ResolveTCPAddr("tcp", subAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
 	c := &Client{
-		Addr:          addr,
+		QueryAddr:     qA,
+		SubscribeAddr: sA,
 		Subscriptions: make(map[string]chan giles.SmapMessage),
 	}
 	return c
@@ -51,53 +62,87 @@ func (c *Client) doError(messages ...error) {
 	}
 }
 
-func (c *Client) DecodeMessage(r gorequest.Response) (decoded *giles.SmapMessageList, err error) {
-	decoder := json.NewDecoder(r.Body)
+func (c *Client) DecodeMessage(conn net.Conn) (decoded *giles.SmapMessageList, err error) {
+	decoder := json.NewDecoder(conn)
 	decoder.UseNumber()
 	err = decoder.Decode(&decoded)
 	return
 }
 
-func (c *Client) Query(query string) giles.SmapMessageList {
-	request := gorequest.New()
-	resp, _, errs := request.Post(c.Addr + "/api/query").Type("text").Send(query).End()
-	if errs != nil {
-		c.doError(errs...)
-		return nil
-	}
-	messages, err := c.DecodeMessage(resp)
+func (c *Client) Query(query string) *giles.SmapMessageList {
+	var decoded *giles.SmapMessageList
+	conn, err := net.DialTCP("tcp", nil, c.QueryAddr)
 	if err != nil {
+		log.Error(err)
 		c.doError(err)
-		return nil
+		return decoded
 	}
-	return *messages
+	// write query
+	n, err := conn.Write([]byte(query))
+	if n != len([]byte(query)) {
+		err = fmt.Errorf("Only wrote %v/%v bytes", n, len([]byte(query)))
+		log.Error(err)
+		c.doError(err)
+		return decoded
+	}
+	decoder := json.NewDecoder(conn)
+	decoder.UseNumber()
+	err = decoder.Decode(&decoded)
+	return decoded
 }
 
-func (c *Client) Subscribe(where string) (recv chan giles.SmapMessage) {
-	recv = make(chan giles.SmapMessage)
-	request := gorequest.New()
-	resp, _, errs := request.Post(c.Addr + "/republish").Type("text").Send(where).End()
-	if errs != nil {
-		c.doError(errs...)
+func (c *Client) Subscribe(where string) (recv chan giles.QueryResult) {
+	recv = make(chan giles.QueryResult)
+
+	conn, err := net.DialTCP("tcp", nil, c.SubscribeAddr)
+	if err != nil {
+		log.Error(err)
+		c.doError(err)
 		return
 	}
-	b := make([]byte, 2048)
-	for {
-		n, err := resp.Body.Read(b)
+	// write where
+	n, err := conn.Write([]byte(where))
+	if n != len([]byte(where)) {
+		err = fmt.Errorf("Only wrote %v/%v bytes", n, len([]byte(where)))
+		log.Error(err)
+		c.doError(err)
+		return
+	}
+
+	go func() {
+		reader := json.NewDecoder(conn)
+		var msg giles.SmapMessage
+		var msglist giles.SmapMessageList
+		// initial message
+		err = reader.Decode(&msglist)
 		if err != nil {
+			log.Error(err)
 			c.doError(err)
 			return
 		}
-		log.Debugf("read %v bytes", n)
-		log.Debugf(string(b))
-	}
+		log.Debugf("send %v", msglist)
+		recv <- msglist
+
+		for reader.More() {
+			err := reader.Decode(&msg)
+			if err != nil {
+				log.Error(err)
+				c.doError(err)
+				return
+			}
+			log.Debugf("send %v", msg)
+			recv <- msg
+		}
+	}()
 	return
 }
 
 func main() {
-	c := NewClient("http://localhost:8079")
+	c := NewClient("localhost:8002", "localhost:8003")
 	messages := c.Query("select *;")
-	log.Debugf("got %v messages", len(messages))
-	c.Subscribe("has uuid")
-
+	log.Debugf("got %v messages", len(*messages))
+	channel := c.Subscribe("has uuid;")
+	for m := range channel {
+		log.Debug(m)
+	}
 }

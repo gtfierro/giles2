@@ -225,32 +225,32 @@ func (b *Broker) reevaluateQuery(q *Query) {
 	}
 	// added, removed
 	added, removed := q.changeUUIDs(uuids)
-    if len(removed) > 0 {
-        b.subscribersLock.Lock()
-        for _, rm_uuid := range removed {
-            if list, found = b.subscribers[rm_uuid]; !found {
-                // no subscribers for this uuid
-                continue
-            }
-            // if there is a list of subscribers, iterate through and see if they are subscribed to *this* query
-            for _, client := range *list {
-                if client.query.Querystring == q.Query { // remove!
-                    list.removeSubscriber(client)
-                    continue
-                }
-            }
-            b.subscribers[rm_uuid] = list
-        }
-        b.subscribersLock.Unlock()
-    }
+	if len(removed) > 0 {
+		b.subscribersLock.Lock()
+		for _, rm_uuid := range removed {
+			if list, found = b.subscribers[rm_uuid]; !found {
+				// no subscribers for this uuid
+				continue
+			}
+			// if there is a list of subscribers, iterate through and see if they are subscribed to *this* query
+			for _, client := range *list {
+				if client.query.Querystring == q.Query { // remove!
+					list.removeSubscriber(client)
+					continue
+				}
+			}
+			b.subscribers[rm_uuid] = list
+		}
+		b.subscribersLock.Unlock()
+	}
 
-    if len(added) > 0 {
-        for _, add_uuid := range added {
-            for _, sub := range *q.subscribers {
-                b.addSubscriberToStream(add_uuid, sub)
-            }
-        }
-    }
+	if len(added) > 0 {
+		for _, add_uuid := range added {
+			for _, sub := range *q.subscribers {
+				b.addSubscriberToStream(add_uuid, sub)
+			}
+		}
+	}
 
 }
 
@@ -316,6 +316,14 @@ func (b *Broker) removeSubscriber(sub *Subscriber) {
 	query.RUnlock()
 	query.Lock()
 	query.subscribers.removeSubscriber(sub)
+	if len(*query.subscribers) == 0 {
+		// remove ourselves from key references
+		b.keysLock.Lock()
+		for _, key := range query.Keys {
+			b.keys[key].removeQuery(query)
+		}
+		b.keysLock.Unlock()
+	}
 	query.Unlock()
 }
 
@@ -324,8 +332,11 @@ func (b *Broker) removeSubscriber(sub *Subscriber) {
 func (b *Broker) ForwardMessage(msg *SmapMessage) {
 	b.subscribersLock.RLock()
 	if list, found := b.subscribers[msg.UUID]; found {
-		log.Debugf("Found list of subscribers for msg %v (%v)", msg, list)
 		b.subscribersLock.RUnlock()
+		if len(*list) == 0 {
+			return
+		}
+		log.Debugf("Found list of subscribers for msg %v (%v)", msg, list)
 		for _, sub := range *list {
 			sub.QueueToSend(msg)
 		}

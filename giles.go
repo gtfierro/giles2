@@ -5,6 +5,7 @@ import (
 	"github.com/gtfierro/giles2/archiver"
 	"github.com/gtfierro/giles2/http"
 	"github.com/gtfierro/giles2/msgpack"
+	"github.com/gtfierro/giles2/tcpjson"
 	"github.com/gtfierro/giles2/websocket"
 	"github.com/op/go-logging"
 	"os"
@@ -63,6 +64,10 @@ func main() {
 
 	if config.MsgPackUDP.Enabled {
 		go msgpack.HandleUDP4(a, *config.MsgPackUDP.Port)
+	}
+
+	if config.TCPJSON.Enabled {
+		go tcpjson.Handle(a, *config.TCPJSON.AddPort, *config.TCPJSON.QueryPort, *config.TCPJSON.SubscribePort)
 	}
 
 	idx := 0

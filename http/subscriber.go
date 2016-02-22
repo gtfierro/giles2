@@ -47,8 +47,10 @@ func StartHTTPSubscriber(rw http.ResponseWriter) *giles.Subscriber {
 	hs.subscription = giles.NewSubscriber(hs.closeC, 10, hs.handleError)
 	writer := json.NewEncoder(rw)
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
 
 	go func(hs *HTTPSubscriber, writer *json.Encoder) {
+		log.Debugf(">>> NEW HTTP REPUB %v", hs)
 		for val := range hs.subscription.C {
 			hs.Lock()
 			if hs.closed {

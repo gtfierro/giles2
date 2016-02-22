@@ -11,6 +11,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"runtime/trace"
 	"time"
 )
 
@@ -47,6 +48,12 @@ func main() {
 		}
 		pprof.StartCPUProfile(f)
 		runtime.SetBlockProfileRate(1)
+
+		f3, err := os.Create("trace.out")
+		if err != nil {
+			log.Fatal(err)
+		}
+		trace.Start(f3)
 		defer runtime.SetBlockProfileRate(0)
 		defer pprof.Lookup("block").WriteTo(f2, 1)
 		defer pprof.StopCPUProfile()
@@ -82,6 +89,7 @@ func main() {
 				}
 				pprof.WriteHeapProfile(f)
 				f.Close()
+				trace.Stop()
 				return
 			}
 			if *config.Profile.CpuProfile != "" {

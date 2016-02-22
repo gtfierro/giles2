@@ -92,6 +92,7 @@ func HandleUDP4(a *archiver.Archiver, port int) {
 func (h *MsgPackUdpHandler) handleAdd(buffer []byte, num int, from *net.UDPAddr, err error) {
 	if err != nil {
 		log.Debugf("Got err handling MsgPack packet", err)
+        return
 	}
 
 	msg, ephkey, err := h.decode(buffer)
@@ -102,6 +103,38 @@ func (h *MsgPackUdpHandler) handleAdd(buffer []byte, num int, from *net.UDPAddr,
 	msg.Metadata = archiver.Dict{}
 	h.msgpool.Put(msg)
 	h.bufpool.Put(buffer)
+}
+
+func (h *MsgPackUdpHandler) handleSubscription(buffer []byte, num int, from *net.UDPAddr, err error) {
+	if err != nil {
+		log.Debugf("Got err handling MsgPack packet", err)
+        return
+	}
+}
+
+func Fuzz(data []byte) int {
+	h := &MsgPackUdpHandler{
+		bufpool: sync.Pool{
+			New: func() interface{} {
+				return make([]byte, 1024)
+			},
+		},
+		msgpool: sync.Pool{
+			New: func() interface{} {
+				return &archiver.SmapMessage{
+					Actuator: make(archiver.Dict),
+					Metadata: make(archiver.Dict),
+					Readings: make([]archiver.Reading, 0),
+				}
+			},
+		},
+		counter: 0,
+	}
+	msg, _, err := h.decode(data)
+	if msg == nil || err != nil {
+		return 1
+	}
+	return 0
 }
 
 func (h *MsgPackUdpHandler) decode(buffer []byte) (*archiver.SmapMessage, archiver.EphemeralKey, error) {

@@ -201,7 +201,6 @@ func (b *Broker) HandleMessage(msg *SmapMessage) {
 		}
 	}
 	b.keysLock.RUnlock()
-	log.Debugf("reevaluate %v", toReevaluate)
 	for query, _ := range toReevaluate {
 		b.reevaluateQuery(query)
 	}
@@ -218,6 +217,7 @@ func (b *Broker) reevaluateQuery(q *Query) {
 		list  *subscriberList
 		found bool
 	)
+    log.Debugf("reevalute %v", q)
 	uuids, err := b.a.mdStore.GetUUIDs(q.WhereClause)
 	if err != nil {
 		log.Criticalf("Error fetching UUIDs for (%v) from metadata store (%v)", q.WhereClause, err)
@@ -225,28 +225,32 @@ func (b *Broker) reevaluateQuery(q *Query) {
 	}
 	// added, removed
 	added, removed := q.changeUUIDs(uuids)
-	b.subscribersLock.Lock()
-	for _, rm_uuid := range removed {
-		if list, found = b.subscribers[rm_uuid]; !found {
-			// no subscribers for this uuid
-			continue
-		}
-		// if there is a list of subscribers, iterate through and see if they are subscribed to *this* query
-		for _, client := range *list {
-			if client.query.Querystring == q.Query { // remove!
-				list.removeSubscriber(client)
-				continue
-			}
-		}
-		b.subscribers[rm_uuid] = list
-	}
-	b.subscribersLock.Unlock()
+    if len(removed) > 0 {
+        b.subscribersLock.Lock()
+        for _, rm_uuid := range removed {
+            if list, found = b.subscribers[rm_uuid]; !found {
+                // no subscribers for this uuid
+                continue
+            }
+            // if there is a list of subscribers, iterate through and see if they are subscribed to *this* query
+            for _, client := range *list {
+                if client.query.Querystring == q.Query { // remove!
+                    list.removeSubscriber(client)
+                    continue
+                }
+            }
+            b.subscribers[rm_uuid] = list
+        }
+        b.subscribersLock.Unlock()
+    }
 
-	for _, add_uuid := range added {
-		for _, sub := range *q.subscribers {
-			b.addSubscriberToStream(add_uuid, sub)
-		}
-	}
+    if len(added) > 0 {
+        for _, add_uuid := range added {
+            for _, sub := range *q.subscribers {
+                b.addSubscriberToStream(add_uuid, sub)
+            }
+        }
+    }
 
 }
 

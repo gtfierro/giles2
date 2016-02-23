@@ -1,4 +1,5 @@
-package main
+// Client library for communicating with giles using JSON/TCP
+package client
 
 import (
 	"encoding/json"
@@ -29,6 +30,11 @@ type Client struct {
 	Subscriptions map[string]chan giles.SmapMessage
 }
 
+// Creates a new client with connections to the Giles instance at the provided addresses. Its
+// on the list to create a better client configuration, but for now, the two arguments here
+// use the AddPort and QueryPort config options from `giles.cfg` under the `TCPJSON` section header.
+// Remember to use the full addresses, e.g.
+//  "1.2.3.4:8002", "1.2.3.4:8003"
 func NewClient(queryAddr, subAddr string) *Client {
 	qA, err := net.ResolveTCPAddr("tcp", queryAddr)
 	if err != nil {
@@ -69,6 +75,8 @@ func (c *Client) DecodeMessage(conn net.Conn) (decoded *giles.SmapMessageList, e
 	return
 }
 
+// Executes the provided query and returns a list of giles.SmapMessage. This does not yet
+// handle different return types such as those returned by 'select distinct'
 func (c *Client) Query(query string) *giles.SmapMessageList {
 	var decoded *giles.SmapMessageList
 	conn, err := net.DialTCP("tcp", nil, c.QueryAddr)
@@ -91,6 +99,9 @@ func (c *Client) Query(query string) *giles.SmapMessageList {
 	return decoded
 }
 
+// Subscribes to the given where clause (gets turned into "select * [where]") and returns
+// results on the provided channel. The first item on the channel will be a giles.SmapMessageList,
+// and the subsequent ones will be giles.SmapMessage until I finish implementing the diffs
 func (c *Client) Subscribe(where string) (recv chan giles.QueryResult) {
 	recv = make(chan giles.QueryResult)
 
@@ -135,14 +146,4 @@ func (c *Client) Subscribe(where string) (recv chan giles.QueryResult) {
 		}
 	}()
 	return
-}
-
-func main() {
-	c := NewClient("localhost:8002", "localhost:8003")
-	messages := c.Query("select *;")
-	log.Debugf("got %v messages", len(*messages))
-	channel := c.Subscribe("has uuid;")
-	for m := range channel {
-		log.Debug(m)
-	}
 }

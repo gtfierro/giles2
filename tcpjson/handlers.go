@@ -6,6 +6,7 @@ import (
 	"fmt"
 	giles "github.com/gtfierro/giles2/archiver"
 	"github.com/op/go-logging"
+	"io"
 	"net"
 	"os"
 	"strconv"
@@ -94,6 +95,27 @@ func (tcp *TCPJSONHandler) listenAdds() {
 }
 
 func (tcp *TCPJSONHandler) handleAdd(conn net.Conn) {
+	var (
+		ephkey   giles.EphemeralKey
+		messages giles.TieredSmapMessage
+		err      error
+	)
+	if messages, err = handleJSON(conn); err != nil {
+		log.Errorf("Error handling JSON: %v", err)
+		tcp.errors <- err
+		return
+	}
+	ephkey = giles.NewEphemeralKey()
+	messages.CollapseToTimeseries()
+	for _, msg := range messages {
+		if addErr := tcp.a.AddData(msg, ephkey); addErr != nil {
+			log.Errorf("Error handling JSON: %v", err)
+			tcp.errors <- err
+			conn.Close()
+			return
+		}
+	}
+
 }
 
 func (tcp *TCPJSONHandler) listenQuery() {
@@ -153,4 +175,14 @@ func (tcp *TCPJSONHandler) handleSubscribe(conn net.Conn) {
 
 	subscription := StartTCPJSONSubscriber(conn)
 	tcp.a.HandleNewSubscriber(subscription, "select * where "+string(querybuffer), giles.NewEphemeralKey())
+}
+
+func handleJSON(r io.Reader) (decoded giles.TieredSmapMessage, err error) {
+	decoder := json.NewDecoder(r)
+	decoder.UseNumber()
+	err = decoder.Decode(&decoded)
+	for path, msg := range decoded {
+		msg.Path = path
+	}
+	return
 }

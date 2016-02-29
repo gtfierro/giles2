@@ -27,6 +27,7 @@ func init() {
 type Client struct {
 	QueryAddr     *net.TCPAddr
 	SubscribeAddr *net.TCPAddr
+	AddAddr       *net.TCPAddr
 	Subscriptions map[string]chan giles.SmapMessage
 }
 
@@ -35,7 +36,7 @@ type Client struct {
 // use the AddPort and QueryPort config options from `giles.cfg` under the `TCPJSON` section header.
 // Remember to use the full addresses, e.g.
 //  "1.2.3.4:8002", "1.2.3.4:8003"
-func NewClient(queryAddr, subAddr string) *Client {
+func NewClient(queryAddr, subAddr, addAddr string) *Client {
 	qA, err := net.ResolveTCPAddr("tcp", queryAddr)
 	if err != nil {
 		log.Fatal(err)
@@ -44,9 +45,14 @@ func NewClient(queryAddr, subAddr string) *Client {
 	if err != nil {
 		log.Fatal(err)
 	}
+	aA, err := net.ResolveTCPAddr("tcp", addAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
 	c := &Client{
 		QueryAddr:     qA,
 		SubscribeAddr: sA,
+		AddAddr:       aA,
 		Subscriptions: make(map[string]chan giles.SmapMessage),
 	}
 	return c
@@ -146,4 +152,23 @@ func (c *Client) Subscribe(where string) (recv chan giles.QueryResult) {
 		}
 	}()
 	return
+}
+
+func (c *Client) Add(msgs ...giles.SmapMessage) {
+	conn, err := net.DialTCP("tcp", nil, c.AddAddr)
+	if err != nil {
+		log.Error(err)
+		c.doError(err)
+		return
+	}
+
+	encoder := json.NewEncoder(conn)
+	for _, msg := range msgs {
+		err = encoder.Encode(msg)
+		if err != nil {
+			log.Error(err)
+			c.doError(err)
+			return
+		}
+	}
 }

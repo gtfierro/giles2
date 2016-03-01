@@ -241,7 +241,6 @@ func (a *Archiver) handleData(parsed *querylang.ParsedQuery, ephkey EphemeralKey
 		readings, err = a.tsStore.Next(uuids, start)
 	}
 
-	log.Debugf("readings %v", readings)
 	for _, resp := range readings {
 		if len(resp.Readings) > 0 {
 			msg := &SmapMessage{UUID: resp.UUID}
@@ -252,7 +251,7 @@ func (a *Archiver) handleData(parsed *querylang.ParsedQuery, ephkey EphemeralKey
 			result = append(result, msg)
 		}
 	}
-	log.Debugf("readings %v", result)
+	log.Debugf("Returning %d readings", len(result))
 
 	return result, nil
 }

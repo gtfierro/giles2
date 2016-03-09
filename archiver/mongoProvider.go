@@ -137,11 +137,17 @@ func (m *mongoStore) GetUnitOfTime(uuid UUID) (UnitOfTime, error) {
 					return
 				}
 				uot = UnitOfTime(entry.(int))
+				if uot == 0 {
+					uot = UOT_S
+				}
 			}
 		}
 		return
 	})
 	if item != nil && err == nil {
+		if item.Value().(UnitOfTime) == 0 {
+			return UOT_S, err
+		}
 		return item.Value().(UnitOfTime), err
 	}
 	return UOT_S, err

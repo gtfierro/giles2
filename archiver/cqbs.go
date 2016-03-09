@@ -217,7 +217,7 @@ func (b *Broker) reevaluateQuery(q *Query) {
 		list  *subscriberList
 		found bool
 	)
-    log.Debugf("reevalute %v", q)
+	log.Debugf("reevalute %v", q)
 	uuids, err := b.a.mdStore.GetUUIDs(q.WhereClause)
 	if err != nil {
 		log.Criticalf("Error fetching UUIDs for (%v) from metadata store (%v)", q.WhereClause, err)

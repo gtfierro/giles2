@@ -129,10 +129,11 @@ func (msg *SmapMessage) ToBson() (ret bson.M) {
 
 func (sm *SmapMessage) UnmarshalJSON(b []byte) (err error) {
 	var (
-		incoming  = new(incomingSmapMessage)
-		time      uint64
-		value_num float64
-		value_obj interface{}
+		incoming   = new(incomingSmapMessage)
+		time       uint64
+		time_weird float64
+		value_num  float64
+		value_obj  interface{}
 	)
 
 	// unmarshal to an intermediary struct that matches the format
@@ -165,7 +166,12 @@ func (sm *SmapMessage) UnmarshalJSON(b []byte) (err error) {
 		// time should be a uint64 no matter what
 		err = json.Unmarshal(reading[0], &time)
 		if err != nil {
-			return
+			err = json.Unmarshal(reading[0], &time_weird)
+			if err != nil {
+				return
+			} else {
+				time = uint64(time_weird)
+			}
 		}
 
 		// check if we have a numerical value

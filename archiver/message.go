@@ -350,5 +350,5 @@ type incomingSmapMessage struct {
 	// Unique identifier for this stream. Should be empty for Collections
 	UUID UUID `json:"uuid"`
 	// Path of this stream (thus far)
-	Path string
+	Path string `json:"Path"`
 }

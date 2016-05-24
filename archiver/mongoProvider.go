@@ -3,6 +3,7 @@ package archiver
 // mongo provider for metadata store
 import (
 	"fmt"
+	"github.com/gtfierro/giles2/common"
 	"github.com/karlseguin/ccache"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -113,13 +114,13 @@ func (m *mongoStore) addIndexes() {
 	}
 }
 
-func (m *mongoStore) GetUnitOfTime(uuid UUID) (UnitOfTime, error) {
+func (m *mongoStore) GetUnitOfTime(uuid common.UUID) (common.UnitOfTime, error) {
 	item, err := m.uotCache.Fetch(string(uuid), m.cacheExpiry, func() (uot interface{}, err error) {
 		var (
 			res interface{}
 			c   int
 		)
-		uot = UOT_S
+		uot = common.UOT_S
 		query := m.metadata.Find(bson.M{"uuid": uuid}).Select(bson.M{"Properties.UnitofTime": 1})
 		if c, err = query.Count(); err != nil {
 			return
@@ -131,35 +132,35 @@ func (m *mongoStore) GetUnitOfTime(uuid UUID) (UnitOfTime, error) {
 		if props, found := res.(bson.M)["Properties"]; found {
 			if entry, found := props.(bson.M)["UnitofTime"]; found {
 				if uotInt, isInt := entry.(int); isInt {
-					uot = UnitOfTime(uotInt)
+					uot = common.UnitOfTime(uotInt)
 				} else {
 					err = fmt.Errorf("Invalid UnitOfTime retrieved? %v", entry)
 					return
 				}
-				uot = UnitOfTime(entry.(int))
+				uot = common.UnitOfTime(entry.(int))
 				if uot == 0 {
-					uot = UOT_S
+					uot = common.UOT_S
 				}
 			}
 		}
 		return
 	})
 	if item != nil && err == nil {
-		if item.Value().(UnitOfTime) == 0 {
-			return UOT_S, err
+		if item.Value().(common.UnitOfTime) == 0 {
+			return common.UOT_S, err
 		}
-		return item.Value().(UnitOfTime), err
+		return item.Value().(common.UnitOfTime), err
 	}
-	return UOT_S, err
+	return common.UOT_S, err
 }
 
-func (m *mongoStore) GetStreamType(uuid UUID) (StreamType, error) {
+func (m *mongoStore) GetStreamType(uuid common.UUID) (common.StreamType, error) {
 	item, err := m.stCache.Fetch(string(uuid), m.cacheExpiry, func() (entry interface{}, err error) {
 		var (
 			res interface{}
 			c   int
 		)
-		entry = NUMERIC_STREAM
+		entry = common.NUMERIC_STREAM
 		query := m.metadata.Find(bson.M{"uuid": uuid}).Select(bson.M{"Properties.StreamType": 1})
 		if c, err = query.Count(); err != nil {
 			return
@@ -170,18 +171,18 @@ func (m *mongoStore) GetStreamType(uuid UUID) (StreamType, error) {
 		err = query.One(&res)
 		if props, found := res.(bson.M)["Properties"]; found {
 			if entry, found := props.(bson.M)["StreamType"]; found {
-				entry = StreamType(entry.(int))
+				entry = common.StreamType(entry.(int))
 			}
 		}
 		return
 	})
 	if item != nil && err == nil {
-		return item.Value().(StreamType), err
+		return item.Value().(common.StreamType), err
 	}
-	return NUMERIC_STREAM, err
+	return common.NUMERIC_STREAM, err
 }
 
-func (m *mongoStore) GetUnitOfMeasure(uuid UUID) (string, error) {
+func (m *mongoStore) GetUnitOfMeasure(uuid common.UUID) (string, error) {
 	item, err := m.uotCache.Fetch(string(uuid), m.cacheExpiry, func() (entry interface{}, err error) {
 		var (
 			res interface{}
@@ -209,7 +210,7 @@ func (m *mongoStore) GetUnitOfMeasure(uuid UUID) (string, error) {
 }
 
 // Retrieves all tags in the provided list that match the provided where clause.
-func (m *mongoStore) GetTags(tags []string, where bson.M) (SmapMessageList, error) {
+func (m *mongoStore) GetTags(tags []string, where bson.M) (common.SmapMessageList, error) {
 	var (
 		staged      *mgo.Query
 		selectTags  bson.M
@@ -219,7 +220,7 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (SmapMessageList, erro
 	if len(where) != 0 {
 		whereClause = make(bson.M)
 		for wk, wv := range where {
-			whereClause[fixMongoKey(wk)] = wv
+			whereClause[common.FixMongoKey(wk)] = wv
 		}
 	}
 	staged = m.metadata.Find(whereClause)
@@ -228,7 +229,7 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (SmapMessageList, erro
 	} else {
 		selectTags = bson.M{"_id": 0}
 		for _, tag := range tags {
-			selectTags[fixMongoKey(tag)] = 1
+			selectTags[common.FixMongoKey(tag)] = 1
 		}
 	}
 	err := staged.Select(selectTags).All(&x)
@@ -239,45 +240,45 @@ func (m *mongoStore) GetTags(tags []string, where bson.M) (SmapMessageList, erro
 			filtered = append(filtered, doc)
 		}
 	}
-	return SmapMessageListFromBson(filtered), err
+	return common.SmapMessageListFromBson(filtered), err
 }
 
-func (m *mongoStore) GetDistinct(tag string, where bson.M) (DistinctResult, error) {
+func (m *mongoStore) GetDistinct(tag string, where bson.M) (common.DistinctResult, error) {
 	var (
-		result      DistinctResult
+		result      common.DistinctResult
 		whereClause bson.M
-		fixedTag    = fixMongoKey(tag)
+		fixedTag    = common.FixMongoKey(tag)
 	)
 	if len(where) != 0 {
 		whereClause = make(bson.M)
 		for wk, wv := range where {
-			whereClause[fixMongoKey(wk)] = wv
+			whereClause[common.FixMongoKey(wk)] = wv
 		}
 	}
 	err := m.metadata.Find(where).Distinct(fixedTag, &result)
 	return result, err
 }
 
-func (m *mongoStore) GetUUIDs(where bson.M) ([]UUID, error) {
-	var results []UUID
+func (m *mongoStore) GetUUIDs(where bson.M) ([]common.UUID, error) {
+	var results []common.UUID
 	var x []bson.M
 	var whereClause bson.M
 	if len(where) != 0 {
 		whereClause = make(bson.M)
 		for wk, wv := range where {
-			whereClause[fixMongoKey(wk)] = wv
+			whereClause[common.FixMongoKey(wk)] = wv
 		}
 	}
 	selectClause := bson.M{"_id": 0, "uuid": 1}
 	err := m.metadata.Find(where).Select(selectClause).All(&x)
-	results = make([]UUID, len(x))
+	results = make([]common.UUID, len(x))
 	for i, doc := range x {
-		results[i] = UUID(doc["uuid"].(string))
+		results[i] = common.UUID(doc["uuid"].(string))
 	}
 	return results, err
 }
 
-func (m *mongoStore) SaveTags(msg *SmapMessage) error {
+func (m *mongoStore) SaveTags(msg *common.SmapMessage) error {
 	if msg == nil {
 		return fmt.Errorf("Message is null")
 	}

@@ -4,6 +4,7 @@ package archiver
 import (
 	"fmt"
 	"github.com/gtfierro/giles2/archiver/internal/querylang"
+	"github.com/gtfierro/giles2/common"
 	"github.com/op/go-logging"
 	"net"
 	"os"
@@ -31,10 +32,7 @@ type Archiver struct {
 	// permissions manager
 	pm permissionsManager
 	// transaction coalescer
-	txc *transactionCoalescer
-	qp  *querylang.QueryProcessor
-	// republisher
-	repub *Republisher
+	qp *querylang.QueryProcessor
 	// broker
 	broker *Broker
 	// metrics
@@ -105,10 +103,8 @@ func NewArchiver(c *Config) (a *Archiver) {
 
 	a.tsStore = tsStore
 
-	a.txc = newTransactionCoalescer(&a.tsStore, &a.mdStore)
 	a.qp = querylang.NewQueryProcessor()
 
-	a.repub = NewRepublisher(a)
 	a.broker = NewBroker(a)
 
 	a.metrics = make(metricMap)
@@ -130,13 +126,13 @@ func (a *Archiver) startReport() {
 	}()
 }
 
-// Takes an incoming SmapMessage object (from a client) and does the following:
+// Takes an incoming common.SmapMessage object (from a client) and does the following:
 //  - Checks the incoming message against the ApiKey to verify it is valid to write
 //  - Saves the attached metadata (if any) to the metadata store
 //  - Reevaluates any dynamic subscriptions and pushes to republish clients
 //  - Saves the attached readings (if any) to the timeseries database
 // These last 2 steps happen in parallel
-func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
+func (a *Archiver) AddData(msg *common.SmapMessage, ephkey common.EphemeralKey) (err error) {
 	if a.enforceKeys && !a.pm.ValidEphemeralKey(ephkey) {
 		return fmt.Errorf("Ephemeral key %v is not valid", ephkey)
 	}
@@ -147,13 +143,9 @@ func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 		return err
 	}
 
-	//TODO reevaluate subscriptions, push to clients
 	//save timeseries data
-	err = a.txc.AddSmapMessage(msg)
 	a.metrics["adds"].Mark(1)
-	//a.tsStore.AddMessage(msg)
-	//a.repub.TriggerChangesMessage(msg)
-	//a.repub.Republish(msg)
+	a.tsStore.AddMessage(msg)
 	a.broker.HandleMessage(msg)
 	return err
 }
@@ -161,8 +153,8 @@ func (a *Archiver) AddData(msg *SmapMessage, ephkey EphemeralKey) (err error) {
 // Need to think about how to transfer the results of these queries to the handlers that are
 // asking for them and need to transform them into their own internal representations (e.g.
 // JSON, MsgPack, etc). What are the data patterns we are seeing?
-// Basically everything fits into SmapMessageList
-func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (QueryResult, error) {
+// Basically everything fits into common.SmapMessageList
+func (a *Archiver) HandleQuery(querystring string, ephkey common.EphemeralKey) (QueryResult, error) {
 	var result QueryResult
 	if a.enforceKeys && !a.pm.ValidEphemeralKey(ephkey) {
 		return result, fmt.Errorf("Ephemeral key %v is not valid", ephkey)
@@ -177,7 +169,7 @@ func (a *Archiver) HandleQuery(querystring string, ephkey EphemeralKey) (QueryRe
 
 }
 
-func (a *Archiver) evaluateQuery(parsed *querylang.ParsedQuery, ephkey EphemeralKey) (QueryResult, error) {
+func (a *Archiver) evaluateQuery(parsed *querylang.ParsedQuery, ephkey common.EphemeralKey) (QueryResult, error) {
 	var result QueryResult
 	// execute the query
 	switch parsed.QueryType {
@@ -194,12 +186,12 @@ func (a *Archiver) evaluateQuery(parsed *querylang.ParsedQuery, ephkey Ephemeral
 	}
 }
 
-func (a *Archiver) HandleNewSubscriber(subscriber *Subscriber, querystring string, ephkey EphemeralKey) error {
+func (a *Archiver) HandleNewSubscriber(subscriber *Subscriber, querystring string, ephkey common.EphemeralKey) error {
 	subscriber.query = a.qp.Parse(querystring)
 	return a.broker.NewSubscriber(subscriber)
 }
 
-func (a *Archiver) handleSelect(parsed *querylang.ParsedQuery, ephkey EphemeralKey) (QueryResult, error) {
+func (a *Archiver) handleSelect(parsed *querylang.ParsedQuery, ephkey common.EphemeralKey) (QueryResult, error) {
 	//TODO: filter results by EphKey
 	if parsed.Distinct {
 		return a.mdStore.GetDistinct(parsed.Target[0], parsed.Where)
@@ -207,10 +199,10 @@ func (a *Archiver) handleSelect(parsed *querylang.ParsedQuery, ephkey EphemeralK
 	return a.mdStore.GetTags(parsed.Target, parsed.Where)
 }
 
-func (a *Archiver) handleData(parsed *querylang.ParsedQuery, ephkey EphemeralKey) (SmapMessageList, error) {
+func (a *Archiver) handleData(parsed *querylang.ParsedQuery, ephkey common.EphemeralKey) (common.SmapMessageList, error) {
 	var (
-		result   = SmapMessageList{}
-		readings []SmapNumbersResponse
+		result   = common.SmapMessageList{}
+		readings []common.SmapNumbersResponse
 	)
 
 	uuids, err := a.mdStore.GetUUIDs(parsed.Where)
@@ -243,9 +235,9 @@ func (a *Archiver) handleData(parsed *querylang.ParsedQuery, ephkey EphemeralKey
 
 	for _, resp := range readings {
 		if len(resp.Readings) > 0 {
-			msg := &SmapMessage{UUID: resp.UUID}
+			msg := &common.SmapMessage{UUID: resp.UUID}
 			for _, rdg := range resp.Readings {
-				rdg.ConvertTime(UOT_NS, UnitOfTime(parsed.Data.Timeconv))
+				rdg.ConvertTime(common.UOT_NS, common.UnitOfTime(parsed.Data.Timeconv))
 				msg.Readings = append(msg.Readings, rdg)
 			}
 			result = append(result, msg)
@@ -256,7 +248,7 @@ func (a *Archiver) handleData(parsed *querylang.ParsedQuery, ephkey EphemeralKey
 	return result, nil
 }
 
-func (a *Archiver) handleDelete(parsed *querylang.ParsedQuery, ephkey EphemeralKey) error {
+func (a *Archiver) handleDelete(parsed *querylang.ParsedQuery, ephkey common.EphemeralKey) error {
 	if len(parsed.Target) > 0 {
 		// remove tags
 		log.Debugf("Removing tags %v docs where %v", parsed.Target, parsed.Where)
@@ -266,7 +258,7 @@ func (a *Archiver) handleDelete(parsed *querylang.ParsedQuery, ephkey EphemeralK
 	return a.mdStore.RemoveDocs(parsed.Where)
 }
 
-func (a *Archiver) handleSet(parsed *querylang.ParsedQuery, ephkey EphemeralKey) error {
+func (a *Archiver) handleSet(parsed *querylang.ParsedQuery, ephkey common.EphemeralKey) error {
 	log.Debugf("Apply updates %v where %v", parsed.Set, parsed.Where)
 	if len(parsed.Set) == 0 {
 		return nil

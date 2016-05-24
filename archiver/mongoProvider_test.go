@@ -2,6 +2,7 @@ package archiver
 
 import (
 	"flag"
+	"github.com/gtfierro/giles2/common"
 	"gopkg.in/mgo.v2/bson"
 	"net"
 	"os"
@@ -31,7 +32,7 @@ func TestMain(m *testing.M) {
 
 func BenchmarkSaveTagsBare(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		msg := &SmapMessage{
+		msg := &common.SmapMessage{
 			Path: "/sensor8",
 			UUID: NewUUID(),
 		}
@@ -42,7 +43,7 @@ func BenchmarkSaveTagsBare(b *testing.B) {
 func BenchmarkSaveTagsBareParallel(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			msg := &SmapMessage{
+			msg := &common.SmapMessage{
 				Path: "/sensor8",
 				UUID: NewUUID(),
 			}
@@ -52,7 +53,7 @@ func BenchmarkSaveTagsBareParallel(b *testing.B) {
 }
 
 func BenchmarkSaveTagsWithMetadata(b *testing.B) {
-	msg := &SmapMessage{
+	msg := &common.SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Metadata: Dict{
@@ -68,7 +69,7 @@ func BenchmarkSaveTagsWithMetadata(b *testing.B) {
 }
 
 func BenchmarkSaveTagsWithMetadataParallel(b *testing.B) {
-	msg := &SmapMessage{
+	msg := &common.SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Metadata: Dict{
@@ -86,7 +87,7 @@ func BenchmarkSaveTagsWithMetadataParallel(b *testing.B) {
 }
 
 func BenchmarkGetUnitOfTime(b *testing.B) {
-	msg := &SmapMessage{
+	msg := &common.SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Properties: &SmapProperties{
@@ -104,7 +105,7 @@ func BenchmarkGetUnitOfTime(b *testing.B) {
 }
 
 func BenchmarkGetUnitOfTimeParallel(b *testing.B) {
-	msg := &SmapMessage{
+	msg := &common.SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Properties: &SmapProperties{
@@ -124,7 +125,7 @@ func BenchmarkGetUnitOfTimeParallel(b *testing.B) {
 }
 
 func TestGetUnitOfTime(t *testing.T) {
-	msg := &SmapMessage{
+	msg := &common.SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Properties: &SmapProperties{
@@ -145,7 +146,7 @@ func TestGetUnitOfTime(t *testing.T) {
 }
 
 func TestGetStreamType(t *testing.T) {
-	msg := &SmapMessage{
+	msg := &common.SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Properties: &SmapProperties{
@@ -166,7 +167,7 @@ func TestGetStreamType(t *testing.T) {
 }
 
 func TestGetUnitOfMeasure(t *testing.T) {
-	msg := &SmapMessage{
+	msg := &common.SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Properties: &SmapProperties{
@@ -190,22 +191,22 @@ func TestGetTags(t *testing.T) {
 	myUUID := NewUUID()
 	myPath := "/sensor8"
 	for _, test := range []struct {
-		msg    *SmapMessage
+		msg    *common.SmapMessage
 		tags   []string
 		where  bson.M
-		result SmapMessageList
+		result common.SmapMessageList
 	}{
 		{
-			&SmapMessage{Path: myPath, UUID: myUUID},
+			&common.SmapMessage{Path: myPath, UUID: myUUID},
 			[]string{"uuid"},
 			bson.M{"uuid": myUUID},
-			SmapMessageList{{UUID: myUUID}},
+			common.SmapMessageList{{UUID: myUUID}},
 		},
 		{
-			&SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{"System": "HVAC", "Point|Name": "My Point"}},
+			&common.SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{"System": "HVAC", "Point|Name": "My Point"}},
 			[]string{"Metadata.System", "Path"},
 			bson.M{"uuid": myUUID},
-			SmapMessageList{{Path: myPath, Metadata: Dict{"System": "HVAC"}}},
+			common.SmapMessageList{{Path: myPath, Metadata: Dict{"System": "HVAC"}}},
 		},
 	} {
 		ms.SaveTags(test.msg)
@@ -220,7 +221,7 @@ func TestGetTags(t *testing.T) {
 }
 
 func BenchmarkGetTags(b *testing.B) {
-	msg := &SmapMessage{
+	msg := &common.SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Metadata: Dict{
@@ -239,7 +240,7 @@ func BenchmarkGetTags(b *testing.B) {
 }
 
 func BenchmarkGetTagsParallel(b *testing.B) {
-	msg := &SmapMessage{
+	msg := &common.SmapMessage{
 		Path: "/sensor8",
 		UUID: NewUUID(),
 		Metadata: Dict{
@@ -261,8 +262,8 @@ func BenchmarkGetTagsParallel(b *testing.B) {
 
 func TestGetDistinct(t *testing.T) {
 	commonUUID := NewUUID()
-	msg1 := &SmapMessage{Path: "/sensor1", UUID: NewUUID(), Metadata: Dict{"Tag": "Value1", "Shared": string(commonUUID)}}
-	msg2 := &SmapMessage{Path: "/sensor2", UUID: NewUUID(), Metadata: Dict{"Tag": "Value2", "Shared": string(commonUUID)}}
+	msg1 := &common.SmapMessage{Path: "/sensor1", UUID: NewUUID(), Metadata: Dict{"Tag": "Value1", "Shared": string(commonUUID)}}
+	msg2 := &common.SmapMessage{Path: "/sensor2", UUID: NewUUID(), Metadata: Dict{"Tag": "Value2", "Shared": string(commonUUID)}}
 	ms.SaveTags(msg1)
 	ms.SaveTags(msg2)
 	for _, test := range []struct {
@@ -290,8 +291,8 @@ func TestGetDistinct(t *testing.T) {
 
 func TestGetUUIDs(t *testing.T) {
 	commonUUID := NewUUID()
-	msg1 := &SmapMessage{Path: "/sensor1", UUID: NewUUID(), Metadata: Dict{"Tag": "Value1", "Shared": string(commonUUID)}}
-	msg2 := &SmapMessage{Path: "/sensor2", UUID: NewUUID(), Metadata: Dict{"Tag": "Value2", "Shared": string(commonUUID)}}
+	msg1 := &common.SmapMessage{Path: "/sensor1", UUID: NewUUID(), Metadata: Dict{"Tag": "Value1", "Shared": string(commonUUID)}}
+	msg2 := &common.SmapMessage{Path: "/sensor2", UUID: NewUUID(), Metadata: Dict{"Tag": "Value2", "Shared": string(commonUUID)}}
 	ms.SaveTags(msg1)
 	ms.SaveTags(msg2)
 

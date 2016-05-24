@@ -6,6 +6,7 @@ import (
 	qtree "github.com/SoftwareDefinedBuildings/btrdb/qtree"
 	capn "github.com/glycerine/go-capnproto"
 	btrdb "github.com/gtfierro/giles2/archiver/btrdbcapnp"
+	"github.com/gtfierro/giles2/common"
 	"github.com/satori/go.uuid"
 	"net"
 	"sync"
@@ -74,12 +75,12 @@ func (b *btrdbDB) getConnection() *tsConn {
 	return &tsConn{conn, false}
 }
 
-func (b *btrdbDB) receiveData(conn *tsConn) (SmapNumbersResponse, error) {
+func (b *btrdbDB) receiveData(conn *tsConn) (common.SmapNumbersResponse, error) {
 	var (
-		sr       = SmapNumbersResponse{}
+		sr       = common.SmapNumbersResponse{}
 		finished = false
 	)
-	sr.Readings = []*SmapNumberReading{}
+	sr.Readings = []*common.SmapNumberReading{}
 
 	for !finished {
 		// wait for response on given connection
@@ -98,7 +99,7 @@ func (b *btrdbDB) receiveData(conn *tsConn) (SmapNumbersResponse, error) {
 				return sr, fmt.Errorf("Error when reading from BtrDB: %v", resp.StatusCode().String())
 			}
 			for _, rec := range resp.Records().Values().ToArray() {
-				sr.Readings = append(sr.Readings, &SmapNumberReading{Time: uint64(rec.Time()), Value: rec.Value()})
+				sr.Readings = append(sr.Readings, &common.SmapNumberReading{Time: uint64(rec.Time()), Value: rec.Value()})
 			}
 			finished = resp.Final()
 		default:
@@ -126,7 +127,7 @@ func (b *btrdbDB) receiveStatus(conn *tsConn) error {
 	}
 }
 
-func (b *btrdbDB) AddMessage(msg *SmapMessage) error {
+func (b *btrdbDB) AddMessage(msg *common.SmapMessage) error {
 	var (
 		parsed_uuid uuid.UUID
 		err         error
@@ -164,39 +165,8 @@ func (b *btrdbDB) AddMessage(msg *SmapMessage) error {
 	return err
 }
 
-func (b *btrdbDB) AddBuffer(buf *streamBuffer) error {
-	var (
-		parsed_uuid uuid.UUID
-		err         error
-	)
-	if len(buf.readings) == 0 {
-		return nil
-	}
-	if parsed_uuid, err = uuid.FromString(string(buf.uuid)); err != nil {
-		return err
-	}
-	pkt := b.packetpool.Get().(btrdbReading)
-	pkt.ins.SetUuid(parsed_uuid.Bytes())
-	rl := btrdb.NewRecordList(pkt.seg, buf.idx)
-	rla := rl.ToArray()
-	for i, val := range buf.readings[:buf.idx] {
-		rla[i].SetTime(int64(val.GetTime()))
-		if num, ok := val.GetValue().(float64); ok {
-			rla[i].SetValue(num)
-		} else {
-			return fmt.Errorf("Bad number in buffer %v %v", buf.uuid, val)
-		}
-	}
-	pkt.ins.SetValues(rl)
-	pkt.req.SetInsertValues(*pkt.ins)
-	// write to the database
-	err = b.reliableWriteStatus(&pkt)
-	b.packetpool.Put(pkt)
-	return err
-}
-
-func (b *btrdbDB) queryNearestValue(uuids []UUID, start uint64, backwards bool) ([]SmapNumbersResponse, error) {
-	var ret = make([]SmapNumbersResponse, len(uuids))
+func (b *btrdbDB) queryNearestValue(uuids []common.UUID, start uint64, backwards bool) ([]common.SmapNumbersResponse, error) {
+	var ret = make([]common.SmapNumbersResponse, len(uuids))
 	conn := b.connpool.Get()
 	defer b.connpool.Put(conn)
 	for i, uu := range uuids {
@@ -222,16 +192,16 @@ func (b *btrdbDB) queryNearestValue(uuids []UUID, start uint64, backwards bool) 
 	return ret, nil
 }
 
-func (b *btrdbDB) Prev(uuids []UUID, start uint64) ([]SmapNumbersResponse, error) {
+func (b *btrdbDB) Prev(uuids []common.UUID, start uint64) ([]common.SmapNumbersResponse, error) {
 	return b.queryNearestValue(uuids, start, true)
 }
 
-func (b *btrdbDB) Next(uuids []UUID, start uint64) ([]SmapNumbersResponse, error) {
+func (b *btrdbDB) Next(uuids []common.UUID, start uint64) ([]common.SmapNumbersResponse, error) {
 	return b.queryNearestValue(uuids, start, false)
 }
 
-func (b *btrdbDB) GetData(uuids []UUID, start, end uint64) ([]SmapNumbersResponse, error) {
-	var ret = make([]SmapNumbersResponse, len(uuids))
+func (b *btrdbDB) GetData(uuids []common.UUID, start, end uint64) ([]common.SmapNumbersResponse, error) {
+	var ret = make([]common.SmapNumbersResponse, len(uuids))
 	for i, uu := range uuids {
 		seg := capn.NewBuffer(nil)
 		req := btrdb.NewRootRequest(seg)
@@ -251,10 +221,10 @@ func (b *btrdbDB) GetData(uuids []UUID, start, end uint64) ([]SmapNumbersRespons
 	return ret, nil
 }
 
-func (b *btrdbDB) ValidTimestamp(time uint64, uot UnitOfTime) bool {
+func (b *btrdbDB) ValidTimestamp(time uint64, uot common.UnitOfTime) bool {
 	var err error
-	if uot != UOT_NS {
-		time, err = convertTime(time, uot, UOT_NS)
+	if uot != common.UOT_NS {
+		time, err = common.ConvertTime(time, uot, common.UOT_NS)
 	}
 	return time >= 0 && time <= qtree.MaximumTime && err == nil
 }
@@ -284,9 +254,9 @@ func (b *btrdbDB) reliableWriteStatus(pkt *btrdbReading) error {
 	return nil
 }
 
-func (b *btrdbDB) reliableWriteData(seg *capn.Segment) (SmapNumbersResponse, error) {
+func (b *btrdbDB) reliableWriteData(seg *capn.Segment) (common.SmapNumbersResponse, error) {
 	var (
-		sr   SmapNumbersResponse
+		sr   common.SmapNumbersResponse
 		conn *tsConn
 		err  error
 	)

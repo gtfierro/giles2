@@ -1,12 +1,13 @@
 package archiver
 
 import (
+	"github.com/gtfierro/giles2/common"
 	"testing"
 	"time"
 )
 
 func BenchmarkArchiverAddNoMetadata(b *testing.B) {
-	msg := &SmapMessage{
+	msg := &common.SmapMessage{
 		UUID: NewUUID(),
 		Properties: &SmapProperties{
 			UnitOfTime:    UOT_NS,

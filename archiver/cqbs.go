@@ -2,6 +2,7 @@ package archiver
 
 import (
 	"github.com/gtfierro/giles2/archiver/internal/querylang"
+	"github.com/gtfierro/giles2/common"
 	"gopkg.in/mgo.v2/bson"
 	"sync"
 )
@@ -14,6 +15,10 @@ const (
 	SAME
 )
 
+type QueryResult interface {
+	IsResult()
+}
+
 type Query struct {
 	// query string
 	Query string
@@ -22,7 +27,7 @@ type Query struct {
 	// where clause in BSON
 	WhereClause bson.M
 	// uuids
-	Streams     map[UUID]UUIDSTATE
+	Streams     map[common.UUID]UUIDSTATE
 	subscribers *subscriberList
 	// most recent evaluation of this query
 	Initial QueryResult
@@ -34,13 +39,13 @@ func NewQuery(pq *querylang.ParsedQuery) *Query {
 		Query:       pq.Querystring,
 		Keys:        pq.Keys,
 		WhereClause: pq.Where,
-		Streams:     make(map[UUID]UUIDSTATE),
+		Streams:     make(map[common.UUID]UUIDSTATE),
 		subscribers: new(subscriberList),
 	}
 }
 
 // updates internal list of qualified streams. Returns the lists of added and removed UUIDs
-func (q *Query) changeUUIDs(uuids []UUID) (added, removed []UUID) {
+func (q *Query) changeUUIDs(uuids []common.UUID) (added, removed []common.UUID) {
 	// mark the UUIDs that are new
 	q.Lock()
 	for _, uuid := range uuids {
@@ -74,7 +79,7 @@ type Broker struct {
 	queryLock sync.RWMutex
 
 	// uuid -> subscriber
-	subscribers     map[UUID]*subscriberList
+	subscribers     map[common.UUID]*subscriberList
 	subscribersLock sync.RWMutex
 
 	// key -> list of queries
@@ -86,7 +91,7 @@ func NewBroker(a *Archiver) *Broker {
 	return &Broker{
 		a:           a,
 		queries:     make(map[string]*Query),
-		subscribers: make(map[UUID]*subscriberList),
+		subscribers: make(map[common.UUID]*subscriberList),
 		keys:        make(map[string]*queryList),
 	}
 }
@@ -116,7 +121,7 @@ func (b *Broker) GetQuery(pq *querylang.ParsedQuery) (*Query, error) {
 	q.changeUUIDs(uuids)
 
 	// also get initial result for query and cache it
-	result, evalErr := b.a.evaluateQuery(pq, NewEphemeralKey())
+	result, evalErr := b.a.evaluateQuery(pq, common.NewEphemeralKey())
 	if evalErr != nil {
 		return q, nil
 	}
@@ -152,7 +157,7 @@ func (b *Broker) GetQuery(pq *querylang.ParsedQuery) (*Query, error) {
 //TODO: reevaluate query.Initial
 // first adjust all subscriptions based on metadata in this message,
 // then forward it out to all subscribed clients
-func (b *Broker) HandleMessage(msg *SmapMessage) {
+func (b *Broker) HandleMessage(msg *common.SmapMessage) {
 	var toReevaluate = make(map[*Query]bool)
 	b.keysLock.RLock()
 	if msg.Metadata != nil {
@@ -277,7 +282,7 @@ func (b *Broker) NewSubscriber(sub *Subscriber) error {
 	return err
 }
 
-func (b *Broker) addSubscriberToStream(uuid UUID, sub *Subscriber) {
+func (b *Broker) addSubscriberToStream(uuid common.UUID, sub *Subscriber) {
 	var (
 		list  *subscriberList
 		found bool
@@ -329,7 +334,7 @@ func (b *Broker) removeSubscriber(sub *Subscriber) {
 
 // finds all clients subscribed to the uuid for this message
 // can calls client.QueueToSend(msg) on them
-func (b *Broker) ForwardMessage(msg *SmapMessage) {
+func (b *Broker) ForwardMessage(msg *common.SmapMessage) {
 	b.subscribersLock.RLock()
 	if list, found := b.subscribers[msg.UUID]; found {
 		b.subscribersLock.RUnlock()

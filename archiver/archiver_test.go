@@ -8,16 +8,16 @@ import (
 
 func BenchmarkArchiverAddNoMetadata(b *testing.B) {
 	msg := &common.SmapMessage{
-		UUID: NewUUID(),
-		Properties: &SmapProperties{
-			UnitOfTime:    UOT_NS,
+		UUID: common.NewUUID(),
+		Properties: &common.SmapProperties{
+			UnitOfTime:    common.UOT_NS,
 			UnitOfMeasure: "unit",
-			StreamType:    NUMERIC_STREAM,
+			StreamType:    common.NUMERIC_STREAM,
 		},
-		Readings: make([]Reading, 1),
+		Readings: make([]common.Reading, 1),
 	}
-	ek := NewEphemeralKey()
-	rdg := &SmapNumberReading{Time: 0, Value: 0}
+	ek := common.NewEphemeralKey()
+	rdg := &common.SmapNumberReading{Time: 0, Value: 0}
 	msg.Readings[0] = rdg
 	offset := time.Now().UnixNano()
 	b.ReportAllocs()

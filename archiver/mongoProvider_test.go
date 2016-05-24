@@ -34,7 +34,7 @@ func BenchmarkSaveTagsBare(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		msg := &common.SmapMessage{
 			Path: "/sensor8",
-			UUID: NewUUID(),
+			UUID: common.NewUUID(),
 		}
 		ms.SaveTags(msg)
 	}
@@ -45,7 +45,7 @@ func BenchmarkSaveTagsBareParallel(b *testing.B) {
 		for pb.Next() {
 			msg := &common.SmapMessage{
 				Path: "/sensor8",
-				UUID: NewUUID(),
+				UUID: common.NewUUID(),
 			}
 			ms.SaveTags(msg)
 		}
@@ -55,8 +55,8 @@ func BenchmarkSaveTagsBareParallel(b *testing.B) {
 func BenchmarkSaveTagsWithMetadata(b *testing.B) {
 	msg := &common.SmapMessage{
 		Path: "/sensor8",
-		UUID: NewUUID(),
-		Metadata: Dict{
+		UUID: common.NewUUID(),
+		Metadata: common.Dict{
 			"System":     "HVAC",
 			"Point.Name": "My Point",
 		},
@@ -71,8 +71,8 @@ func BenchmarkSaveTagsWithMetadata(b *testing.B) {
 func BenchmarkSaveTagsWithMetadataParallel(b *testing.B) {
 	msg := &common.SmapMessage{
 		Path: "/sensor8",
-		UUID: NewUUID(),
-		Metadata: Dict{
+		UUID: common.NewUUID(),
+		Metadata: common.Dict{
 			"System":     "HVAC",
 			"Point.Name": "My Point",
 		},
@@ -89,10 +89,10 @@ func BenchmarkSaveTagsWithMetadataParallel(b *testing.B) {
 func BenchmarkGetUnitOfTime(b *testing.B) {
 	msg := &common.SmapMessage{
 		Path: "/sensor8",
-		UUID: NewUUID(),
-		Properties: &SmapProperties{
-			UnitOfTime:    UOT_MS,
-			StreamType:    NUMERIC_STREAM,
+		UUID: common.NewUUID(),
+		Properties: &common.SmapProperties{
+			UnitOfTime:    common.UOT_MS,
+			StreamType:    common.NUMERIC_STREAM,
 			UnitOfMeasure: "F",
 		},
 	}
@@ -107,10 +107,10 @@ func BenchmarkGetUnitOfTime(b *testing.B) {
 func BenchmarkGetUnitOfTimeParallel(b *testing.B) {
 	msg := &common.SmapMessage{
 		Path: "/sensor8",
-		UUID: NewUUID(),
-		Properties: &SmapProperties{
-			UnitOfTime:    UOT_MS,
-			StreamType:    NUMERIC_STREAM,
+		UUID: common.NewUUID(),
+		Properties: &common.SmapProperties{
+			UnitOfTime:    common.UOT_MS,
+			StreamType:    common.NUMERIC_STREAM,
 			UnitOfMeasure: "F",
 		},
 	}
@@ -127,10 +127,10 @@ func BenchmarkGetUnitOfTimeParallel(b *testing.B) {
 func TestGetUnitOfTime(t *testing.T) {
 	msg := &common.SmapMessage{
 		Path: "/sensor8",
-		UUID: NewUUID(),
-		Properties: &SmapProperties{
-			UnitOfTime:    UOT_MS,
-			StreamType:    NUMERIC_STREAM,
+		UUID: common.NewUUID(),
+		Properties: &common.SmapProperties{
+			UnitOfTime:    common.UOT_MS,
+			StreamType:    common.NUMERIC_STREAM,
 			UnitOfMeasure: "F",
 		},
 	}
@@ -140,18 +140,18 @@ func TestGetUnitOfTime(t *testing.T) {
 	if err != nil {
 		t.Errorf("Err getting uot for %v (%v)", msg, err)
 	}
-	if uot != UOT_MS {
-		t.Errorf("UOT should be %v but was %v", UOT_MS, uot)
+	if uot != common.UOT_MS {
+		t.Errorf("UOT should be %v but was %v", common.UOT_MS, uot)
 	}
 }
 
 func TestGetStreamType(t *testing.T) {
 	msg := &common.SmapMessage{
 		Path: "/sensor8",
-		UUID: NewUUID(),
-		Properties: &SmapProperties{
-			UnitOfTime:    UOT_MS,
-			StreamType:    NUMERIC_STREAM,
+		UUID: common.NewUUID(),
+		Properties: &common.SmapProperties{
+			UnitOfTime:    common.UOT_MS,
+			StreamType:    common.NUMERIC_STREAM,
 			UnitOfMeasure: "F",
 		},
 	}
@@ -161,18 +161,18 @@ func TestGetStreamType(t *testing.T) {
 	if err != nil {
 		t.Errorf("Err getting StreamType for %v (%v)", msg, err)
 	}
-	if st != NUMERIC_STREAM {
-		t.Errorf("UOT should be %v but was %v", NUMERIC_STREAM, st)
+	if st != common.NUMERIC_STREAM {
+		t.Errorf("UOT should be %v but was %v", common.NUMERIC_STREAM, st)
 	}
 }
 
 func TestGetUnitOfMeasure(t *testing.T) {
 	msg := &common.SmapMessage{
 		Path: "/sensor8",
-		UUID: NewUUID(),
-		Properties: &SmapProperties{
-			UnitOfTime:    UOT_MS,
-			StreamType:    NUMERIC_STREAM,
+		UUID: common.NewUUID(),
+		Properties: &common.SmapProperties{
+			UnitOfTime:    common.UOT_MS,
+			StreamType:    common.NUMERIC_STREAM,
 			UnitOfMeasure: "F",
 		},
 	}
@@ -188,7 +188,7 @@ func TestGetUnitOfMeasure(t *testing.T) {
 }
 
 func TestGetTags(t *testing.T) {
-	myUUID := NewUUID()
+	myUUID := common.NewUUID()
 	myPath := "/sensor8"
 	for _, test := range []struct {
 		msg    *common.SmapMessage
@@ -203,10 +203,10 @@ func TestGetTags(t *testing.T) {
 			common.SmapMessageList{{UUID: myUUID}},
 		},
 		{
-			&common.SmapMessage{Path: myPath, UUID: myUUID, Metadata: Dict{"System": "HVAC", "Point|Name": "My Point"}},
+			&common.SmapMessage{Path: myPath, UUID: myUUID, Metadata: common.Dict{"System": "HVAC", "Point|Name": "My Point"}},
 			[]string{"Metadata.System", "Path"},
 			bson.M{"uuid": myUUID},
-			common.SmapMessageList{{Path: myPath, Metadata: Dict{"System": "HVAC"}}},
+			common.SmapMessageList{{Path: myPath, Metadata: common.Dict{"System": "HVAC"}}},
 		},
 	} {
 		ms.SaveTags(test.msg)
@@ -223,8 +223,8 @@ func TestGetTags(t *testing.T) {
 func BenchmarkGetTags(b *testing.B) {
 	msg := &common.SmapMessage{
 		Path: "/sensor8",
-		UUID: NewUUID(),
-		Metadata: Dict{
+		UUID: common.NewUUID(),
+		Metadata: common.Dict{
 			"System":     "HVAC",
 			"Point.Name": "My Point",
 		},
@@ -242,8 +242,8 @@ func BenchmarkGetTags(b *testing.B) {
 func BenchmarkGetTagsParallel(b *testing.B) {
 	msg := &common.SmapMessage{
 		Path: "/sensor8",
-		UUID: NewUUID(),
-		Metadata: Dict{
+		UUID: common.NewUUID(),
+		Metadata: common.Dict{
 			"System":     "HVAC",
 			"Point.Name": "My Point",
 		},
@@ -261,9 +261,9 @@ func BenchmarkGetTagsParallel(b *testing.B) {
 }
 
 func TestGetDistinct(t *testing.T) {
-	commonUUID := NewUUID()
-	msg1 := &common.SmapMessage{Path: "/sensor1", UUID: NewUUID(), Metadata: Dict{"Tag": "Value1", "Shared": string(commonUUID)}}
-	msg2 := &common.SmapMessage{Path: "/sensor2", UUID: NewUUID(), Metadata: Dict{"Tag": "Value2", "Shared": string(commonUUID)}}
+	commonUUID := common.NewUUID()
+	msg1 := &common.SmapMessage{Path: "/sensor1", UUID: common.NewUUID(), Metadata: common.Dict{"Tag": "Value1", "Shared": string(commonUUID)}}
+	msg2 := &common.SmapMessage{Path: "/sensor2", UUID: common.NewUUID(), Metadata: common.Dict{"Tag": "Value2", "Shared": string(commonUUID)}}
 	ms.SaveTags(msg1)
 	ms.SaveTags(msg2)
 	for _, test := range []struct {
@@ -290,9 +290,9 @@ func TestGetDistinct(t *testing.T) {
 }
 
 func TestGetUUIDs(t *testing.T) {
-	commonUUID := NewUUID()
-	msg1 := &common.SmapMessage{Path: "/sensor1", UUID: NewUUID(), Metadata: Dict{"Tag": "Value1", "Shared": string(commonUUID)}}
-	msg2 := &common.SmapMessage{Path: "/sensor2", UUID: NewUUID(), Metadata: Dict{"Tag": "Value2", "Shared": string(commonUUID)}}
+	commonUUID := common.NewUUID()
+	msg1 := &common.SmapMessage{Path: "/sensor1", UUID: common.NewUUID(), Metadata: common.Dict{"Tag": "Value1", "Shared": string(commonUUID)}}
+	msg2 := &common.SmapMessage{Path: "/sensor2", UUID: common.NewUUID(), Metadata: common.Dict{"Tag": "Value2", "Shared": string(commonUUID)}}
 	ms.SaveTags(msg1)
 	ms.SaveTags(msg2)
 
@@ -310,7 +310,7 @@ func TestGetUUIDs(t *testing.T) {
 
 	if !((results[0] == msg1.UUID || results[1] == msg1.UUID) &&
 		(results[0] == msg2.UUID || results[1] == msg2.UUID)) {
-		t.Errorf("Results were %v but should be %v", results, []UUID{msg1.UUID, msg2.UUID})
+		t.Errorf("Results were %v but should be %v", results, []common.UUID{msg1.UUID, msg2.UUID})
 
 	}
 }

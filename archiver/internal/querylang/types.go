@@ -1,7 +1,7 @@
 package querylang
 
 import (
-	"github.com/gtfierro/giles2/internal/unitoftime"
+	"github.com/gtfierro/giles2/common"
 	"time"
 )
 
@@ -10,7 +10,7 @@ type DataQuery struct {
 	Start    time.Time
 	End      time.Time
 	Limit    Limit
-	Timeconv unitoftime.UnitOfTime
+	Timeconv common.UnitOfTime
 }
 
 type Limit struct {

@@ -6,7 +6,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/taylorchu/toki"
-    "github.com/gtfierro/giles2/internal/unitoftime"
+    "github.com/gtfierro/giles2/common"
 	"strconv"
 	"gopkg.in/mgo.v2/bson"
     _time "time"
@@ -23,7 +23,7 @@ Notes here
 	dict qDict
 	data *DataQuery
 	limit Limit
-    timeconv unitoftime.UnitOfTime
+    timeconv common.UnitOfTime
 	list List
 	time _time.Time
     timediff _time.Duration
@@ -203,7 +203,7 @@ timeref		: abstime
 
 abstime		: NUMBER LVALUE
             {
-                foundtime, err := unitoftime.ParseAbsTime($1, $2)
+                foundtime, err := common.ParseAbsTime($1, $2)
                 if err != nil {
 				    sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse time \"%v %v\" (%v)", $1, $2, err.Error()))
                 }
@@ -242,18 +242,18 @@ abstime		: NUMBER LVALUE
 reltime		: NUMBER lvalue
             {
                 var err error
-                $$, err = unitoftime.ParseReltime($1, $2)
+                $$, err = common.ParseReltime($1, $2)
                 if err != nil {
 				    sqlex.(*sqLex).Error(fmt.Sprintf("Error parsing relative time \"%v %v\" (%v)", $1, $2, err.Error()))
                 }
             }
 			| NUMBER lvalue reltime
             {
-                newDuration, err := unitoftime.ParseReltime($1, $2)
+                newDuration, err := common.ParseReltime($1, $2)
                 if err != nil {
 				    sqlex.(*sqLex).Error(fmt.Sprintf("Error parsing relative time \"%v %v\" (%v)", $1, $2, err.Error()))
                 }
-                $$ = unitoftime.AddDurations(newDuration, $3)
+                $$ = common.AddDurations(newDuration, $3)
             }
 			;
 
@@ -293,11 +293,11 @@ limit		: /* empty */
 
 timeconv    : /* empty */
             {
-                $$ = unitoftime.UOT_MS
+                $$ = common.UOT_MS
             }
             | AS LVALUE
             {
-                uot, err := unitoftime.ParseUOT($2)
+                uot, err := common.ParseUOT($2)
                 if err != nil {
                     sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse unit of time %v (%v)", $2, err))
                 }

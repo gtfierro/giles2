@@ -7,7 +7,7 @@ import __yyfmt__ "fmt"
 import (
 	"bufio"
 	"fmt"
-	"github.com/gtfierro/giles2/internal/unitoftime"
+	"github.com/gtfierro/giles2/common"
 	"github.com/taylorchu/toki"
 	"gopkg.in/mgo.v2/bson"
 	"strconv"
@@ -25,7 +25,7 @@ type sqSymType struct {
 	dict     qDict
 	data     *DataQuery
 	limit    Limit
-	timeconv unitoftime.UnitOfTime
+	timeconv common.UnitOfTime
 	list     List
 	time     _time.Time
 	timediff _time.Duration
@@ -114,6 +114,7 @@ const sqErrCode = 2
 const sqInitialStackSize = 16
 
 //line query.y:386
+
 const eof = 0
 
 var supported_formats = []string{"1/2/2006",
@@ -910,7 +911,7 @@ sqdefault:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
 		//line query.y:205
 		{
-			foundtime, err := unitoftime.ParseAbsTime(sqDollar[1].str, sqDollar[2].str)
+			foundtime, err := common.ParseAbsTime(sqDollar[1].str, sqDollar[2].str)
 			if err != nil {
 				sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse time \"%v %v\" (%v)", sqDollar[1].str, sqDollar[2].str, err.Error()))
 			}
@@ -955,7 +956,7 @@ sqdefault:
 		//line query.y:243
 		{
 			var err error
-			sqVAL.timediff, err = unitoftime.ParseReltime(sqDollar[1].str, sqDollar[2].str)
+			sqVAL.timediff, err = common.ParseReltime(sqDollar[1].str, sqDollar[2].str)
 			if err != nil {
 				sqlex.(*sqLex).Error(fmt.Sprintf("Error parsing relative time \"%v %v\" (%v)", sqDollar[1].str, sqDollar[2].str, err.Error()))
 			}
@@ -964,11 +965,11 @@ sqdefault:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
 		//line query.y:251
 		{
-			newDuration, err := unitoftime.ParseReltime(sqDollar[1].str, sqDollar[2].str)
+			newDuration, err := common.ParseReltime(sqDollar[1].str, sqDollar[2].str)
 			if err != nil {
 				sqlex.(*sqLex).Error(fmt.Sprintf("Error parsing relative time \"%v %v\" (%v)", sqDollar[1].str, sqDollar[2].str, err.Error()))
 			}
-			sqVAL.timediff = unitoftime.AddDurations(newDuration, sqDollar[3].timediff)
+			sqVAL.timediff = common.AddDurations(newDuration, sqDollar[3].timediff)
 		}
 	case 35:
 		sqDollar = sqS[sqpt-0 : sqpt+1]
@@ -1014,13 +1015,13 @@ sqdefault:
 		sqDollar = sqS[sqpt-0 : sqpt+1]
 		//line query.y:295
 		{
-			sqVAL.timeconv = unitoftime.UOT_MS
+			sqVAL.timeconv = common.UOT_MS
 		}
 	case 40:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
 		//line query.y:299
 		{
-			uot, err := unitoftime.ParseUOT(sqDollar[2].str)
+			uot, err := common.ParseUOT(sqDollar[2].str)
 			if err != nil {
 				sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse unit of time %v (%v)", sqDollar[2].str, err))
 			}

@@ -1,4 +1,4 @@
-package archiver
+package common
 
 import (
 	"encoding/json"
@@ -6,10 +6,6 @@ import (
 	"sort"
 	"strings"
 )
-
-type QueryResult interface {
-	IsResult()
-}
 
 type SmapProperties struct {
 	UnitOfTime    UnitOfTime

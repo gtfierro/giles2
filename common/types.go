@@ -1,17 +1,14 @@
-package archiver
+package common
 
 import (
 	"crypto/rand"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/satori/go.uuid"
 	"gopkg.in/mgo.v2/bson"
 	"strconv"
 	"strings"
 )
-
-var TimeConvertErr = errors.New("Over/underflow error in converting time")
 
 // internal unique identifier
 type UUID string
@@ -54,40 +51,25 @@ func (d Dict) MarshalJSON() ([]byte, error) {
 		return json.Marshal(m)
 	}
 
+	fmt.Println("DICT %d", d)
+	var ok bool = false
 	for dk, dv := range d {
 		pieces := strings.Split(dk, "|")
 		plen := len(pieces)
 		var cur = m
 		for _, token := range pieces[:plen-1] {
+			fmt.Println("token %v", token)
 			if _, found := cur[token]; !found {
 				cur[token] = make(map[string]interface{})
 			}
-			cur = cur[token].(map[string]interface{})
+			fmt.Println("cur[token] %v", cur[token])
+			if cur, ok = cur[token].(map[string]interface{}); !ok {
+				return []byte{}, fmt.Errorf("Could not convert cur to map[string]interface{} was %v", cur[token])
+			}
 		}
 		cur[pieces[plen-1]] = dv
 	}
 	return json.Marshal(m)
-}
-
-// unit of time indicators
-type UnitOfTime uint
-
-const (
-	// nanoseconds 1000000000
-	UOT_NS UnitOfTime = 1
-	// microseconds 1000000
-	UOT_US UnitOfTime = 2
-	// milliseconds 1000
-	UOT_MS UnitOfTime = 3
-	// seconds 1
-	UOT_S UnitOfTime = 4
-)
-
-var unitmultiplier = map[UnitOfTime]uint64{
-	UOT_NS: 1000000000,
-	UOT_US: 1000000,
-	UOT_MS: 1000,
-	UOT_S:  1,
 }
 
 // Takes a timestamp with accompanying unit of time 'stream_uot' and
@@ -109,53 +91,6 @@ func convertTime(time uint64, stream_uot, target_uot UnitOfTime) (uint64, error)
 		}
 	}
 	return returnTime, nil
-}
-
-func (u UnitOfTime) String() string {
-	switch u {
-	case UOT_NS:
-		return "ns"
-	case UOT_US:
-		return "us"
-	case UOT_MS:
-		return "ms"
-	case UOT_S:
-		return "s"
-	default:
-		return ""
-	}
-}
-
-func (u UnitOfTime) MarshalJSON() ([]byte, error) {
-	switch u {
-	case UOT_NS:
-		return []byte(`"ns"`), nil
-	case UOT_US:
-		return []byte(`"us"`), nil
-	case UOT_MS:
-		return []byte(`"ms"`), nil
-	case UOT_S:
-		return []byte(`"s"`), nil
-	default:
-		return []byte(`"s"`), nil
-	}
-}
-
-func (u *UnitOfTime) UnmarshalJSON(b []byte) (err error) {
-	str := strings.Trim(string(b), `"`)
-	switch str {
-	case "ns":
-		*u = UOT_NS
-	case "us":
-		*u = UOT_US
-	case "ms":
-		*u = UOT_MS
-	case "s":
-		*u = UOT_S
-	default:
-		return fmt.Errorf("%v is not a valid UnitOfTime", str)
-	}
-	return nil
 }
 
 // stream type indicators

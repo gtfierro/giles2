@@ -3,13 +3,14 @@ package http
 import (
 	"fmt"
 	"github.com/drewolson/testflight"
-	"github.com/gtfierro/giles2/archiver"
+	giles "github.com/gtfierro/giles2/archiver"
+	"github.com/gtfierro/giles2/common"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
 )
 
-var testArchiver *archiver.Archiver
+var testArchiver *giles.Archiver
 
 /*
 Tests to run:
@@ -29,10 +30,10 @@ Tests to run:
 */
 
 func TestHandleAdd(t *testing.T) {
-	aConfig := archiver.LoadConfig("../giles.cfg")
-	testArchiver = archiver.NewArchiver(aConfig)
+	aConfig := giles.LoadConfig("../giles.cfg")
+	testArchiver = giles.NewArchiver(aConfig)
 	h := NewHTTPHandler(testArchiver)
-	uuid := archiver.NewUUID()
+	uuid := common.NewUUID()
 
 	for _, test := range []struct {
 		title          string

@@ -23,7 +23,8 @@ package http
 
 import (
 	"encoding/json"
-	"github.com/gtfierro/giles2/archiver"
+	giles "github.com/gtfierro/giles2/archiver"
+	"github.com/gtfierro/giles2/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/op/go-logging"
 	"io"
@@ -47,11 +48,11 @@ func init() {
 }
 
 type HTTPHandler struct {
-	a       *archiver.Archiver
+	a       *giles.Archiver
 	handler http.Handler
 }
 
-func NewHTTPHandler(a *archiver.Archiver) *HTTPHandler {
+func NewHTTPHandler(a *giles.Archiver) *HTTPHandler {
 	r := httprouter.New()
 	h := &HTTPHandler{a, r}
 	r.POST("/add/:key", h.handleAdd)
@@ -64,7 +65,7 @@ func NewHTTPHandler(a *archiver.Archiver) *HTTPHandler {
 	return h
 }
 
-func Handle(a *archiver.Archiver, port int) {
+func Handle(a *giles.Archiver, port int) {
 	h := NewHTTPHandler(a)
 	address, err := net.ResolveTCPAddr("tcp4", "0.0.0.0:"+strconv.Itoa(port))
 	if err != nil {
@@ -81,8 +82,8 @@ func Handle(a *archiver.Archiver, port int) {
 
 func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey   archiver.EphemeralKey
-		messages archiver.TieredSmapMessage
+		ephkey   common.EphemeralKey
+		messages common.TieredSmapMessage
 		err      error
 	)
 	copy(ephkey[:], ps.ByName("key"))
@@ -110,7 +111,7 @@ func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps ht
 
 func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey archiver.EphemeralKey
+		ephkey common.EphemeralKey
 		err    error
 	)
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
@@ -145,7 +146,7 @@ func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Reques
 
 func (h *HTTPHandler) handleSubscriber(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey archiver.EphemeralKey
+		ephkey common.EphemeralKey
 		err    error
 	)
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
@@ -176,7 +177,7 @@ func (h *HTTPHandler) handleSubscriber(rw http.ResponseWriter, req *http.Request
 
 func (h *HTTPHandler) handleRepublisher(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey archiver.EphemeralKey
+		ephkey common.EphemeralKey
 		err    error
 	)
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
@@ -205,7 +206,7 @@ func (h *HTTPHandler) handleRepublisher(rw http.ResponseWriter, req *http.Reques
 	h.a.HandleNewSubscriber(subscription, "select * where "+string(querybuffer), ephkey)
 }
 
-func handleJSON(r io.Reader) (decoded archiver.TieredSmapMessage, err error) {
+func handleJSON(r io.Reader) (decoded common.TieredSmapMessage, err error) {
 	decoder := json.NewDecoder(r)
 	decoder.UseNumber()
 	err = decoder.Decode(&decoded)

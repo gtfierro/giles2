@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	giles "github.com/gtfierro/giles2/archiver"
+	"github.com/gtfierro/giles2/common"
 	"github.com/op/go-logging"
 	"io"
 	"net"
@@ -96,8 +97,8 @@ func (tcp *TCPJSONHandler) listenAdds() {
 
 func (tcp *TCPJSONHandler) handleAdd(conn net.Conn) {
 	var (
-		ephkey   giles.EphemeralKey
-		messages giles.TieredSmapMessage
+		ephkey   common.EphemeralKey
+		messages common.TieredSmapMessage
 		err      error
 	)
 	if messages, err = handleJSON(conn); err != nil {
@@ -105,7 +106,7 @@ func (tcp *TCPJSONHandler) handleAdd(conn net.Conn) {
 		tcp.errors <- err
 		return
 	}
-	ephkey = giles.NewEphemeralKey()
+	ephkey = common.NewEphemeralKey()
 	messages.CollapseToTimeseries()
 	for _, msg := range messages {
 		if addErr := tcp.a.AddData(msg, ephkey); addErr != nil {
@@ -139,7 +140,7 @@ func (tcp *TCPJSONHandler) handleQuery(conn net.Conn) {
 		tcp.errors <- err
 		return
 	}
-	res, err := tcp.a.HandleQuery(string(querybuffer), giles.NewEphemeralKey())
+	res, err := tcp.a.HandleQuery(string(querybuffer), common.NewEphemeralKey())
 	if err != nil {
 		log.Errorf("Error evaluating query: %v", err)
 		tcp.errors <- err
@@ -174,10 +175,10 @@ func (tcp *TCPJSONHandler) handleSubscribe(conn net.Conn) {
 	}
 
 	subscription := StartTCPJSONSubscriber(conn)
-	tcp.a.HandleNewSubscriber(subscription, "select * where "+string(querybuffer), giles.NewEphemeralKey())
+	tcp.a.HandleNewSubscriber(subscription, "select * where "+string(querybuffer), common.NewEphemeralKey())
 }
 
-func handleJSON(r io.Reader) (decoded giles.TieredSmapMessage, err error) {
+func handleJSON(r io.Reader) (decoded common.TieredSmapMessage, err error) {
 	decoder := json.NewDecoder(r)
 	decoder.UseNumber()
 	err = decoder.Decode(&decoded)

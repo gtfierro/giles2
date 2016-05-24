@@ -13,7 +13,8 @@
 package msgpack
 
 import (
-	"github.com/gtfierro/giles2/archiver"
+	giles "github.com/gtfierro/giles2/archiver"
+	"github.com/gtfierro/giles2/common"
 	"github.com/op/go-logging"
 	"net"
 	"os"
@@ -28,7 +29,7 @@ var log *logging.Logger
 
 // set up logging facilities
 func init() {
-	log = logging.MustGetLogger("archiver")
+	log = logging.MustGetLogger("msgpack")
 	var format = "%{color}%{level} %{time:Jan 02 15:04:05} %{shortfile}%{color:reset} ▶ %{message}"
 	var logBackend = logging.NewLogBackend(os.Stderr, "", 0)
 	logBackendLeveled := logging.AddModuleLevel(logBackend)
@@ -37,13 +38,13 @@ func init() {
 }
 
 type MsgPackUdpHandler struct {
-	a       *archiver.Archiver
+	a       *giles.Archiver
 	bufpool sync.Pool
 	msgpool sync.Pool
 	counter uint64
 }
 
-func HandleUDP4(a *archiver.Archiver, port int) {
+func HandleUDP4(a *giles.Archiver, port int) {
 	h := &MsgPackUdpHandler{
 		a: a,
 		bufpool: sync.Pool{
@@ -53,10 +54,10 @@ func HandleUDP4(a *archiver.Archiver, port int) {
 		},
 		msgpool: sync.Pool{
 			New: func() interface{} {
-				return &archiver.SmapMessage{
-					Actuator: make(archiver.Dict),
-					Metadata: make(archiver.Dict),
-					Readings: make([]archiver.Reading, 0),
+				return &common.SmapMessage{
+					Actuator: make(common.Dict),
+					Metadata: make(common.Dict),
+					Readings: make([]common.Reading, 0),
 				}
 			},
 		},
@@ -92,7 +93,7 @@ func HandleUDP4(a *archiver.Archiver, port int) {
 func (h *MsgPackUdpHandler) handleAdd(buffer []byte, num int, from *net.UDPAddr, err error) {
 	if err != nil {
 		log.Debugf("Got err handling MsgPack packet", err)
-        return
+		return
 	}
 
 	msg, ephkey, err := h.decode(buffer)
@@ -100,7 +101,7 @@ func (h *MsgPackUdpHandler) handleAdd(buffer []byte, num int, from *net.UDPAddr,
 		h.a.AddData(msg, ephkey)
 		atomic.AddUint64(&h.counter, 1)
 	}
-	msg.Metadata = archiver.Dict{}
+	msg.Metadata = common.Dict{}
 	h.msgpool.Put(msg)
 	h.bufpool.Put(buffer)
 }
@@ -108,7 +109,7 @@ func (h *MsgPackUdpHandler) handleAdd(buffer []byte, num int, from *net.UDPAddr,
 func (h *MsgPackUdpHandler) handleSubscription(buffer []byte, num int, from *net.UDPAddr, err error) {
 	if err != nil {
 		log.Debugf("Got err handling MsgPack packet", err)
-        return
+		return
 	}
 }
 
@@ -121,10 +122,10 @@ func Fuzz(data []byte) int {
 		},
 		msgpool: sync.Pool{
 			New: func() interface{} {
-				return &archiver.SmapMessage{
-					Actuator: make(archiver.Dict),
-					Metadata: make(archiver.Dict),
-					Readings: make([]archiver.Reading, 0),
+				return &common.SmapMessage{
+					Actuator: make(common.Dict),
+					Metadata: make(common.Dict),
+					Readings: make([]common.Reading, 0),
 				}
 			},
 		},
@@ -137,12 +138,12 @@ func Fuzz(data []byte) int {
 	return 0
 }
 
-func (h *MsgPackUdpHandler) decode(buffer []byte) (*archiver.SmapMessage, archiver.EphemeralKey, error) {
+func (h *MsgPackUdpHandler) decode(buffer []byte) (*common.SmapMessage, common.EphemeralKey, error) {
 	var (
-		ephkey archiver.EphemeralKey
+		ephkey common.EphemeralKey
 		uuid   string
 	)
-	msg := h.msgpool.Get().(*archiver.SmapMessage)
+	msg := h.msgpool.Get().(*common.SmapMessage)
 
 	msgMap, err := doDecode(buffer)
 
@@ -160,7 +161,7 @@ func (h *MsgPackUdpHandler) decode(buffer []byte) (*archiver.SmapMessage, archiv
 	if uuid, err = getStringValue(msgMap, "uuid"); err != nil {
 		return msg, ephkey, err
 	}
-	msg.UUID = archiver.UUID(uuid)
+	msg.UUID = common.UUID(uuid)
 
 	// test for readings
 	rdgs, err := getReadings(msgMap)
@@ -171,7 +172,7 @@ func (h *MsgPackUdpHandler) decode(buffer []byte) (*archiver.SmapMessage, archiv
 		if value, err = getValue(msgMap); err != nil {
 			return msg, ephkey, err
 		}
-		msg.Readings = []archiver.Reading{&archiver.SmapNumberReading{Time: archiver.GetNow(archiver.UOT_MS), Value: value}}
+		msg.Readings = []common.Reading{&common.SmapNumberReading{Time: common.GetNow(common.UOT_MS), Value: value}}
 	} else if err == nil { // readings are ok
 		msg.Readings = rdgs
 	}

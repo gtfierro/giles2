@@ -3,7 +3,6 @@ package msgpack
 import (
 	"bytes"
 	"errors"
-	"github.com/gtfierro/giles2/archiver"
 	"github.com/gtfierro/giles2/common"
 	"gopkg.in/vmihailenco/msgpack.v2"
 	"strings"
@@ -27,9 +26,9 @@ func getStringValue(msg map[string]interface{}, key string) (string, error) {
 	}
 }
 
-func getReadings(msg map[string]interface{}) ([]archiver.Reading, error) {
+func getReadings(msg map[string]interface{}) ([]common.Reading, error) {
 	var (
-		ret       []archiver.Reading
+		ret       []common.Reading
 		val       interface{}
 		readings  []interface{}
 		found, ok bool
@@ -49,13 +48,13 @@ func getReadings(msg map[string]interface{}) ([]archiver.Reading, error) {
 	return ret, nil
 }
 
-func getMetadata(msg map[string]interface{}) (archiver.Dict, error) {
-	var metadata archiver.Dict
+func getMetadata(msg map[string]interface{}) (common.Dict, error) {
+	var metadata common.Dict
 	if md, found := msg["Metadata"]; found {
 		if stringmap, ok := md.(map[string]interface{}); ok {
 			// once we find it, copy it in, skipping non-strings
 			//TODO: we will probably have to handle numbers here
-			metadata = make(archiver.Dict, len(stringmap))
+			metadata = make(common.Dict, len(stringmap))
 			for k, v := range stringmap {
 				if vs, ok := v.(string); ok {
 					k = strings.Replace(k, ".", "|", -1)
@@ -71,8 +70,8 @@ func getMetadata(msg map[string]interface{}) (archiver.Dict, error) {
 	return metadata, MetadataNotFound
 }
 
-func getProperties(msg map[string]interface{}) (properties *archiver.SmapProperties, err error) {
-	properties = &archiver.SmapProperties{}
+func getProperties(msg map[string]interface{}) (properties *common.SmapProperties, err error) {
+	properties = &common.SmapProperties{}
 	if prop, found := msg["Properties"]; found {
 		if propmap, ok := prop.(map[string]interface{}); ok {
 			// UnitofTime
@@ -101,9 +100,9 @@ func getProperties(msg map[string]interface{}) (properties *archiver.SmapPropert
 				if !ok || (ststr != "numeric" && ststr != "object") {
 					err = errors.New("StreamType was not 'numeric' or 'object'")
 				} else if ststr == "numeric" {
-					properties.StreamType = archiver.NUMERIC_STREAM
+					properties.StreamType = common.NUMERIC_STREAM
 				} else if ststr == "object" {
-					properties.StreamType = archiver.OBJECT_STREAM
+					properties.StreamType = common.OBJECT_STREAM
 				}
 			}
 		}

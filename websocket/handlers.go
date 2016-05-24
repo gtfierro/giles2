@@ -3,6 +3,7 @@ package websocket
 import (
 	"github.com/gorilla/websocket"
 	giles "github.com/gtfierro/giles2/archiver"
+	"github.com/gtfierro/giles2/common"
 	"github.com/julienschmidt/httprouter"
 	"github.com/op/go-logging"
 	"net"
@@ -64,8 +65,8 @@ func Handle(a *giles.Archiver, port int) {
 
 func (h *WebSocketHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey   giles.EphemeralKey
-		messages giles.TieredSmapMessage
+		ephkey   common.EphemeralKey
+		messages common.TieredSmapMessage
 		err      error
 	)
 	rw.Header().Set("Content-Type", "application/json")
@@ -90,8 +91,8 @@ func (h *WebSocketHandler) handleAdd(rw http.ResponseWriter, req *http.Request, 
 
 func (h *WebSocketHandler) handleRepublish(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey giles.EphemeralKey
-		//messages giles.TieredSmapMessage
+		ephkey common.EphemeralKey
+		//messages common.TieredSmapMessage
 		err error
 	)
 	rw.Header().Set("Content-Type", "application/json")

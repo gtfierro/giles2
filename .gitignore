@@ -6,4 +6,5 @@ giles2
 archiver/archiver.test
 archiver/cpu.out
 archiver/mem.out
+archiver/internal/querylang/y.output
 archiver/y.output

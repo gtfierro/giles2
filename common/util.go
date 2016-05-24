@@ -25,7 +25,7 @@ func flatten(m bson.M) bson.M {
 func fixKey(k string) string {
 	return strings.Replace(k, ".", "|", -1)
 }
-func fixMongoKey(key string) string {
+func FixMongoKey(key string) string {
 	switch {
 	case strings.HasPrefix(key, "Metadata"):
 		return "Metadata." + strings.Replace(key[9:], ".", "|", -1)

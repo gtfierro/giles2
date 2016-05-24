@@ -33,7 +33,7 @@ func NewDict() *Dict {
 func DictFromBson(m bson.M) Dict {
 	d := Dict{}
 	for k, v := range m {
-		key := fixMongoKey(k)
+		key := FixMongoKey(k)
 		if vs, ok := v.(string); ok {
 			d[key] = vs
 		} else if vs, ok := v.(int64); ok {

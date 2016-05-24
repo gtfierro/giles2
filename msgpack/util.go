@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"github.com/gtfierro/giles2/archiver"
-	"github.com/gtfierro/giles2/internal/unitoftime"
+	"github.com/gtfierro/giles2/common"
 	"gopkg.in/vmihailenco/msgpack.v2"
 	"strings"
 )
@@ -81,9 +81,9 @@ func getProperties(msg map[string]interface{}) (properties *archiver.SmapPropert
 				if !ok {
 					err = errors.New("UnitofTime was not string")
 				} else {
-					var uot unitoftime.UnitOfTime
-					uot, err = unitoftime.ParseUOT(uotstr)
-					properties.UnitOfTime = archiver.UnitOfTime(uot)
+					var uot common.UnitOfTime
+					uot, err = common.ParseUOT(uotstr)
+					properties.UnitOfTime = common.UnitOfTime(uot)
 				}
 			}
 			// UnitofMeasure

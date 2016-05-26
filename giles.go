@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/gtfierro/giles2/archiver"
+	"github.com/gtfierro/giles2/bosswave"
 	"github.com/gtfierro/giles2/http"
 	"github.com/gtfierro/giles2/msgpack"
 	"github.com/gtfierro/giles2/tcpjson"
@@ -63,6 +64,10 @@ func main() {
 
 	if config.HTTP.Enabled {
 		go http.Handle(a, *config.HTTP.Port)
+	}
+
+	if config.BOSSWAVE.Enabled {
+		go bosswave.Handle(a, config.BOSSWAVE.Entityfile, config.BOSSWAVE.Namespace)
 	}
 
 	if config.WebSocket.Enabled {

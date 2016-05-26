@@ -48,6 +48,12 @@ type Config struct {
 		Port    *int
 	}
 
+	BOSSWAVE struct {
+		Enabled    bool
+		Entityfile string
+		Namespace  string
+	}
+
 	WebSocket struct {
 		Enabled bool
 		Port    *int

@@ -48,6 +48,7 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 	bwh.svc = bwh.bw.RegisterService(bwh.namespace, "s.giles")
 	bwh.iface = bwh.svc.RegisterInterface("0", "i.archiver")
 	bwh.iface.SubscribeSlot("query", bwh.listenQueries)
+	bwh.iface.SubscribeSlot("subscribe", bwh.listenCQBS)
 	log.Infof("iface: %s", bwh.iface.FullURI())
 	return bwh
 }
@@ -108,4 +109,80 @@ func (bwh *BOSSWaveHandler) listenQueries(msg *bw.SimpleMessage) {
 	}
 
 	bwh.iface.PublishSignal(signalURI, reply...)
+}
+
+func (bwh *BOSSWaveHandler) listenCQBS(msg *bw.SimpleMessage) {
+	var (
+		// the publisher of the message. We incorporate this into the signal URI
+		fromVK string
+		// query message
+		query KeyValueQuery
+	)
+	fromVK = msg.From
+	msg.Dump()
+	po := msg.GetOnePODF(GilesKeyValueQueryPIDString)
+	if po == nil { // no query found
+		return
+	}
+
+	if obj, ok := po.(bw.MsgPackPayloadObject); !ok {
+		log.Error("Received query was not msgpack")
+	} else if err := obj.ValueInto(&query); err != nil {
+		log.Error(errors.Wrap(err, "Could not unmarshal received query"))
+	}
+
+	subscription := bwh.StartSubscriber(fromVK, query)
+	go bwh.a.HandleNewSubscriber(subscription, query.Query, common.NewEphemeralKey())
+}
+
+func (bwh *BOSSWaveHandler) StartSubscriber(vk string, query KeyValueQuery) *giles.Subscriber {
+	bws := &BWSubscriber{
+		bw:      bwh.bw,
+		nonce:   query.Nonce,
+		closeC:  make(chan bool),
+		baseURI: bwh.iface.FullURI() + fmt.Sprintf("/signal/%s/", vk[:len(vk)-1]),
+	}
+	bws.allURI = bws.baseURI + "all"
+	bws.timeseriesURI = bws.baseURI + "timeseries"
+	bws.metadataURI = bws.baseURI + "metadata"
+	bws.diffURI = bws.baseURI + "diff"
+	bws.subscription = giles.NewSubscriber(bws.closeC, 10, bws.handleError)
+
+	go func(bws *BWSubscriber) {
+		for val := range bws.subscription.C {
+			var reply []bw.PayloadObject
+			log.Debugf("subscription got val %+v", val)
+			switch t := val.(type) {
+			case common.SmapMessageList:
+				log.Debugf("smap messages list %+v", t)
+				pos := POsFromSmapMessageList(query.Nonce, t)
+				reply = append(reply, pos...)
+			case common.DistinctResult:
+				log.Debugf("distinct list %+v", t)
+				reply = append(reply, POFromDistinctResult(query.Nonce, t))
+			default:
+				log.Debug("type %T", val)
+			}
+			log.Info(bws.allURI)
+			log.Error(bwh.iface.PublishSignal(bws.allURI, reply...))
+		}
+	}(bws)
+
+	return bws.subscription
+}
+
+type BWSubscriber struct {
+	bw            *bw.BW2Client
+	subscription  *giles.Subscriber
+	closeC        chan bool
+	baseURI       string
+	allURI        string
+	timeseriesURI string
+	metadataURI   string
+	diffURI       string
+	nonce         uint32
+}
+
+func (bws *BWSubscriber) handleError(e error) {
+	log.Error("sub got error", e)
 }

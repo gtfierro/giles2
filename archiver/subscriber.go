@@ -6,7 +6,7 @@ import (
 )
 
 type Subscriber struct {
-	C            chan interface{}
+	C            chan QueryResult
 	closed       <-chan bool
 	errorHandler func(error)
 	query        *querylang.ParsedQuery
@@ -17,7 +17,7 @@ type Subscriber struct {
 // considered dead, so we clean up
 func NewSubscriber(closed <-chan bool, bufferSize int, handleError func(error)) *Subscriber {
 	return &Subscriber{
-		C:            make(chan interface{}, bufferSize),
+		C:            make(chan QueryResult, bufferSize),
 		closed:       closed,
 		errorHandler: handleError,
 	}
@@ -25,7 +25,7 @@ func NewSubscriber(closed <-chan bool, bufferSize int, handleError func(error)) 
 
 // Attempts to send a message on the subscribers channel. If this
 // fails (e.g. queue is full), then the message is dropped
-func (s *Subscriber) QueueToSend(v interface{}) error {
+func (s *Subscriber) QueueToSend(v QueryResult) error {
 	select {
 	case s.C <- v:
 		return nil
@@ -35,7 +35,7 @@ func (s *Subscriber) QueueToSend(v interface{}) error {
 }
 
 // Like QueueToSend, but blocks until sent
-func (s *Subscriber) BlockSend(v interface{}) {
+func (s *Subscriber) BlockSend(v QueryResult) {
 	s.C <- v
 }
 

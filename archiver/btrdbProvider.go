@@ -3,7 +3,6 @@ package archiver
 import (
 	"errors"
 	"fmt"
-	qtree "github.com/SoftwareDefinedBuildings/btrdb/qtree"
 	capn "github.com/glycerine/go-capnproto"
 	btrdb "github.com/gtfierro/giles2/archiver/btrdbcapnp"
 	"github.com/gtfierro/giles2/common"
@@ -13,6 +12,8 @@ import (
 )
 
 var BtrDBReadErr = errors.New("Error receiving data from BtrDB")
+
+const MaximumTime = (48 << 56)
 
 type btrdbDB struct {
 	addr           *net.TCPAddr
@@ -226,7 +227,7 @@ func (b *btrdbDB) ValidTimestamp(time uint64, uot common.UnitOfTime) bool {
 	if uot != common.UOT_NS {
 		time, err = common.ConvertTime(time, uot, common.UOT_NS)
 	}
-	return time >= 0 && time <= qtree.MaximumTime && err == nil
+	return time >= 0 && time <= MaximumTime && err == nil
 }
 
 func (b *btrdbDB) reliableWriteStatus(pkt *btrdbReading) error {

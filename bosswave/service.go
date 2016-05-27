@@ -79,7 +79,7 @@ func (bwh *BOSSWaveHandler) listenQueries(msg *bw.SimpleMessage) {
 		log.Error(errors.Wrap(err, "Could not unmarshal received query"))
 	}
 
-	signalURI = fmt.Sprintf("%s/queries", fromVK[:len(fromVK)-1])
+	signalURI = fmt.Sprintf("%s,queries", fromVK[:len(fromVK)-1])
 
 	log.Infof("Got query %+v", query)
 	res, err := bwh.a.HandleQuery(query.Query, common.NewEphemeralKey())
@@ -119,7 +119,6 @@ func (bwh *BOSSWaveHandler) listenCQBS(msg *bw.SimpleMessage) {
 		query KeyValueQuery
 	)
 	fromVK = msg.From
-	msg.Dump()
 	po := msg.GetOnePODF(GilesKeyValueQueryPIDString)
 	if po == nil { // no query found
 		return
@@ -140,7 +139,7 @@ func (bwh *BOSSWaveHandler) StartSubscriber(vk string, query KeyValueQuery) *gil
 		bw:      bwh.bw,
 		nonce:   query.Nonce,
 		closeC:  make(chan bool),
-		baseURI: bwh.iface.FullURI() + fmt.Sprintf("/signal/%s/", vk[:len(vk)-1]),
+		baseURI: fmt.Sprintf("%s,", vk[:len(vk)-1]),
 	}
 	bws.allURI = bws.baseURI + "all"
 	bws.timeseriesURI = bws.baseURI + "timeseries"
@@ -163,8 +162,9 @@ func (bwh *BOSSWaveHandler) StartSubscriber(vk string, query KeyValueQuery) *gil
 			default:
 				log.Debug("type %T", val)
 			}
-			log.Info(bws.allURI)
-			log.Error(bwh.iface.PublishSignal(bws.allURI, reply...))
+			if err := bwh.iface.PublishSignal(bws.allURI, reply...); err != nil {
+				log.Error(errors.Wrap(err, "Could not publish reply"))
+			}
 		}
 	}(bws)
 

@@ -86,13 +86,13 @@ func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps ht
 		messages common.TieredSmapMessage
 		err      error
 	)
+	defer req.Body.Close()
 	copy(ephkey[:], ps.ByName("key"))
 
 	if messages, err = handleJSON(req.Body); err != nil {
 		log.Errorf("Error handling JSON: %v", err)
 		rw.WriteHeader(400)
 		rw.Write([]byte(err.Error()))
-		req.Body.Close()
 		return
 	}
 
@@ -101,7 +101,6 @@ func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps ht
 		if addErr := h.a.AddData(msg, ephkey); addErr != nil {
 			rw.WriteHeader(500)
 			rw.Write([]byte(addErr.Error()))
-			req.Body.Close()
 			return
 		}
 	}
@@ -118,12 +117,12 @@ func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Reques
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	copy(ephkey[:], ps.ByName("key"))
+	defer req.Body.Close()
 
 	if req.ContentLength > 1024 {
 		log.Errorf("HUGE query string with length %v. Aborting!", req.ContentLength)
 		rw.WriteHeader(500)
 		rw.Write([]byte("Your query is too big"))
-		req.Body.Close()
 		return
 	}
 
@@ -149,6 +148,7 @@ func (h *HTTPHandler) handleSubscriber(rw http.ResponseWriter, req *http.Request
 		ephkey common.EphemeralKey
 		err    error
 	)
+	defer req.Body.Close()
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 	copy(ephkey[:], ps.ByName("key"))
@@ -157,7 +157,6 @@ func (h *HTTPHandler) handleSubscriber(rw http.ResponseWriter, req *http.Request
 		log.Errorf("HUGE query string with length %v. Aborting!", req.ContentLength)
 		rw.WriteHeader(500)
 		rw.Write([]byte("Your query is too big"))
-		req.Body.Close()
 		return
 	}
 
@@ -180,6 +179,7 @@ func (h *HTTPHandler) handleRepublisher(rw http.ResponseWriter, req *http.Reques
 		ephkey common.EphemeralKey
 		err    error
 	)
+	defer req.Body.Close()
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 	copy(ephkey[:], ps.ByName("key"))
@@ -188,7 +188,6 @@ func (h *HTTPHandler) handleRepublisher(rw http.ResponseWriter, req *http.Reques
 		log.Errorf("HUGE query string with length %v. Aborting!", req.ContentLength)
 		rw.WriteHeader(500)
 		rw.Write([]byte("Your query is too big"))
-		req.Body.Close()
 		return
 	}
 

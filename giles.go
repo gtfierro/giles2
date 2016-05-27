@@ -32,6 +32,14 @@ func init() {
 }
 
 func main() {
+	// print up some server stats
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			log.Infof("Number of active goroutines %v", runtime.NumGoroutine())
+		}
+	}()
+
 	flag.Parse()
 	config := archiver.LoadConfig(*configfile)
 	archiver.PrintConfig(config)

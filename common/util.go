@@ -102,3 +102,21 @@ func GetNow(units UnitOfTime) uint64 {
 	}
 	return now
 }
+
+const (
+	S_LOW  uint64 = 2 << 30
+	MS_LOW uint64 = 2 << 39
+	US_LOW uint64 = 2 << 50
+	NS_LOW uint64 = 2 << 60
+)
+
+func GuessTimeUnit(val uint64) UnitOfTime {
+	if val < MS_LOW {
+		return UOT_S
+	} else if val < US_LOW {
+		return UOT_MS
+	} else if val < NS_LOW {
+		return UOT_US
+	}
+	return UOT_NS
+}

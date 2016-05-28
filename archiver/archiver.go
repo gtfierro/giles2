@@ -237,7 +237,7 @@ func (a *Archiver) handleData(parsed *querylang.ParsedQuery, ephkey common.Ephem
 		if len(resp.Readings) > 0 {
 			msg := &common.SmapMessage{UUID: resp.UUID}
 			for _, rdg := range resp.Readings {
-				rdg.ConvertTime(common.UOT_NS, common.UnitOfTime(parsed.Data.Timeconv))
+				rdg.ConvertTime(common.UnitOfTime(parsed.Data.Timeconv))
 				msg.Readings = append(msg.Readings, rdg)
 			}
 			result = append(result, msg)

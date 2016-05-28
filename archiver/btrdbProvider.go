@@ -100,7 +100,7 @@ func (b *btrdbDB) receiveData(conn *tsConn) (common.SmapNumbersResponse, error) 
 				return sr, fmt.Errorf("Error when reading from BtrDB: %v", resp.StatusCode().String())
 			}
 			for _, rec := range resp.Records().Values().ToArray() {
-				sr.Readings = append(sr.Readings, &common.SmapNumberReading{Time: uint64(rec.Time()), Value: rec.Value()})
+				sr.Readings = append(sr.Readings, &common.SmapNumberReading{Time: uint64(rec.Time()), Value: rec.Value(), UoT: common.UOT_NS})
 			}
 			finished = resp.Final()
 		default:
@@ -148,6 +148,7 @@ func (b *btrdbDB) AddMessage(msg *common.SmapMessage) error {
 	// insert readings
 	recordsArr := records.ToArray()
 	for i, val := range msg.Readings {
+		val.ConvertTime(common.UOT_NS)
 		recordsArr[i].SetTime(int64(val.GetTime()))
 		if num, ok := val.GetValue().(float64); ok {
 			recordsArr[i].SetValue(num)

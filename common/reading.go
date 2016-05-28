@@ -9,7 +9,7 @@ import (
 // interface for sMAP readings
 type Reading interface {
 	GetTime() uint64
-	ConvertTime(from, to UnitOfTime) error
+	ConvertTime(to UnitOfTime) error
 	GetValue() interface{}
 	IsObject() bool
 }
@@ -18,6 +18,7 @@ type Reading interface {
 type SmapNumberReading struct {
 	// uint64 timestamp
 	Time uint64
+	UoT  UnitOfTime
 	// value associated with this timestamp
 	Value float64
 }
@@ -40,8 +41,10 @@ func (s *SmapNumberReading) GetTime() uint64 {
 	return s.Time
 }
 
-func (s *SmapNumberReading) ConvertTime(from_uot, to_uot UnitOfTime) (err error) {
-	s.Time, err = convertTime(s.Time, from_uot, to_uot)
+func (s *SmapNumberReading) ConvertTime(to_uot UnitOfTime) (err error) {
+	if to_uot != s.UoT {
+		s.Time, err = convertTime(s.Time, s.UoT, to_uot)
+	}
 	return
 }
 
@@ -57,6 +60,7 @@ func (s *SmapNumberReading) GetValue() interface{} {
 type SmapObjectReading struct {
 	// uint64 timestamp
 	Time uint64
+	UoT  UnitOfTime
 	// value associated with this timestamp
 	Value interface{}
 }
@@ -70,8 +74,10 @@ func (s *SmapObjectReading) GetTime() uint64 {
 	return s.Time
 }
 
-func (s *SmapObjectReading) ConvertTime(from_uot, to_uot UnitOfTime) (err error) {
-	s.Time, err = convertTime(s.Time, from_uot, to_uot)
+func (s *SmapObjectReading) ConvertTime(to_uot UnitOfTime) (err error) {
+	if to_uot != s.UoT {
+		s.Time, err = convertTime(s.Time, s.UoT, to_uot)
+	}
 	return
 }
 

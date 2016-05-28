@@ -147,6 +147,8 @@ func (sm *SmapMessage) UnmarshalJSON(b []byte) (err error) {
 	}
 	if !incoming.Properties.IsEmpty() {
 		sm.Properties = &incoming.Properties
+	} else {
+		sm.Properties = &SmapProperties{}
 	}
 	if len(incoming.Actuator) > 0 {
 		sm.Actuator = DictFromBson(flatten(incoming.Actuator))
@@ -172,12 +174,19 @@ func (sm *SmapMessage) UnmarshalJSON(b []byte) (err error) {
 
 		// check if we have a numerical value
 		err = json.Unmarshal(reading[1], &value_num)
+
+		// the unit of time for these readings
+		if sm.Properties.IsEmpty() {
+			// if we don't have info, then calculate from time
+			sm.Properties.UnitOfTime = GuessTimeUnit(time)
+		}
+
 		if err != nil {
 			// if we don't, then we treat as an object reading
 			err = json.Unmarshal(reading[1], &value_obj)
-			sm.Readings[idx] = &SmapObjectReading{time, value_obj}
+			sm.Readings[idx] = &SmapObjectReading{time, sm.Properties.UnitOfTime, value_obj}
 		} else {
-			sm.Readings[idx] = &SmapNumberReading{time, value_num}
+			sm.Readings[idx] = &SmapNumberReading{time, sm.Properties.UnitOfTime, value_num}
 		}
 		idx += 1
 	}

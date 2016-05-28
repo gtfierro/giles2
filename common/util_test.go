@@ -3,6 +3,7 @@ package common
 import (
 	"gopkg.in/mgo.v2/bson"
 	"testing"
+	"time"
 )
 
 func BenchmarkFlatten1x1(b *testing.B) {
@@ -104,5 +105,30 @@ func TestGetPrefixes(t *testing.T) {
 	z = []string{"/", "/a", "/a/b"}
 	if !isStringSliceEqual(y, z) {
 		t.Error("Got ", y, " should be ", z)
+	}
+}
+
+func TestGuessTimeUnit(t *testing.T) {
+	for _, test := range []struct {
+		inp        uint64
+		actualUnit UnitOfTime
+	}{
+		{
+			uint64(time.Date(2079, 1, 1, 1, 1, 1, 0, time.UTC).UnixNano()),
+			UOT_NS,
+		},
+		{
+			uint64(time.Date(2079, 1, 1, 1, 1, 1, 0, time.UTC).Unix()),
+			UOT_S,
+		},
+		{
+			0,
+			UOT_S,
+		},
+	} {
+		computed := GuessTimeUnit(test.inp)
+		if computed != test.actualUnit {
+			t.Error("Time %v unit %s computed as %s", test.inp, test.actualUnit.String(), computed.String())
+		}
 	}
 }

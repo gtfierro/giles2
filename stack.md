@@ -5,7 +5,7 @@ title: The Once And Future Stack
 
 The current iteration of the "sMAP stack" has changed since the original conception:
 
-* Timeseries Database: [Berkeley Tree Database (BtrDB)](https://github.com/SoftwareDefinedBuildings/quasar)
+* Timeseries Database: [Berkeley Tree Database (BtrDB)](https://github.com/SoftwareDefinedBuildings/btrdb)
 * Metadata Database: [MongoDB](https://www.mongodb.org/)
 * Archiver: [Giles](https://github.com/gtfierro/giles)
 * Plotter: [uPMU Plotter](https://github.com/SoftwareDefinedBuildings/upmu-plotter)
@@ -77,11 +77,6 @@ be installed "locally".
 $ sudo npm install -g bower react-tools
 ```
 
-#### Meteor
-
-`curl https://install.meteor.com/ | sh`
-
-
 ## <a name="MongoDB"></a>MongoDB
 
 Mongo will have been installed by the above aptitude command. For deployments, it is recommended to use the
@@ -103,20 +98,20 @@ Be aware that if this crashes, you will need to manually restart.
 ## <a name="BtrDB"></a>BtrDB
 
 ```bash
-$ go get -u -a github.com/SoftwareDefinedBuildings/quasar/qserver
-$ go install -a github.com/SoftwareDefinedBuildings/quasar/qserver
-$ curl -O https://raw.githubusercontent.com/SoftwareDefinedBuildings/quasar/master/quasar.conf
-$ qserver -makedb
+$ go get -u -a github.com/SoftwareDefinedBuildings/btrdb/btrdbd
+$ go install -a github.com/SoftwareDefinedBuildings/btrdb/btrdbd
+$ curl -O https://raw.githubusercontent.com/SoftwareDefinedBuildings/btrdb/master/btrdb.conf.conf
+$ btrdb -makedb
 ```
 
 ```ini
-# /etc/supervisor/conf.d/quasar.conf
-[program:quasar]
-command=/home/gabe/go/bin/qserver
+# /etc/supervisor/conf.d/btrdb.conf
+[program:btrdb]
+command=/home/gabe/go/bin/btrdbd
 autostart=true
 autorestart=true
-stderr_logfile=/var/log/quasar.err.log
-stdout_logfile=/var/log/quasar.out.log
+stderr_logfile=/var/log/btrdb.err.log
+stdout_logfile=/var/log/btrdb.out.log
 ```
 
 
@@ -141,38 +136,21 @@ stdout_logfile=/var/log/giles.out.log
 ## <A Name="Plotter"></a>uPMU Plotter
 
 ```bash
-$ git clone https://github.com/SoftwareDefinedBuildings/upmu-plotter.git
+$ git clone https://github.com/SoftwareDefinedBuildings/mr-plotter
 ```
 
-Edit `upmuplot/settings.json` and `upmuplot/client/home.js`. The addresses can be hostnames
-or IP addresses. All ports below are default, but if you have changed them in your installation,
-change them here.
+Edit `plotter.ini` such that `csv_url` and `db_addr` point to your BtrDB installation and `mongo_server` points to your Mongo server. `metadata_server` should be changed
+to your giles query interface, most likely `http://<xyz>:8079/api/query`.
 
-* `upmuplot/settings.json`
-
-  ```json
-  {
-      "archiverUrl": "http://<address of btrdb>:9000",
-      "public": { "archiverUrl": "http://<address of btrdb>:9000" }
-  }
-  ```
-
-* `upmuplot/client/home.js`
-
-  ```javascript
-  tagsURL: 'http://<address of giles>:8079/api/query',
-  dataURLStart: 'http://<address of btrdb>:9000/data/uuid/',
-  bracketURL: 'http://<address of btrdb>:9000/q/bracket',
-  csvURL: 'http://<address of btrdb>:9000/wrappedcsv',
-  ```
+Additionally, make sure that `plotter_dir` correctly points to the location of `mr-plotter/assets`. I recommend using an absolute path, unlike the default configuration provided.
 
 * Supervisord conf file
 
   ```ini
   # /etc/supervisor/conf.d/plotter.conf
   [program:plotter]
-  command=/usr/local/bin/meteor --settings settings.json
-  directory=/srv/plotter/upmuplot
+  command=/home/gabe/go/bin/mr-plotter
+  directory=/srv/plotter # put plotter.ini here
   autostart=true
   autorestart=true
   stderr_logfile=/var/log/plotter.err.log

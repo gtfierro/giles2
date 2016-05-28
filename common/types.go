@@ -51,18 +51,15 @@ func (d Dict) MarshalJSON() ([]byte, error) {
 		return json.Marshal(m)
 	}
 
-	fmt.Println("DICT %d", d)
 	var ok bool = false
 	for dk, dv := range d {
 		pieces := strings.Split(dk, "|")
 		plen := len(pieces)
 		var cur = m
 		for _, token := range pieces[:plen-1] {
-			fmt.Println("token %v", token)
 			if _, found := cur[token]; !found {
 				cur[token] = make(map[string]interface{})
 			}
-			fmt.Println("cur[token] %v", cur[token])
 			if cur, ok = cur[token].(map[string]interface{}); !ok {
 				return []byte{}, fmt.Errorf("Could not convert cur to map[string]interface{} was %v", cur[token])
 			}

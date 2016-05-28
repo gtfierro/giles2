@@ -1,8 +1,8 @@
 ## Giles
 
-[![GoDoc](https://godoc.org/github.com/gtfierro/giles?status.svg)](https://godoc.org/github.com/gtfierro/giles) [GoSrc](https://sourcegraph.com/github.com/gtfierro/giles)
+[![GoDoc](https://godoc.org/github.com/gtfierro/giles?status.svg)](https://godoc.org/github.com/gtfierro/giles2) [GoSrc](https://sourcegraph.com/github.com/gtfierro/giles2)
 
-Documentation is available at http://godoc.org/github.com/gtfierro/giles 
+Documentation is available at http://godoc.org/github.com/gtfierro/giles2 
 
 Giles is a replacement sMAP Archiver that offers more mechanisms for extension and scalability.
 

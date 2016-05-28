@@ -4,8 +4,8 @@ permalink:        pretty
 # Setup
 title:            Giles
 tagline:          A sMAP Archiver
-url:              http://gtfierro.github.com/giles
-baseurl:          /giles
+url:              http://gtfierro.github.com/giles2
+baseurl:          /giles2
 
 paginate:         5
 
@@ -13,7 +13,7 @@ paginate:         5
 version:          2.1.0
 
 github:
-  repo:           https://github.com/gtfierro/giles
+  repo:           https://github.com/gtfierro/giles2
 
 redcarpet:
   extensions:     ["with_toc_data", "html_toc", "tables"]

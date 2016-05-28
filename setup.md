@@ -14,8 +14,9 @@ Giles requires both an installation of MongoDB and a timeseries database.
 Install MongoDB using their [installation instructions](http://docs.mongodb.org/manual/installation/).
 
 For timeseries databases, Giles currently supports either
-[ReadingDB](https://github.com/SoftwareDefinedBuildings/readingdb/tree/adaptive)
-or [Quasar](https://github.com/SoftwareDefinedBuildings/quasar). Install one of them.
+[ReadingDB](https://github.com/SoftwareDefinedBuildings/readingdb/tree/adaptive),
+[Quasar](https://github.com/SoftwareDefinedBuildings/quasar) or [BtrDB](https://github.com/SoftwareDefinedBuildings/btrdb). Install one of
+them.
 
 Make a note of what IP/Port Mongo and your timeseries databases are running on.
 
@@ -27,7 +28,7 @@ Giles itself is designed to be easy to install. There are several different ways
 #### Installation From Binary
 
 I make occasional binary releases of Giles, which can be found
-[here](https://github.com/gtfierro/giles/releases). Binaries are provided for
+[here](https://github.com/gtfierro/giles2/releases). Binaries are provided for
 Mac OS X, and Linux 32 and 64 bit architectures. Technically, Giles can be
 compiled for any platform that is [supported by
 Go](https://golang.org/doc/install). Binaries have well defined behavior and
@@ -51,8 +52,8 @@ Giles also requires [Mercurial](http://mercurial.selenic.com/downloads) to be in
 To retrieve the giles source code and install the executable, run
 
 ```bash
-$ go get -u -a github.com/gtfierro/giles # fetches source
-$ go install -a github.com/gtfierro/giles # compiles and moves executable into $PATH
+$ go get -u -a github.com/gtfierro/giles2 # fetches source
+$ go install -a github.com/gtfierro/giles2 # compiles and moves executable into $PATH
 ```
 
 ## <a name="Running"></a>Running Giles
@@ -61,14 +62,14 @@ You should now be able to run the `giles` comand. You can see the usage with `gi
 
 Giles requires knowledge of a configuration file in order to run. The default
 configuration file can be downloaded from
-[here](https://raw.githubusercontent.com/gtfierro/giles/master/giles.cfg), and
+[here](https://raw.githubusercontent.com/gtfierro/giles2/master/giles.cfg), and
 should be mostly self explanatory. Remember to alter the TSDB, ReadingDB/Quasar and Mongo
 sections to match your deployment.
 
 You can now run giles and see the following output (or something similar to it)
 
 ```bash
-$ giles -c path/to/giles.cfg
+$ giles2 -c path/to/giles.cfg
 Giles Configuration
 Connecting to Mongo at 0.0.0.0 : 27017
 Using Timeseries DB readingdb
@@ -98,22 +99,22 @@ TODO:
 
 ## <a name="Development"></a>Development
 
-For development, I either work in `$GOPATH/src/github.com/gtfierro/giles/...`, which is the default
+For development, I either work in `$GOPATH/src/github.com/gtfierro/giles2/...`, which is the default
 path where the giles libs are installed, or I will sym link the git repo to there:
 
 ```
-ln -s path/to/giles/repo/root $GOPATH/src/github.com/gtfierro/giles
+ln -s path/to/giles2/repo/root $GOPATH/src/github.com/gtfierro/giles2
 ```
 
 should take care of it. Now you should be able to compile giles by running
 
 ```bash
-$ cd path/to/giles/repo/root
-$ cd giles
+$ cd path/to/giles2/repo/root
+$ cd giles2
 $ go get ...
-$ cd archiver ; go generate ; cd .. # OR go generate github.com/gtfierro/giles/archiver
+$ cd archiver ; go generate ; cd .. # OR go generate github.com/gtfierro/giles2/archiver
 $ go build
-$ ./giles -h
+$ ./giles2 -h
 ```
 
 The `go generate` command is for the YACC-based parser in `archiver/query.y`. You should only need

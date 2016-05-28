@@ -44,7 +44,7 @@ clients is to write a short bit of middleware to do the protocol translation.
 
 The sMAP query language (original formulation can be found [here](http://pythonhosted.org/Smap/en/2.0/archiver.html#query-language)) is a simple,
 SQL-like language that allows the user to treat Metadata tags like SQL column names. Giles implements a modern reimplementation with an eye towards
-extensibility. The full YACC implementation of the sMAP query language is [here](https://github.com/gtfierro/giles/blob/master/archiver/query.y).
+extensibility. The full YACC implementation of the sMAP query language is [here](https://github.com/gtfierro/giles2/blob/master/archiver/internal/querylang/query.y).
 **Aside from sMAP operators, which have yet to be implemented**, the Giles-flavored sMAP query language aims to support the full range of old sMAP
 queries, as well as some new features.
 

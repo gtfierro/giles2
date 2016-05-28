@@ -16,7 +16,7 @@ including completely new sections on the Giles archiver and sMAP actuator
 ### Giles Documentation
 
 The GoDoc for the Giles codebase can be found at
-[https://godoc.org/github.com/gtfierro/giles](https://godoc.org/github.com/gtfierro/giles).
+[https://godoc.org/github.com/gtfierro/giles2](https://godoc.org/github.com/gtfierro/giles2).
 This is useful for developers or those interested in how Giles is put together.
 
 ### Archiver Interface

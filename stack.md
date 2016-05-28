@@ -7,7 +7,7 @@ The current iteration of the "sMAP stack" has changed since the original concept
 
 * Timeseries Database: [Berkeley Tree Database (BtrDB)](https://github.com/SoftwareDefinedBuildings/btrdb)
 * Metadata Database: [MongoDB](https://www.mongodb.org/)
-* Archiver: [Giles](https://github.com/gtfierro/giles)
+* Archiver: [Giles2](https://github.com/gtfierro/giles2)
 * Plotter: [uPMU Plotter](https://github.com/SoftwareDefinedBuildings/upmu-plotter)
 * Status Dashboard: [Deckard](https://github.com/gtfierro/deckard)
 
@@ -115,12 +115,12 @@ stdout_logfile=/var/log/btrdb.out.log
 ```
 
 
-## <a name="Giles"></a>Giles
+## <a name="Giles2"></a>Giles
 
 ```bash
-$ go get -u -a github.com/gtfierro/giles
-$ go install -a github.com/gtfierro/giles
-$ curl -O https://raw.githubusercontent.com/gtfierro/giles/master/giles.cfg
+$ go get -u -a github.com/gtfierro/giles2
+$ go install -a github.com/gtfierro/giles2
+$ curl -O https://raw.githubusercontent.com/gtfierro/giles2/master/giles.cfg
 ```
 
 ```ini

@@ -3,16 +3,18 @@ package main
 import (
 	"flag"
 	"github.com/gtfierro/giles2/archiver"
-	"github.com/gtfierro/giles2/bosswave"
-	"github.com/gtfierro/giles2/http"
-	"github.com/gtfierro/giles2/msgpack"
-	"github.com/gtfierro/giles2/tcpjson"
-	"github.com/gtfierro/giles2/websocket"
+	"github.com/gtfierro/giles2/plugins/bosswave"
+	"github.com/gtfierro/giles2/plugins/http"
+	"github.com/gtfierro/giles2/plugins/msgpack"
+	"github.com/gtfierro/giles2/plugins/tcpjson"
+	"github.com/gtfierro/giles2/plugins/websocket"
 	"github.com/op/go-logging"
 	"os"
+	"os/signal"
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
+	"syscall"
 	"time"
 )
 
@@ -38,6 +40,15 @@ func main() {
 			time.Sleep(5 * time.Second)
 			log.Infof("Number of active goroutines %v", runtime.NumGoroutine())
 		}
+	}()
+
+	signals := make(chan os.Signal, 1)
+	done := make(chan bool)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-signals
+		log.Noticef("Got signal %v", sig)
+		done <- true
 	}()
 
 	flag.Parse()
@@ -90,24 +101,25 @@ func main() {
 		go tcpjson.Handle(a, *config.TCPJSON.AddPort, *config.TCPJSON.QueryPort, *config.TCPJSON.SubscribePort)
 	}
 
-	idx := 0
-	for {
-		time.Sleep(5 * time.Second)
-		idx += 5
-		if config.Profile.Enabled && idx == *config.Profile.BenchmarkTimer {
-			if *config.Profile.MemProfile != "" {
-				f, err := os.Create(*config.Profile.MemProfile)
-				if err != nil {
-					log.Panic(err)
-				}
-				pprof.WriteHeapProfile(f)
-				f.Close()
-				trace.Stop()
-				return
-			}
-			if *config.Profile.CpuProfile != "" {
-				return
-			}
-		}
-	}
+	<-done
+	//idx := 0
+	//for {
+	//	time.Sleep(5 * time.Second)
+	//	idx += 5
+	//	if config.Profile.Enabled && idx == *config.Profile.BenchmarkTimer {
+	//		if *config.Profile.MemProfile != "" {
+	//			f, err := os.Create(*config.Profile.MemProfile)
+	//			if err != nil {
+	//				log.Panic(err)
+	//			}
+	//			pprof.WriteHeapProfile(f)
+	//			f.Close()
+	//			trace.Stop()
+	//			return
+	//		}
+	//		if *config.Profile.CpuProfile != "" {
+	//			return
+	//		}
+	//	}
+	//}
 }

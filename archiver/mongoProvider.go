@@ -291,10 +291,10 @@ func (m *mongoStore) SaveTags(msg *common.SmapMessage) error {
 	// and save to the uuid cache
 	m.uuidCache.Set(string(msg.UUID), struct{}{}, m.cacheExpiry)
 	if msg.Properties != nil && msg.Properties.UnitOfTime != 0 {
-		m.uotCache.Delete(string(msg.UUID))
+		m.uotCache.Set(string(msg.UUID), msg.Properties.UnitOfTime, m.cacheExpiry)
 	}
 	if msg.Properties != nil && msg.Properties.UnitOfMeasure != "" {
-		m.uomCache.Delete(string(msg.UUID))
+		m.uomCache.Set(string(msg.UUID), msg.Properties.UnitOfMeasure, m.cacheExpiry)
 	}
 	return err
 }

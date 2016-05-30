@@ -131,7 +131,6 @@ func (a *Archiver) startReport() {
 //  - Saves the attached metadata (if any) to the metadata store
 //  - Reevaluates any dynamic subscriptions and pushes to republish clients
 //  - Saves the attached readings (if any) to the timeseries database
-// These last 2 steps happen in parallel
 func (a *Archiver) AddData(msg *common.SmapMessage, ephkey common.EphemeralKey) (err error) {
 	if a.enforceKeys && !a.pm.ValidEphemeralKey(ephkey) {
 		return fmt.Errorf("Ephemeral key %v is not valid", ephkey)
@@ -141,6 +140,21 @@ func (a *Archiver) AddData(msg *common.SmapMessage, ephkey common.EphemeralKey) 
 	err = a.mdStore.SaveTags(msg)
 	if err != nil {
 		return err
+	}
+
+	// fix inconsistencies
+	var (
+		uot common.UnitOfTime
+	)
+	if uot, err = a.mdStore.GetUnitOfTime(msg.UUID); uot == 0 && err == nil {
+		if len(msg.Readings) > 0 {
+			uot = common.GuessTimeUnit(msg.Readings[0].GetTime())
+		}
+	} else if err != nil {
+		return err
+	}
+	for _, rdg := range msg.Readings {
+		rdg.SetUOT(uot)
 	}
 
 	//save timeseries data

@@ -1,6 +1,7 @@
 package bosswave
 
 import (
+	"github.com/gtfierro/giles2/common"
 	bw "gopkg.in/immesys/bw2bind.v5"
 )
 
@@ -105,6 +106,14 @@ type Point struct {
 func (msg Timeseries) ToMsgPackBW() (po bw.PayloadObject) {
 	po, _ = bw.CreateMsgPackPayloadObject(GilesTimeseriesPID, msg)
 	return
+}
+
+func (msg Timeseries) ToReadings() []common.Reading {
+	var res = make([]common.Reading, len(msg.Data))
+	for idx, point := range msg.Data {
+		res[idx] = &common.SmapNumberReading{Time: point.Time, Value: point.Value, UoT: common.GuessTimeUnit(point.Time)}
+	}
+	return res
 }
 
 type BWavable interface {

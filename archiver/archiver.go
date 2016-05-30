@@ -145,6 +145,7 @@ func (a *Archiver) AddData(msg *common.SmapMessage, ephkey common.EphemeralKey) 
 	// fix inconsistencies
 	var (
 		uot common.UnitOfTime
+		uom string
 	)
 	if uot, err = a.mdStore.GetUnitOfTime(msg.UUID); uot == 0 && err == nil {
 		if len(msg.Readings) > 0 {
@@ -155,6 +156,19 @@ func (a *Archiver) AddData(msg *common.SmapMessage, ephkey common.EphemeralKey) 
 	}
 	for _, rdg := range msg.Readings {
 		rdg.SetUOT(uot)
+	}
+
+	if uom, err = a.mdStore.GetUnitOfMeasure(msg.UUID); uom == "" && err == nil {
+		if msg.Properties == nil {
+			msg.Properties = &common.SmapProperties{StreamType: common.NUMERIC_STREAM}
+		}
+		msg.Properties.UnitOfMeasure = "n/a"
+		err = a.mdStore.SaveTags(msg)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
 	}
 
 	//save timeseries data

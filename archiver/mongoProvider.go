@@ -183,7 +183,7 @@ func (m *mongoStore) GetStreamType(uuid common.UUID) (common.StreamType, error) 
 }
 
 func (m *mongoStore) GetUnitOfMeasure(uuid common.UUID) (string, error) {
-	item, err := m.uotCache.Fetch(string(uuid), m.cacheExpiry, func() (entry interface{}, err error) {
+	item, err := m.uomCache.Fetch(string(uuid), m.cacheExpiry, func() (entry interface{}, err error) {
 		var (
 			res interface{}
 			c   int

@@ -10,6 +10,7 @@ import (
 type Reading interface {
 	GetTime() uint64
 	ConvertTime(to UnitOfTime) error
+	SetUOT(uot UnitOfTime)
 	GetValue() interface{}
 	IsObject() bool
 }
@@ -39,6 +40,10 @@ func (s *SmapNumberReading) DecodeMsgpack(enc *msgpack.Decoder) error {
 
 func (s *SmapNumberReading) GetTime() uint64 {
 	return s.Time
+}
+
+func (s *SmapNumberReading) SetUOT(uot UnitOfTime) {
+	s.UoT = uot
 }
 
 func (s *SmapNumberReading) ConvertTime(to_uot UnitOfTime) (err error) {
@@ -87,6 +92,10 @@ func (s *SmapObjectReading) IsObject() bool {
 
 func (s *SmapObjectReading) GetValue() interface{} {
 	return s.Value
+}
+
+func (s *SmapObjectReading) SetUOT(uot UnitOfTime) {
+	s.UoT = uot
 }
 
 type SmapNumbersResponse struct {

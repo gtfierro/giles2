@@ -107,7 +107,7 @@ const (
 	S_LOW  uint64 = 2 << 30
 	MS_LOW uint64 = 2 << 39
 	US_LOW uint64 = 2 << 50
-	NS_LOW uint64 = 2 << 60
+	NS_LOW uint64 = 2 << 58
 )
 
 func GuessTimeUnit(val uint64) UnitOfTime {

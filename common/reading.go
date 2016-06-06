@@ -47,8 +47,10 @@ func (s *SmapNumberReading) SetUOT(uot UnitOfTime) {
 }
 
 func (s *SmapNumberReading) ConvertTime(to_uot UnitOfTime) (err error) {
-	if to_uot != s.UoT {
-		s.Time, err = convertTime(s.Time, s.UoT, to_uot)
+	guess := GuessTimeUnit(s.Time)
+	if to_uot != guess {
+		s.Time, err = convertTime(s.Time, guess, to_uot)
+		s.UoT = guess
 	}
 	return
 }
@@ -80,8 +82,10 @@ func (s *SmapObjectReading) GetTime() uint64 {
 }
 
 func (s *SmapObjectReading) ConvertTime(to_uot UnitOfTime) (err error) {
-	if to_uot != s.UoT {
-		s.Time, err = convertTime(s.Time, s.UoT, to_uot)
+	guess := GuessTimeUnit(s.Time)
+	if to_uot != guess {
+		s.Time, err = convertTime(s.Time, guess, to_uot)
+		s.UoT = guess
 	}
 	return
 }

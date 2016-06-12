@@ -83,6 +83,14 @@ func CreateView(client *bw.BW2Client, expr Expression) (v *View, err error) {
 	return
 }
 
+// marks all matchset entries as false so we can tell which of them
+// changed
+func (v *View) _setMatchSetTo(val bool) {
+	for uri := range v.MatchSet {
+		v.MatchSet[uri] = val
+	}
+}
+
 func (v *View) Subscribe() chan *bw.SimpleMessage {
 	return v.C
 }

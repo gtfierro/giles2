@@ -17,6 +17,7 @@ func newForwarder(incoming chan *bw.SimpleMessage, uri string) *forwarder {
 	f.uri = uri
 	f.incoming = incoming
 	f.forwardList = make(map[*View]struct{})
+	log.Infof("Starting forwarding for URI %v", uri)
 
 	go func() {
 		for msg := range incoming {

@@ -30,12 +30,16 @@ func (rec *MetadataRecord) Valid() bool {
 	return rec.Key == key && rec.URI != "" && rec.VK != "" && rec.Namespace != "" && rec.Time > 0
 }
 
+// TODO: for a view, we may want to allow them to configure if they want * or +
+// and how far beyond the base URI, because otherwise we *just* subscribe to
+// metadata
 func GetRecord(msg *bw.SimpleMessage) *MetadataRecord {
 	parts := strings.Split(msg.URI, "/")
+	uri := strings.Join(parts[:len(parts)-2], "/") + "/*"
 	rec := &MetadataRecord{
 		Key:       parts[len(parts)-1],
 		Namespace: parts[0],
-		URI:       msg.URI,
+		URI:       uri,
 		VK:        msg.From,
 		Time:      time.Now().UnixNano(),
 	}
@@ -73,7 +77,6 @@ func newQueryContext(expr Expression) *queryContext {
 	return ctx
 }
 
-//TODO: fix once we understand how to get the vk
 func (ctx *queryContext) hasNamespace(ns string) (found bool) {
 	_, found = ctx.namespaces[ns]
 	return
@@ -125,7 +128,9 @@ func (vm *ViewManager) Handle(v *View) error {
 	// for the matching URIs. We want to subscribe to those URIs
 	initialMatches := vm.db.Exec(v.Expr)
 	for _, rec := range initialMatches {
-		vm.startForwarding(rec.URI, v)
+		if err := vm.startForwarding(rec.URI, v); err != nil {
+			log.Error(err)
+		}
 	}
 	return nil
 }
@@ -186,6 +191,7 @@ func (vm *ViewManager) subscribeNamespaces(expr Expression) {
 			for msg := range sub {
 				rec := GetRecord(msg)
 				vm.db.Insert(rec)
+				vm.checkViews()
 			}
 		}(vm.namespaceSubscriptions[namespace])
 		// Subscriptions only give us metadata messages that appear AFTER the subscription begins,
@@ -200,6 +206,7 @@ func (vm *ViewManager) subscribeNamespaces(expr Expression) {
 			for msg := range persistedMetadata {
 				rec := GetRecord(msg)
 				vm.db.Insert(rec)
+				vm.checkViews()
 			}
 		}()
 	}
@@ -220,6 +227,7 @@ func (vm *ViewManager) startForwarding(uri string, views ...*View) error {
 	vm.fwdL.Lock()
 	defer vm.fwdL.Unlock()
 	if _, found := vm.forwarders[uri]; !found {
+		log.Infof("Creating new subscription for %s", uri)
 		subscription, err := vm.client.Subscribe(&bw.SubscribeParams{
 			URI: uri,
 		})
@@ -228,6 +236,7 @@ func (vm *ViewManager) startForwarding(uri string, views ...*View) error {
 		}
 		vm.forwarders[uri] = newForwarder(subscription, uri)
 	}
+
 	vm.forwarders[uri].addViews(views...)
 	for _, v := range views {
 		v.MatchSet[uri] = true
@@ -252,15 +261,19 @@ func (vm *ViewManager) checkViews() {
 		// rerun the expression to get the list of matching URIs
 		matching := vm.db.Exec(viewList[0].Expr)
 		view := viewList[0]
-		for uri := range view.MatchSet {
-			view.MatchSet[uri] = false
+		for _, v := range viewList {
+			v._setMatchSetTo(false)
 		}
 		// for all matching URIs, check if that URI previously matched
 		for _, rec := range matching {
 			if _, found := view.MatchSet[rec.URI]; !found {
 				// if it did not match, then forward
-				vm.startForwarding(rec.URI, viewList...)
-				view.MatchSet[rec.URI] = true
+				if err := vm.startForwarding(rec.URI, viewList...); err != nil {
+					log.Error(err)
+				}
+			}
+			for _, v := range viewList {
+				v.MatchSet[rec.URI] = true
 			}
 		}
 		for uri, doesItStay := range view.MatchSet {
@@ -304,7 +317,6 @@ func (mm *memoryMetadataDB) Insert(rec *MetadataRecord) error {
 	if !rec.Valid() {
 		return errors.New(fmt.Sprintf("Record %+v was invalid", rec))
 	}
-	//log.Noticef("Inserting Record %+v", rec)
 	mm.rl.Lock()
 	defer mm.rl.Unlock()
 	if _, found := mm.records[rec.URI]; found {
@@ -320,11 +332,8 @@ done:
 
 func (mm *memoryMetadataDB) Exec(expr Expression) []MetadataRecord {
 	ctx := newQueryContext(expr)
-	if expr.N != nil {
-		res := mm.getNode(ctx, expr.N)
-		log.Noticef("RESULTS %+v", res)
-	}
-	return []MetadataRecord{}
+	res := mm.getNode(ctx, expr.N)
+	return res
 }
 
 func (mm *memoryMetadataDB) Query(query string) []MetadataRecord {
@@ -338,7 +347,6 @@ func (mm *memoryMetadataDB) getNode(ctx *queryContext, n Node) []MetadataRecord 
 	for _, rec := range mm.records {
 		// if the record is not in the right namespace, skip it
 		if !ctx.hasNamespace(rec.Namespace) {
-			log.Debugf("wrong namespace: %v vs %v", rec.Namespace, ctx.namespaces)
 			continue
 		}
 		if n.Eval(&rec) {

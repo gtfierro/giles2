@@ -58,6 +58,3 @@ type ObjectTemplate struct {
 //	 - /key/@pairs [time, val]
 //
 // implement decoding for all the PO types, using the masks
-
-type Operation interface {
-}

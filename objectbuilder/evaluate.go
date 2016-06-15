@@ -24,7 +24,8 @@ type ArrayOperator struct {
 
 func (o *ArrayOperator) Eval(i interface{}) interface{} {
 	val := reflect.ValueOf(i)
-	isarray := val.Type().Kind() == reflect.Slice
+	kind := val.Type().Kind()
+	isarray := (kind == reflect.Slice || kind == reflect.Array)
 
 	if !isarray || o.all {
 		return i
@@ -48,4 +49,25 @@ func (o *ArrayOperator) Eval(i interface{}) interface{} {
 	}
 
 	return val.Index(o.index).Interface()
+}
+
+type ObjectOperator struct {
+	key string
+}
+
+func (o *ObjectOperator) Eval(i interface{}) interface{} {
+	val := reflect.ValueOf(i)
+	kind := val.Type().Kind()
+	ismap := (kind == reflect.Map)
+	isstruct := (kind == reflect.Struct)
+
+	if !(ismap || isstruct) {
+		return i
+	}
+
+	if ismap {
+		return val.MapIndex(reflect.ValueOf(o.key)).Interface()
+	}
+	// is struct
+	return val.FieldByName(o.key).Interface()
 }

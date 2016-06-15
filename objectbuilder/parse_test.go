@@ -160,3 +160,73 @@ func BenchmarkArrayAll(b *testing.B) {
 		op.Eval(data)
 	}
 }
+
+func TestEvalMap(t *testing.T) {
+	for _, test := range []struct {
+		op     ObjectOperator
+		data   interface{}
+		result interface{}
+	}{
+		{
+			ObjectOperator{"key1"},
+			map[string]interface{}{"key1": "val1"},
+			"val1",
+		},
+		{
+			ObjectOperator{"key1"},
+			map[string]interface{}{"key1": 12345},
+			12345,
+		},
+		{
+			ObjectOperator{"key1"},
+			map[string]interface{}{"key1": []string{"a", "b"}},
+			[]string{"a", "b"},
+		},
+	} {
+		res := test.op.Eval(test.data)
+		if !reflect.DeepEqual(res, test.result) {
+			t.Errorf("Operator %+v on %+v gave %+v but wanted %+v", test.op, test.data, res, test.result)
+		}
+	}
+}
+
+func TestEvalStruct(t *testing.T) {
+	for _, test := range []struct {
+		op     ObjectOperator
+		data   interface{}
+		result interface{}
+	}{
+		{
+			ObjectOperator{"Key1"},
+			struct{ Key1 string }{Key1: "val1"},
+			"val1",
+		},
+		{
+			ObjectOperator{"Key2"},
+			struct{ Key2 map[string]string }{Key2: map[string]string{"a": "b"}},
+			map[string]string{"a": "b"},
+		},
+	} {
+		res := test.op.Eval(test.data)
+		if !reflect.DeepEqual(res, test.result) {
+			t.Errorf("Operator %+v on %+v gave %+v but wanted %+v", test.op, test.data, res, test.result)
+		}
+	}
+}
+
+func BenchmarkObjectMap(b *testing.B) {
+	op := ObjectOperator{"key1"}
+	data := map[string]interface{}{"key1": "val1"}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		op.Eval(data)
+	}
+}
+func BenchmarkObjectStruct(b *testing.B) {
+	op := ObjectOperator{"Key1"}
+	data := struct{ Key1 string }{Key1: "val1"}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		op.Eval(data)
+	}
+}

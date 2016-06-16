@@ -387,7 +387,7 @@ func TestEvalOperatorChain(t *testing.T) {
 	}
 }
 
-func BenchmarkEvalKey(b *testing.B) {
+func BenchmarkParseEvalKey(b *testing.B) {
 	expr := "key1"
 	data := map[string]interface{}{"key1": "val1"}
 	b.ReportAllocs()
@@ -396,9 +396,18 @@ func BenchmarkEvalKey(b *testing.B) {
 	}
 }
 
-func BenchmarkEvalIndex(b *testing.B) {
+func BenchmarkParseEvalIndex(b *testing.B) {
 	expr := "[5]"
 	data := []int{1, 2, 3, 4}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		Eval(Parse(expr), data)
+	}
+}
+
+func BenchmarkParseEvalComplex(b *testing.B) {
+	expr := "[0].key1[1]"
+	data := []map[string]interface{}{map[string]interface{}{"key1": []string{"a", "b"}}}
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		Eval(Parse(expr), data)
@@ -408,8 +417,29 @@ func BenchmarkEvalIndex(b *testing.B) {
 func BenchmarkEvalComplex(b *testing.B) {
 	expr := "[0].key1[1]"
 	data := []map[string]interface{}{map[string]interface{}{"key1": []string{"a", "b"}}}
+	ops := Parse(expr)
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		Eval(Parse(expr), data)
+		Eval(ops, data)
+	}
+}
+
+func BenchmarkEvalKey(b *testing.B) {
+	expr := "key1"
+	data := map[string]interface{}{"key1": "val1"}
+	ops := Parse(expr)
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		Eval(ops, data)
+	}
+}
+
+func BenchmarkEvalIndex(b *testing.B) {
+	expr := "[5]"
+	data := []int{1, 2, 3, 4}
+	ops := Parse(expr)
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		Eval(ops, data)
 	}
 }

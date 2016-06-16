@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	bw "gopkg.in/immesys/bw2bind.v5"
 	"os"
-	"sync"
 )
 
 // logger
@@ -33,11 +32,6 @@ type BOSSWaveHandler struct {
 	namespace string
 	vk        string
 
-	// for now, this is map of the subscribe URi to the vk that published
-	// the metadata telling us to listen
-	subs     map[string]*DataSource
-	subsLock sync.RWMutex
-
 	stop chan bool
 	// subscribe to */!meta/archive to see what we subscribe to
 	incomingData chan *bw.SimpleMessage
@@ -49,7 +43,6 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 		bw:        bw.ConnectOrExit(""),
 		namespace: namespace,
 		stop:      make(chan bool),
-		subs:      make(map[string]*DataSource),
 	}
 	bwh.bw.OverrideAutoChainTo(true)
 	bwh.vk = bwh.bw.SetEntityFileOrExit(entityfile)
@@ -75,41 +68,12 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 		}
 	}()
 
-	bwh.incomingData = bwh.bw.SubscribeOrExit(&bw.SubscribeParams{
-		URI: bwh.namespace + "/" + "*/!meta/archive",
-	})
-	log.Debug(bwh.namespace + "/" + "*/!meta/archive")
-	go bwh.listenForAdds()
-	log.Infof("iface: %s", bwh.iface.FullURI())
-
-	// query streams already marked to archive
-	declaredURIs := bwh.bw.QueryOrExit(&bw.QueryParams{
-		URI: bwh.namespace + "/*/!meta/archive",
-	})
-	go func() {
-		for msg := range declaredURIs {
-			bwh.incomingData <- msg
-		}
-	}()
-
 	return bwh
 }
 
 func Handle(a *giles.Archiver, entityfile, namespace string) {
 	bwh := NewHandler(a, entityfile, namespace)
 	<-bwh.stop
-}
-
-func (bwh *BOSSWaveHandler) addSub(uri, fromVK string) {
-	bwh.subsLock.Lock()
-	defer bwh.subsLock.Unlock()
-
-	if _, found := bwh.subs[uri]; found {
-		return
-	}
-	//log.Noticef("Subscribing to readings on %s (VK %s)", uri, fromVK)
-	//TODO: recover these subscriptions on crash
-	bwh.subs[uri] = NewSource(uri, bwh.bw, bwh.a)
 }
 
 func (bwh *BOSSWaveHandler) listenQueries(msg *bw.SimpleMessage) {
@@ -223,16 +187,6 @@ func (bwh *BOSSWaveHandler) StartSubscriber(vk string, query KeyValueQuery) *gil
 	}(bws)
 
 	return bws.subscription
-}
-
-func (bwh *BOSSWaveHandler) listenForAdds() {
-	for msg := range bwh.incomingData {
-		po := msg.GetOnePODF(bw.PODFString)
-		if po == nil {
-			continue
-		}
-		bwh.addSub(po.(bw.TextPayloadObject).Value(), msg.From)
-	}
 }
 
 type BWSubscriber struct {

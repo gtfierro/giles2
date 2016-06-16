@@ -329,7 +329,6 @@ func (mm *memoryMetadataDB) Insert(rec *MetadataRecord) error {
 	}
 	mm.rl.Lock()
 	defer mm.rl.Unlock()
-	log.Debugf("inserting %+v", rec.Key)
 	if _, found := mm.records[rec.URI]; found {
 		if len(rec.Value) == 0 { // len of 0 means delete this key
 			delete(mm.records, rec.URI)

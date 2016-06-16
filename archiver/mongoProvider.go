@@ -191,7 +191,6 @@ func (m *mongoStore) GetUnitOfMeasure(uuid common.UUID) (string, error) {
 		entry = ""
 		query := m.metadata.Find(bson.M{"uuid": uuid}).Select(bson.M{"Properties.UnitofMeasure": 1})
 		if c, err = query.Count(); err != nil {
-			err = err
 			return
 		} else if c == 0 {
 			err = fmt.Errorf("no stream named %v", uuid)

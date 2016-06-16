@@ -29,8 +29,6 @@ type Archiver struct {
 	tsStore TimeseriesStore
 	// metadata store
 	mdStore MetadataStore
-	// permissions manager
-	pm permissionsManager
 	// transaction coalescer
 	qp *querylang.QueryProcessor
 	// broker
@@ -48,7 +46,6 @@ func NewArchiver(c *Config) (a *Archiver) {
 	var (
 		mdStore MetadataStore
 		tsStore TimeseriesStore
-		pm      permissionsManager
 	)
 
 	a = &Archiver{}
@@ -66,13 +63,11 @@ func NewArchiver(c *Config) (a *Archiver) {
 			enforceKeys: c.Archiver.EnforceKeys,
 		}
 		mdStore = newMongoStore(config)
-		pm = newMongoPermissionsManager(config)
 	default:
 		log.Fatalf(*c.Archiver.MetadataStore, " is not a recognized metadata store")
 	}
 
 	a.mdStore = mdStore
-	a.pm = pm
 
 	switch *c.Archiver.TimeseriesStore {
 	case "quasar":
@@ -132,10 +127,6 @@ func (a *Archiver) startReport() {
 //  - Reevaluates any dynamic subscriptions and pushes to republish clients
 //  - Saves the attached readings (if any) to the timeseries database
 func (a *Archiver) AddData(msg *common.SmapMessage, ephkey common.EphemeralKey) (err error) {
-	if a.enforceKeys && !a.pm.ValidEphemeralKey(ephkey) {
-		return fmt.Errorf("Ephemeral key %v is not valid", ephkey)
-	}
-
 	// save metadata
 	err = a.mdStore.SaveTags(msg)
 	if err != nil {
@@ -184,10 +175,6 @@ func (a *Archiver) AddData(msg *common.SmapMessage, ephkey common.EphemeralKey) 
 // Basically everything fits into common.SmapMessageList
 func (a *Archiver) HandleQuery(querystring string, ephkey common.EphemeralKey) (QueryResult, error) {
 	var result QueryResult
-	if a.enforceKeys && !a.pm.ValidEphemeralKey(ephkey) {
-		return result, fmt.Errorf("Ephemeral key %v is not valid", ephkey)
-	}
-
 	// parse the query
 	parsed := a.qp.Parse(querystring)
 	if parsed.Err != nil {

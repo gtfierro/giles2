@@ -77,7 +77,12 @@ func (o ObjectOperator) Eval(i interface{}) interface{} {
 	}
 
 	if ismap {
-		return val.MapIndex(reflect.ValueOf(o.key)).Interface()
+		try := val.MapIndex(reflect.ValueOf(o.key))
+		if try.IsValid() {
+			return try.Interface()
+		} else {
+			return i
+		}
 	}
 	// is struct
 	return val.FieldByName(o.key).Interface()

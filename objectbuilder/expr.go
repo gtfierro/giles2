@@ -7,13 +7,15 @@ import __yyfmt__ "fmt"
 import (
 	"errors"
 	"github.com/taylorchu/toki"
+	"strconv"
 )
 
-//line expr.y:11
+//line expr.y:12
 type exSymType struct {
 	yys int
 	str string
-	int int
+	op  Operation
+	opl []Operation
 }
 
 const LBRACKET = 57346
@@ -40,7 +42,7 @@ const exEofCode = 1
 const exErrCode = 2
 const exInitialStackSize = 16
 
-//line expr.y:41
+//line expr.y:87
 
 const eof = 0
 
@@ -69,6 +71,10 @@ type lexer struct {
 	lextokens  []uint32
 	operations []Operation
 	error      error
+}
+
+func (l *lexer) addOperation(o Operation) {
+	l.operations = append(l.operations, o)
 }
 
 func NewExprLexer(s string) *lexer {
@@ -112,7 +118,7 @@ var exExca = [...]int{
 	-2, 0,
 }
 
-const exNprod = 11
+const exNprod = 13
 const exPrivate = 57344
 
 var exTokenNames []string
@@ -122,38 +128,38 @@ const exLast = 21
 
 var exAct = [...]int{
 
-	12, 11, 17, 4, 16, 9, 5, 4, 4, 7,
-	5, 5, 14, 13, 15, 1, 10, 3, 6, 8,
-	2,
+	12, 11, 18, 15, 6, 2, 16, 5, 10, 4,
+	4, 5, 13, 8, 14, 19, 17, 9, 3, 1,
+	7,
 }
 var exPact = [...]int{
 
-	4, -1000, 3, -1, -8, -1000, -1000, 6, -1000, 5,
-	9, -4, -1000, -1000, -1000, -1000, -7, -1000,
+	3, -1000, 7, 7, -1000, -8, -1000, 7, 2, -1000,
+	-1000, -2, 11, -1000, -1000, -1000, -7, -1000, 10, -1000,
 }
 var exPgo = [...]int{
 
-	0, 15, 20, 17, 16,
+	0, 17, 5, 20, 4, 19,
 }
 var exR1 = [...]int{
 
-	0, 1, 1, 1, 2, 4, 4, 4, 3, 3,
-	3,
+	0, 5, 5, 5, 5, 4, 4, 3, 3, 1,
+	1, 1, 2,
 }
 var exR2 = [...]int{
 
-	0, 2, 2, 0, 3, 1, 3, 1, 1, 3,
-	3,
+	0, 2, 2, 1, 1, 1, 2, 2, 1, 3,
+	5, 3, 1,
 }
 var exChk = [...]int{
 
-	-1000, -1, -2, -3, 4, 7, -1, 6, -1, 6,
-	-4, 9, 8, 7, 7, 5, 8, 9,
+	-1000, -5, -2, -1, 7, 4, -4, -3, 6, -1,
+	-4, 9, 8, -4, -2, 5, 8, 5, 9, 5,
 }
 var exDef = [...]int{
 
-	3, -2, 3, 3, 0, 8, 1, 0, 2, 0,
-	0, 5, 7, 10, 9, 4, 0, 6,
+	0, -2, 3, 4, 12, 0, 1, 5, 0, 8,
+	2, 0, 0, 6, 7, 9, 0, 11, 0, 10,
 }
 var exTok1 = [...]int{
 
@@ -504,6 +510,81 @@ exdefault:
 	// dummy call; replaced with literal code
 	switch exnt {
 
+	case 1:
+		exDollar = exS[expt-2 : expt+1]
+		//line expr.y:28
+		{
+			exlex.(*lexer).operations = append([]Operation{exDollar[1].op}, exDollar[2].opl...)
+		}
+	case 2:
+		exDollar = exS[expt-2 : expt+1]
+		//line expr.y:32
+		{
+			exlex.(*lexer).operations = append([]Operation{exDollar[1].op}, exDollar[2].opl...)
+		}
+	case 3:
+		exDollar = exS[expt-1 : expt+1]
+		//line expr.y:36
+		{
+			exlex.(*lexer).operations = []Operation{exDollar[1].op}
+		}
+	case 4:
+		exDollar = exS[expt-1 : expt+1]
+		//line expr.y:40
+		{
+			exlex.(*lexer).operations = []Operation{exDollar[1].op}
+		}
+	case 5:
+		exDollar = exS[expt-1 : expt+1]
+		//line expr.y:46
+		{
+			exVAL.opl = []Operation{exDollar[1].op}
+		}
+	case 6:
+		exDollar = exS[expt-2 : expt+1]
+		//line expr.y:50
+		{
+			exVAL.opl = append([]Operation{exDollar[1].op}, exDollar[2].opl...)
+		}
+	case 7:
+		exDollar = exS[expt-2 : expt+1]
+		//line expr.y:56
+		{
+			exVAL.op = exDollar[2].op
+		}
+	case 8:
+		exDollar = exS[expt-1 : expt+1]
+		//line expr.y:60
+		{
+			exVAL.op = exDollar[1].op
+		}
+	case 9:
+		exDollar = exS[expt-3 : expt+1]
+		//line expr.y:66
+		{
+			num, _ := strconv.Atoi(exDollar[2].str)
+			exVAL.op = ArrayOperator{index: num, slice: false, all: false}
+		}
+	case 10:
+		exDollar = exS[expt-5 : expt+1]
+		//line expr.y:71
+		{
+			num, _ := strconv.Atoi(exDollar[2].str)
+			num2, _ := strconv.Atoi(exDollar[4].str)
+			exVAL.op = ArrayOperator{slice_start: num, slice_end: num2, slice: true, all: false}
+		}
+	case 11:
+		exDollar = exS[expt-3 : expt+1]
+		//line expr.y:77
+		{
+			exVAL.op = ArrayOperator{slice: false, all: true}
+		}
+	case 12:
+		exDollar = exS[expt-1 : expt+1]
+		//line expr.y:83
+		{
+			exVAL.op = ObjectOperator{key: exDollar[1].str}
+		}
 	}
 	goto exstack /* stack new state and value */
 }

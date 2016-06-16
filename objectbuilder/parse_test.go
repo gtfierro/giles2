@@ -230,3 +230,52 @@ func BenchmarkObjectStruct(b *testing.B) {
 		op.Eval(data)
 	}
 }
+
+func TestParseOperatorChain(t *testing.T) {
+	for _, test := range []struct {
+		expr      string
+		operators []Operation
+	}{
+		{
+			"key",
+			[]Operation{ObjectOperator{"key"}},
+		},
+		{
+			"key1.key2",
+			[]Operation{ObjectOperator{"key1"}, ObjectOperator{"key2"}},
+		},
+		{
+			"[0]",
+			[]Operation{ArrayOperator{index: 0, slice: false, all: false}},
+		},
+		{
+			"[:]",
+			[]Operation{ArrayOperator{slice: false, all: true}},
+		},
+		{
+			"key[:]",
+			[]Operation{ObjectOperator{"key"}, ArrayOperator{slice: false, all: true}},
+		},
+		{
+			"key.key2[:]",
+			[]Operation{ObjectOperator{"key"}, ObjectOperator{"key2"}, ArrayOperator{slice: false, all: true}},
+		},
+		{
+			"[0][1][2]",
+			[]Operation{ArrayOperator{index: 0, slice: false, all: false}, ArrayOperator{index: 1, slice: false, all: false}, ArrayOperator{index: 2, slice: false, all: false}},
+		},
+		{
+			"[0].key1",
+			[]Operation{ArrayOperator{index: 0, slice: false, all: false}, ObjectOperator{"key1"}},
+		},
+		{
+			"[0].key1[1].key2",
+			[]Operation{ArrayOperator{index: 0, slice: false, all: false}, ObjectOperator{"key1"}, ArrayOperator{index: 1, slice: false, all: false}, ObjectOperator{"key2"}},
+		},
+	} {
+		parsedOps := Parse(test.expr)
+		if !reflect.DeepEqual(parsedOps, test.operators) {
+			t.Errorf("Operations wrong for: %s -> Got %+v but wanted %+v", test.expr, parsedOps, test.operators)
+		}
+	}
+}

@@ -1,12 +1,16 @@
 package objectbuilder
 
 import (
+	"fmt"
 	"reflect"
 )
 
 func Parse(s string) []Operation {
 	l := NewExprLexer(s)
 	exParse(l)
+	if l.error != nil {
+		fmt.Println(l.error)
+	}
 	return l.operations
 }
 
@@ -22,7 +26,7 @@ type ArrayOperator struct {
 	all         bool
 }
 
-func (o *ArrayOperator) Eval(i interface{}) interface{} {
+func (o ArrayOperator) Eval(i interface{}) interface{} {
 	val := reflect.ValueOf(i)
 	kind := val.Type().Kind()
 	isarray := (kind == reflect.Slice || kind == reflect.Array)
@@ -55,7 +59,7 @@ type ObjectOperator struct {
 	key string
 }
 
-func (o *ObjectOperator) Eval(i interface{}) interface{} {
+func (o ObjectOperator) Eval(i interface{}) interface{} {
 	val := reflect.ValueOf(i)
 	kind := val.Type().Kind()
 	ismap := (kind == reflect.Map)

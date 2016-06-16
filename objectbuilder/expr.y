@@ -4,39 +4,85 @@ package objectbuilder
 import (
 	"github.com/taylorchu/toki"
     "errors"
+    "strconv"
 )
 
 %}
 
 %union{
     str string
-    int int
+    op Operation
+    opl []Operation
 }
 
 %token <str> LBRACKET RBRACKET DOT KEY COLON
 %token NUMBER
 
-%type <int> NUMBER
-%type <str> KEY
+%type <str> KEY NUMBER
+%type <op> array object operator
+%type <opl> operatorList
 
 
 %%
-expression  : array expression
-            | object expression
-            |
-            ;
+expression   : object operatorList
+             {
+                 exlex.(*lexer).operations = append([]Operation{$1}, $2...)
+             }
+             | array operatorList
+             {
+                 exlex.(*lexer).operations = append([]Operation{$1}, $2...)
+             }
+             | object
+             {
+                 exlex.(*lexer).operations = []Operation{$1}
+             }
+             | array
+             {
+                 exlex.(*lexer).operations = []Operation{$1}
+             }
+             ;
 
-array       : LBRACKET index RBRACKET
-            ;
+operatorList : operator
+             {
+                 $$ = []Operation{$1}
+             }
+             | operator operatorList
+             {
+                 $$ = append([]Operation{$1}, $2...)
+             }
+             ;
 
-index       : NUMBER
-            | NUMBER COLON NUMBER
-            | COLON
+operator     : DOT object
+             {
+                 $$ = $2
+             }
+             | array
+             {
+                 $$ = $1
+             }
+             ;
+
+array       : LBRACKET NUMBER RBRACKET
+            {
+                num, _ := strconv.Atoi($2)
+                $$ = ArrayOperator{index: num, slice: false, all: false}
+            }
+            | LBRACKET NUMBER COLON NUMBER RBRACKET
+            {
+                num, _ := strconv.Atoi($2)
+                num2, _ := strconv.Atoi($4)
+                $$ = ArrayOperator{slice_start: num, slice_end: num2, slice: true, all: false}
+            }
+            | LBRACKET COLON RBRACKET
+            {
+                $$ = ArrayOperator{slice: false, all: true}
+            }
             ;
 
 object      : KEY
-            | object DOT KEY
-            | array DOT KEY
+            {
+                $$ = ObjectOperator{key: $1}
+            }
             ;
 %%
 
@@ -67,6 +113,10 @@ type lexer struct {
     lextokens []uint32
     operations []Operation
     error   error
+}
+
+func (l *lexer) addOperation(o Operation) {
+    l.operations = append(l.operations, o)
 }
 
 func NewExprLexer(s string) *lexer {

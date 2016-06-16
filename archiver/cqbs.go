@@ -121,7 +121,7 @@ func (b *Broker) GetQuery(pq *querylang.ParsedQuery) (*Query, error) {
 	q.changeUUIDs(uuids)
 
 	// also get initial result for query and cache it
-	result, evalErr := b.a.evaluateQuery(pq, common.NewEphemeralKey())
+	result, evalErr := b.a.evaluateQuery(pq)
 	if evalErr != nil {
 		return q, nil
 	}

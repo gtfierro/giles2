@@ -96,9 +96,9 @@ func (h *MsgPackUdpHandler) handleAdd(buffer []byte, num int, from *net.UDPAddr,
 		return
 	}
 
-	msg, ephkey, err := h.decode(buffer)
+	msg, err := h.decode(buffer)
 	if err == nil {
-		h.a.AddData(msg, ephkey)
+		h.a.AddData(msg)
 		atomic.AddUint64(&h.counter, 1)
 	}
 	msg.Metadata = common.Dict{}
@@ -131,17 +131,16 @@ func Fuzz(data []byte) int {
 		},
 		counter: 0,
 	}
-	msg, _, err := h.decode(data)
+	msg, err := h.decode(data)
 	if msg == nil || err != nil {
 		return 1
 	}
 	return 0
 }
 
-func (h *MsgPackUdpHandler) decode(buffer []byte) (*common.SmapMessage, common.EphemeralKey, error) {
+func (h *MsgPackUdpHandler) decode(buffer []byte) (*common.SmapMessage, error) {
 	var (
-		ephkey common.EphemeralKey
-		uuid   string
+		uuid string
 	)
 	msg := h.msgpool.Get().(*common.SmapMessage)
 
@@ -149,28 +148,28 @@ func (h *MsgPackUdpHandler) decode(buffer []byte) (*common.SmapMessage, common.E
 
 	if err != nil {
 		log.Errorf("Error decoding msgpack %v", err)
-		return nil, ephkey, err
+		return nil, err
 	}
 
 	// get Path
 	if msg.Path, err = getStringValue(msgMap, "Path"); err != nil {
-		return msg, ephkey, err
+		return msg, err
 	}
 
 	// get UUID
 	if uuid, err = getStringValue(msgMap, "uuid"); err != nil {
-		return msg, ephkey, err
+		return msg, err
 	}
 	msg.UUID = common.UUID(uuid)
 
 	// test for readings
 	rdgs, err := getReadings(msgMap)
 	if err != nil && err != ReadingsNotFound {
-		return msg, ephkey, err // return early if we found readings and it still gave error
+		return msg, err // return early if we found readings and it still gave error
 	} else if err == ReadingsNotFound { // otherwise look for Value field
 		var value float64
 		if value, err = getValue(msgMap); err != nil {
-			return msg, ephkey, err
+			return msg, err
 		}
 		msg.Readings = []common.Reading{&common.SmapNumberReading{Time: common.GetNow(common.UOT_MS), Value: value}}
 	} else if err == nil { // readings are ok
@@ -180,7 +179,7 @@ func (h *MsgPackUdpHandler) decode(buffer []byte) (*common.SmapMessage, common.E
 	//get Metadata
 	md, err := getMetadata(msgMap)
 	if err != nil && err != MetadataNotFound {
-		return msg, ephkey, err
+		return msg, err
 	} else if err == nil {
 		msg.Metadata = md
 	}
@@ -188,10 +187,10 @@ func (h *MsgPackUdpHandler) decode(buffer []byte) (*common.SmapMessage, common.E
 	//get Properties
 	props, err := getProperties(msgMap)
 	if err != nil && err != PropertiesNotFound {
-		return msg, ephkey, err
+		return msg, err
 	} else if err == nil {
 		msg.Properties = props
 	}
 
-	return msg, ephkey, nil
+	return msg, nil
 }

@@ -100,7 +100,7 @@ func (bwh *BOSSWaveHandler) listenQueries(msg *bw.SimpleMessage) {
 	signalURI = fmt.Sprintf("%s,queries", fromVK[:len(fromVK)-1])
 
 	log.Infof("Got query %+v", query)
-	res, err := bwh.a.HandleQuery(query.Query, common.NewEphemeralKey())
+	res, err := bwh.a.HandleQuery(query.Query)
 	if err != nil {
 		msg := QueryError{
 			Query: query.Query,
@@ -149,7 +149,7 @@ func (bwh *BOSSWaveHandler) listenCQBS(msg *bw.SimpleMessage) {
 	}
 
 	subscription := bwh.StartSubscriber(fromVK, query)
-	go bwh.a.HandleNewSubscriber(subscription, query.Query, common.NewEphemeralKey())
+	go bwh.a.HandleNewSubscriber(subscription, query.Query)
 }
 
 func (bwh *BOSSWaveHandler) StartSubscriber(vk string, query KeyValueQuery) *giles.Subscriber {

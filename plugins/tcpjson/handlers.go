@@ -97,7 +97,6 @@ func (tcp *TCPJSONHandler) listenAdds() {
 
 func (tcp *TCPJSONHandler) handleAdd(conn net.Conn) {
 	var (
-		ephkey   common.EphemeralKey
 		messages common.TieredSmapMessage
 		err      error
 	)
@@ -106,10 +105,9 @@ func (tcp *TCPJSONHandler) handleAdd(conn net.Conn) {
 		tcp.errors <- err
 		return
 	}
-	ephkey = common.NewEphemeralKey()
 	messages.CollapseToTimeseries()
 	for _, msg := range messages {
-		if addErr := tcp.a.AddData(msg, ephkey); addErr != nil {
+		if addErr := tcp.a.AddData(msg); addErr != nil {
 			log.Errorf("Error handling JSON: %v", err)
 			tcp.errors <- err
 			conn.Close()
@@ -140,7 +138,7 @@ func (tcp *TCPJSONHandler) handleQuery(conn net.Conn) {
 		tcp.errors <- err
 		return
 	}
-	res, err := tcp.a.HandleQuery(string(querybuffer), common.NewEphemeralKey())
+	res, err := tcp.a.HandleQuery(string(querybuffer))
 	if err != nil {
 		log.Errorf("Error evaluating query: %v", err)
 		tcp.errors <- err
@@ -175,7 +173,7 @@ func (tcp *TCPJSONHandler) handleSubscribe(conn net.Conn) {
 	}
 
 	subscription := StartTCPJSONSubscriber(conn)
-	tcp.a.HandleNewSubscriber(subscription, "select * where "+string(querybuffer), common.NewEphemeralKey())
+	tcp.a.HandleNewSubscriber(subscription, "select * where "+string(querybuffer))
 }
 
 func handleJSON(r io.Reader) (decoded common.TieredSmapMessage, err error) {

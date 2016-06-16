@@ -182,7 +182,7 @@ func (uri *URIArchiver) Listen(a *giles.Archiver) {
 			if err != nil {
 				log.Error(errors.Wrap(err, "Could not unmarshal msgpack object"))
 			}
-			err = a.AddData(uri.GetSmapMessage(thing), common.NewEphemeralKey())
+			err = a.AddData(uri.GetSmapMessage(thing))
 			if err != nil {
 				log.Error(errors.Wrap(err, "Could not add data"))
 			}

@@ -126,7 +126,7 @@ func (a *Archiver) startReport() {
 //  - Saves the attached metadata (if any) to the metadata store
 //  - Reevaluates any dynamic subscriptions and pushes to republish clients
 //  - Saves the attached readings (if any) to the timeseries database
-func (a *Archiver) AddData(msg *common.SmapMessage, ephkey common.EphemeralKey) (err error) {
+func (a *Archiver) AddData(msg *common.SmapMessage) (err error) {
 	// save metadata
 	err = a.mdStore.SaveTags(msg)
 	if err != nil {
@@ -173,48 +173,47 @@ func (a *Archiver) AddData(msg *common.SmapMessage, ephkey common.EphemeralKey) 
 // asking for them and need to transform them into their own internal representations (e.g.
 // JSON, MsgPack, etc). What are the data patterns we are seeing?
 // Basically everything fits into common.SmapMessageList
-func (a *Archiver) HandleQuery(querystring string, ephkey common.EphemeralKey) (QueryResult, error) {
+func (a *Archiver) HandleQuery(querystring string) (QueryResult, error) {
 	var result QueryResult
 	// parse the query
 	parsed := a.qp.Parse(querystring)
 	if parsed.Err != nil {
 		return result, fmt.Errorf("Error (%v) in query \"%v\" (error at %v)\n", parsed.Err, querystring, parsed.ErrPos)
 	}
-	return a.evaluateQuery(parsed, ephkey)
+	return a.evaluateQuery(parsed)
 
 }
 
-func (a *Archiver) evaluateQuery(parsed *querylang.ParsedQuery, ephkey common.EphemeralKey) (QueryResult, error) {
+func (a *Archiver) evaluateQuery(parsed *querylang.ParsedQuery) (QueryResult, error) {
 	var result QueryResult
 	// execute the query
 	switch parsed.QueryType {
 	case querylang.SELECT_TYPE:
-		return a.handleSelect(parsed, ephkey)
+		return a.handleSelect(parsed)
 	case querylang.DELETE_TYPE:
-		return result, a.handleDelete(parsed, ephkey)
+		return result, a.handleDelete(parsed)
 	case querylang.SET_TYPE:
-		return result, a.handleSet(parsed, ephkey)
+		return result, a.handleSet(parsed)
 	case querylang.DATA_TYPE:
-		return a.handleData(parsed, ephkey)
+		return a.handleData(parsed)
 	default:
 		return result, fmt.Errorf("Could not decide query type %v", parsed.Querystring)
 	}
 }
 
-func (a *Archiver) HandleNewSubscriber(subscriber *Subscriber, querystring string, ephkey common.EphemeralKey) error {
+func (a *Archiver) HandleNewSubscriber(subscriber *Subscriber, querystring string) error {
 	subscriber.query = a.qp.Parse(querystring)
 	return a.broker.NewSubscriber(subscriber)
 }
 
-func (a *Archiver) handleSelect(parsed *querylang.ParsedQuery, ephkey common.EphemeralKey) (QueryResult, error) {
-	//TODO: filter results by EphKey
+func (a *Archiver) handleSelect(parsed *querylang.ParsedQuery) (QueryResult, error) {
 	if parsed.Distinct {
 		return a.mdStore.GetDistinct(parsed.Target[0], parsed.Where)
 	}
 	return a.mdStore.GetTags(parsed.Target, parsed.Where)
 }
 
-func (a *Archiver) handleData(parsed *querylang.ParsedQuery, ephkey common.EphemeralKey) (common.SmapMessageList, error) {
+func (a *Archiver) handleData(parsed *querylang.ParsedQuery) (common.SmapMessageList, error) {
 	var (
 		result   = common.SmapMessageList{}
 		readings []common.SmapNumbersResponse
@@ -263,7 +262,7 @@ func (a *Archiver) handleData(parsed *querylang.ParsedQuery, ephkey common.Ephem
 	return result, nil
 }
 
-func (a *Archiver) handleDelete(parsed *querylang.ParsedQuery, ephkey common.EphemeralKey) error {
+func (a *Archiver) handleDelete(parsed *querylang.ParsedQuery) error {
 	if len(parsed.Target) > 0 {
 		// remove tags
 		log.Debugf("Removing tags %v docs where %v", parsed.Target, parsed.Where)
@@ -273,7 +272,7 @@ func (a *Archiver) handleDelete(parsed *querylang.ParsedQuery, ephkey common.Eph
 	return a.mdStore.RemoveDocs(parsed.Where)
 }
 
-func (a *Archiver) handleSet(parsed *querylang.ParsedQuery, ephkey common.EphemeralKey) error {
+func (a *Archiver) handleSet(parsed *querylang.ParsedQuery) error {
 	log.Debugf("Apply updates %v where %v", parsed.Set, parsed.Where)
 	if len(parsed.Set) == 0 {
 		return nil

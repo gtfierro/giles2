@@ -65,7 +65,6 @@ func Handle(a *giles.Archiver, port int) {
 
 func (h *WebSocketHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey   common.EphemeralKey
 		messages common.TieredSmapMessage
 		err      error
 	)
@@ -76,7 +75,6 @@ func (h *WebSocketHandler) handleAdd(rw http.ResponseWriter, req *http.Request, 
 		log.Errorf("Error establishing websocket: %v", err)
 		return
 	}
-	copy(ephkey[:], ps.ByName("key"))
 
 	for {
 		err = ws.ReadJSON(messages)
@@ -91,7 +89,6 @@ func (h *WebSocketHandler) handleAdd(rw http.ResponseWriter, req *http.Request, 
 
 func (h *WebSocketHandler) handleRepublish(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey common.EphemeralKey
 		//messages common.TieredSmapMessage
 		err error
 	)
@@ -102,12 +99,11 @@ func (h *WebSocketHandler) handleRepublish(rw http.ResponseWriter, req *http.Req
 		log.Errorf("Error establishing websocket: %v", err)
 		return
 	}
-	copy(ephkey[:], ps.ByName("key"))
 	msgtype, msg, err := ws.ReadMessage()
-	log.Debugf("msgtype: %v, msg: %v, err: %v, ephkey: %v", msgtype, string(msg), err, ephkey)
+	log.Debugf("msgtype: %v, msg: %v, err: %v", msgtype, string(msg), err)
 
 	subscription := StartSubscriber(ws)
-	h.a.HandleNewSubscriber(subscription, "select * where "+string(msg), ephkey)
+	h.a.HandleNewSubscriber(subscription, "select * where "+string(msg))
 }
 
 type manager struct {

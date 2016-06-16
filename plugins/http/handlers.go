@@ -82,12 +82,10 @@ func Handle(a *giles.Archiver, port int) {
 
 func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey   common.EphemeralKey
 		messages common.TieredSmapMessage
 		err      error
 	)
 	defer req.Body.Close()
-	copy(ephkey[:], ps.ByName("key"))
 
 	if messages, err = handleJSON(req.Body); err != nil {
 		log.Errorf("Error handling JSON: %v", err)
@@ -98,7 +96,7 @@ func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps ht
 
 	messages.CollapseToTimeseries()
 	for _, msg := range messages {
-		if addErr := h.a.AddData(msg, ephkey); addErr != nil {
+		if addErr := h.a.AddData(msg); addErr != nil {
 			rw.WriteHeader(500)
 			rw.Write([]byte(addErr.Error()))
 			return
@@ -110,13 +108,11 @@ func (h *HTTPHandler) handleAdd(rw http.ResponseWriter, req *http.Request, ps ht
 
 func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey common.EphemeralKey
-		err    error
+		err error
 	)
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	copy(ephkey[:], ps.ByName("key"))
 	defer req.Body.Close()
 
 	if req.ContentLength > 1024 {
@@ -128,7 +124,7 @@ func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Reques
 
 	querybuffer := make([]byte, req.ContentLength)
 	_, err = req.Body.Read(querybuffer)
-	res, err := h.a.HandleQuery(string(querybuffer), ephkey)
+	res, err := h.a.HandleQuery(string(querybuffer))
 	if err != nil {
 		log.Errorf("Error evaluating query: %v", err)
 		rw.WriteHeader(500)
@@ -145,13 +141,11 @@ func (h *HTTPHandler) handleSingleQuery(rw http.ResponseWriter, req *http.Reques
 
 func (h *HTTPHandler) handleSubscriber(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey common.EphemeralKey
-		err    error
+		err error
 	)
 	defer req.Body.Close()
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-	copy(ephkey[:], ps.ByName("key"))
 
 	if req.ContentLength > 1024 {
 		log.Errorf("HUGE query string with length %v. Aborting!", req.ContentLength)
@@ -171,18 +165,16 @@ func (h *HTTPHandler) handleSubscriber(rw http.ResponseWriter, req *http.Request
 
 	subscription := StartHTTPSubscriber(rw)
 
-	h.a.HandleNewSubscriber(subscription, string(querybuffer), ephkey)
+	h.a.HandleNewSubscriber(subscription, string(querybuffer))
 }
 
 func (h *HTTPHandler) handleRepublisher(rw http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	var (
-		ephkey common.EphemeralKey
-		err    error
+		err error
 	)
 	defer req.Body.Close()
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
 	rw.Header().Set("Content-Type", "application/json; charset=utf-8")
-	copy(ephkey[:], ps.ByName("key"))
 
 	if req.ContentLength > 1024 {
 		log.Errorf("HUGE query string with length %v. Aborting!", req.ContentLength)
@@ -202,7 +194,7 @@ func (h *HTTPHandler) handleRepublisher(rw http.ResponseWriter, req *http.Reques
 
 	subscription := StartHTTPSubscriber(rw)
 
-	h.a.HandleNewSubscriber(subscription, "select * where "+string(querybuffer), ephkey)
+	h.a.HandleNewSubscriber(subscription, "select * where "+string(querybuffer))
 }
 
 func handleJSON(r io.Reader) (decoded common.TieredSmapMessage, err error) {

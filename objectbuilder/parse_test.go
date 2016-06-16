@@ -63,6 +63,10 @@ func TestParseTokens(t *testing.T) {
 			[]uint32{LBRACKET, NUMBER, RBRACKET, DOT, KEY},
 		},
 		{
+			"[0].key1",
+			[]uint32{LBRACKET, NUMBER, RBRACKET, DOT, KEY},
+		},
+		{
 			"[0].key1[1].key2",
 			[]uint32{LBRACKET, NUMBER, RBRACKET, DOT, KEY, LBRACKET, NUMBER, RBRACKET, DOT, KEY},
 		},
@@ -269,6 +273,10 @@ func TestParseOperatorChain(t *testing.T) {
 			[]Operation{ArrayOperator{index: 0, slice: false, all: false}, ObjectOperator{"key1"}},
 		},
 		{
+			"[0].key1[1]",
+			[]Operation{ArrayOperator{index: 0, slice: false, all: false}, ObjectOperator{"key1"}, ArrayOperator{index: 1, slice: false, all: false}},
+		},
+		{
 			"[0].key1[1].key2",
 			[]Operation{ArrayOperator{index: 0, slice: false, all: false}, ObjectOperator{"key1"}, ArrayOperator{index: 1, slice: false, all: false}, ObjectOperator{"key2"}},
 		},
@@ -276,6 +284,105 @@ func TestParseOperatorChain(t *testing.T) {
 		parsedOps := Parse(test.expr)
 		if !reflect.DeepEqual(parsedOps, test.operators) {
 			t.Errorf("Operations wrong for: %s -> Got %+v but wanted %+v", test.expr, parsedOps, test.operators)
+		}
+	}
+}
+
+func TestEvalOperatorChain(t *testing.T) {
+	for _, test := range []struct {
+		expr   string
+		data   interface{}
+		result interface{}
+	}{
+		{
+			"[0]",
+			[]int{1, 2, 3, 4},
+			1,
+		},
+		{
+			"[3]",
+			[]int{1, 2, 3, 4},
+			4,
+		},
+		{
+			"[5]",
+			[]int{1, 2, 3, 4},
+			4,
+		},
+		{
+			"[-1]",
+			[]int{1, 2, 3, 4},
+			1,
+		},
+		{
+			"[:]",
+			[]int{1, 2, 3, 4},
+			[]int{1, 2, 3, 4},
+		},
+		{
+			"[0:4]",
+			[]int{1, 2, 3, 4},
+			[]int{1, 2, 3, 4},
+		},
+		{
+			"[1:4]",
+			[]int{1, 2, 3, 4},
+			[]int{2, 3, 4},
+		},
+		{
+			"[1:40]",
+			[]int{1, 2, 3, 4},
+			[]int{2, 3, 4},
+		},
+		{
+			"[1:2]",
+			[]int{1, 2, 3, 4},
+			[]int{2},
+		},
+		{
+			"key1",
+			map[string]interface{}{"key1": "val1"},
+			"val1",
+		},
+		{
+			"key1",
+			map[string]interface{}{"key1": 12345},
+			12345,
+		},
+		{
+			"key1",
+			map[string]interface{}{"key1": []string{"a", "b"}},
+			[]string{"a", "b"},
+		},
+		{
+			"key1",
+			map[string]interface{}{"key1": "val1"},
+			"val1",
+		},
+		{
+			"key1",
+			map[string]interface{}{"key1": 12345},
+			12345,
+		},
+		{
+			"key1[:]",
+			map[string]interface{}{"key1": []string{"a", "b"}},
+			[]string{"a", "b"},
+		},
+		{
+			"key1[0]",
+			map[string]interface{}{"key1": []string{"a", "b"}},
+			"a",
+		},
+		{
+			"[0].key1[1]",
+			[]map[string]interface{}{map[string]interface{}{"key1": []string{"a", "b"}}},
+			"b",
+		},
+	} {
+		res := Eval(Parse(test.expr), test.data)
+		if !reflect.DeepEqual(res, test.result) {
+			t.Errorf("Expr %+v on %+v gave %+v but wanted %+v", test.expr, test.data, res, test.result)
 		}
 	}
 }

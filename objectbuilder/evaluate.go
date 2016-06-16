@@ -14,6 +14,13 @@ func Parse(s string) []Operation {
 	return l.operations
 }
 
+func Eval(ops []Operation, v interface{}) interface{} {
+	for _, op := range ops {
+		v = op.Eval(v)
+	}
+	return v
+}
+
 type Operation interface {
 	Eval(interface{}) interface{}
 }

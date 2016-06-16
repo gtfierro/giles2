@@ -56,7 +56,7 @@ func (o ArrayOperator) Eval(i interface{}) interface{} {
 	if o.index > length {
 		return val.Index(length - 1).Interface()
 	} else if o.index < 0 {
-		return val.Index(0).Interface()
+		return val.Index(length + o.index).Interface()
 	}
 
 	return val.Index(o.index).Interface()

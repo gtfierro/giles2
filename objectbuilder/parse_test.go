@@ -43,6 +43,10 @@ func TestParseTokens(t *testing.T) {
 			[]uint32{LBRACKET, NUMBER, RBRACKET},
 		},
 		{
+			"[-1]",
+			[]uint32{LBRACKET, NUMBER, RBRACKET},
+		},
+		{
 			"[:]",
 			[]uint32{LBRACKET, COLON, RBRACKET},
 		},
@@ -103,7 +107,12 @@ func TestEvalArray(t *testing.T) {
 		{
 			ArrayOperator{index: -1, all: false, slice: false},
 			[]int{1, 2, 3, 4},
-			1,
+			4,
+		},
+		{
+			ArrayOperator{index: -2, all: false, slice: false},
+			[]int{1, 2, 3, 4},
+			3,
 		},
 		{
 			ArrayOperator{all: true, slice: false},
@@ -312,7 +321,12 @@ func TestEvalOperatorChain(t *testing.T) {
 		{
 			"[-1]",
 			[]int{1, 2, 3, 4},
-			1,
+			4,
+		},
+		{
+			"[-3]",
+			[]int{1, 2, 3, 4},
+			2,
 		},
 		{
 			"[:]",

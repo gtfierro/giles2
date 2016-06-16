@@ -18,6 +18,7 @@ type MetadataRecord struct {
 	URI       string
 	VK        string
 	Time      int64
+	Msg       *bw.SimpleMessage
 }
 
 // returns true if the metadata record can be used
@@ -30,33 +31,34 @@ func (rec *MetadataRecord) Valid() bool {
 	return rec.Key == key && rec.URI != "" && rec.VK != "" && rec.Namespace != "" && rec.Time > 0
 }
 
-// TODO: for a view, we may want to allow them to configure if they want * or +
-// and how far beyond the base URI, because otherwise we *just* subscribe to
-// metadata
-func GetRecord(msg *bw.SimpleMessage) *MetadataRecord {
+func GetRecords(msg *bw.SimpleMessage) []*MetadataRecord {
 	parts := strings.Split(msg.URI, "/")
 	uri := strings.Join(parts[:len(parts)-2], "/") + "/*"
-	rec := &MetadataRecord{
-		Key:       parts[len(parts)-1],
-		Namespace: parts[0],
-		URI:       uri,
-		VK:        msg.From,
-		Time:      time.Now().UnixNano(),
-	}
+	var records []*MetadataRecord
 
-	meta, ok := msg.GetOnePODF(bw.PODFSMetadata).(bw.MetadataPayloadObject)
-	if ok {
-		val := meta.Value()
-		if val != nil {
-			rec.Value = []byte(val.Value)
-		} else {
-			return nil
+	for _ = range msg.POs {
+		rec := &MetadataRecord{
+			Key:       parts[len(parts)-1],
+			Namespace: parts[0],
+			URI:       uri,
+			VK:        msg.From,
+			Time:      time.Now().UnixNano(),
+			Msg:       msg,
 		}
-	} else {
-		return nil
+		meta, ok := msg.GetOnePODF(bw.PODFSMetadata).(bw.MetadataPayloadObject)
+		if ok {
+			val := meta.Value()
+			if val != nil {
+				rec.Value = []byte(val.Value)
+			} else {
+				rec.Value = meta.GetContents()
+			}
+		} else {
+			rec.Value = msg.POs[0].GetContents()
+		}
+		records = append(records, rec)
 	}
-
-	return rec
+	return records
 }
 
 type queryContext struct {
@@ -126,11 +128,13 @@ func (vm *ViewManager) Handle(v *View) error {
 
 	// now, when we run vm.db.Exec(v.Expr), we will get the list of metadata records
 	// for the matching URIs. We want to subscribe to those URIs
-	initialMatches := vm.db.Exec(v.Expr)
-	for _, rec := range initialMatches {
+	for _, rec := range vm.db.Exec(v.Expr) {
 		if err := vm.startForwarding(rec.URI, v); err != nil {
 			log.Error(err)
 		}
+		vm.fwdL.Lock()
+		vm.forwarders[rec.URI].send(rec.Msg)
+		vm.fwdL.Unlock()
 	}
 	return nil
 }
@@ -177,6 +181,7 @@ func (vm *ViewManager) subscribeNamespaces(expr Expression) {
 		nsvk := base64.URLEncoding.EncodeToString(f.Call([]reflect.Value{})[0].Bytes())
 		vm.namespaceAliases[namespace] = nsvk
 		log.Noticef("Resolved alias %s -> %s", namespace, nsvk)
+		log.Noticef("Subscribe to %s", uri)
 
 		// subscribe to all !meta tags on that namespace
 		vm.namespaceSubscriptions[namespace], err = vm.client.Subscribe(&bw.SubscribeParams{
@@ -189,8 +194,9 @@ func (vm *ViewManager) subscribeNamespaces(expr Expression) {
 		go func(sub chan *bw.SimpleMessage) {
 			// process subscription
 			for msg := range sub {
-				rec := GetRecord(msg)
-				vm.db.Insert(rec)
+				for _, rec := range GetRecords(msg) {
+					vm.db.Insert(rec)
+				}
 				vm.checkViews()
 			}
 		}(vm.namespaceSubscriptions[namespace])
@@ -204,8 +210,9 @@ func (vm *ViewManager) subscribeNamespaces(expr Expression) {
 		}
 		go func() {
 			for msg := range persistedMetadata {
-				rec := GetRecord(msg)
-				vm.db.Insert(rec)
+				for _, rec := range GetRecords(msg) {
+					vm.db.Insert(rec)
+				}
 				vm.checkViews()
 			}
 		}()
@@ -271,6 +278,9 @@ func (vm *ViewManager) checkViews() {
 				if err := vm.startForwarding(rec.URI, viewList...); err != nil {
 					log.Error(err)
 				}
+				vm.fwdL.Lock()
+				vm.forwarders[rec.URI].send(rec.Msg)
+				vm.fwdL.Unlock()
 			}
 			for _, v := range viewList {
 				v.MatchSet[rec.URI] = true
@@ -319,6 +329,7 @@ func (mm *memoryMetadataDB) Insert(rec *MetadataRecord) error {
 	}
 	mm.rl.Lock()
 	defer mm.rl.Unlock()
+	log.Debugf("inserting %+v", rec.Key)
 	if _, found := mm.records[rec.URI]; found {
 		if len(rec.Value) == 0 { // len of 0 means delete this key
 			delete(mm.records, rec.URI)
@@ -353,5 +364,6 @@ func (mm *memoryMetadataDB) getNode(ctx *queryContext, n Node) []MetadataRecord 
 			matched = append(matched, rec)
 		}
 	}
+
 	return matched
 }

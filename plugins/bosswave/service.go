@@ -4,6 +4,7 @@ import (
 	"fmt"
 	giles "github.com/gtfierro/giles2/archiver"
 	"github.com/gtfierro/giles2/common"
+	"github.com/gtfierro/giles2/plugins/bosswave/views"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	bw "gopkg.in/immesys/bw2bind.v5"
@@ -57,6 +58,23 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 	bwh.iface.SubscribeSlot("query", bwh.listenQueries)
 	bwh.iface.SubscribeSlot("subscribe", bwh.listenCQBS)
 
+	v, e := views.CreateView(bwh.bw, views.Expression{
+		NamespaceList: []string{"gabe.pantry"},
+		N:             &views.EqualsNode{Key: views.String("giles")},
+	})
+	if e != nil {
+		log.Error(errors.Wrap(e, "Could not create view"))
+	}
+
+	go func() {
+		for msg := range v.Subscribe() {
+			requests := bwh.ParseArchiveRequests(msg)
+			for _, req := range requests {
+				bwh.HandleArchiveRequest(req)
+			}
+		}
+	}()
+
 	bwh.incomingData = bwh.bw.SubscribeOrExit(&bw.SubscribeParams{
 		URI: bwh.namespace + "/" + "*/!meta/archive",
 	})
@@ -89,7 +107,7 @@ func (bwh *BOSSWaveHandler) addSub(uri, fromVK string) {
 	if _, found := bwh.subs[uri]; found {
 		return
 	}
-	log.Noticef("Subscribing to readings on %s (VK %s)", uri, fromVK)
+	//log.Noticef("Subscribing to readings on %s (VK %s)", uri, fromVK)
 	//TODO: recover these subscriptions on crash
 	bwh.subs[uri] = NewSource(uri, bwh.bw, bwh.a)
 }
@@ -209,8 +227,6 @@ func (bwh *BOSSWaveHandler) StartSubscriber(vk string, query KeyValueQuery) *gil
 
 func (bwh *BOSSWaveHandler) listenForAdds() {
 	for msg := range bwh.incomingData {
-		log.Info("incoming add data")
-		msg.Dump()
 		po := msg.GetOnePODF(bw.PODFString)
 		if po == nil {
 			continue

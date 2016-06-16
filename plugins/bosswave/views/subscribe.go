@@ -21,18 +21,21 @@ func newForwarder(incoming chan *bw.SimpleMessage, uri string) *forwarder {
 
 	go func() {
 		for msg := range incoming {
-			f.RLock()
-			for view := range f.forwardList {
-				select {
-				case view.C <- msg:
-				default:
-				}
-			}
-			f.RUnlock()
+			f.send(msg)
 		}
 	}()
-
 	return f
+}
+
+func (f *forwarder) send(msg *bw.SimpleMessage) {
+	f.RLock()
+	for view := range f.forwardList {
+		select {
+		case view.C <- msg:
+		default:
+		}
+	}
+	f.RUnlock()
 }
 
 func (f *forwarder) addViews(vs ...*View) {

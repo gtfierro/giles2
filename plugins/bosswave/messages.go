@@ -14,6 +14,8 @@ const (
 	GilesQueryListResultPIDString       = "2.0.9.5"
 	GilesQueryMetadataResultPIDString   = "2.0.9.6"
 	GilesQueryTimeseriesResultPIDString = "2.0.9.7"
+
+	GilesArchiveRequestPIDString = "2.0.8.0"
 )
 
 var (
@@ -25,6 +27,7 @@ var (
 	GilesQueryListResultPID       = bw.FromDotForm(GilesQueryListResultPIDString)
 	GilesQueryMetadataResultPID   = bw.FromDotForm(GilesQueryMetadataResultPIDString)
 	GilesQueryTimeseriesResultPID = bw.FromDotForm(GilesQueryTimeseriesResultPIDString)
+	GilesArchiveRequestPID        = bw.FromDotForm(GilesArchiveRequestPIDString)
 )
 
 //TODO: put VK and URi and "format" in these messages, but don't put them in the

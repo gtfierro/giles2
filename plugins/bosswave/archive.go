@@ -1,6 +1,7 @@
 package bosswave
 
 import (
+	"fmt"
 	giles "github.com/gtfierro/giles2/archiver"
 	"github.com/gtfierro/giles2/common"
 	ob "github.com/gtfierro/giles2/objectbuilder"
@@ -33,7 +34,9 @@ type ArchiveRequest struct {
 	// provided, then a UUIDv3 with NAMESPACE_UUID and the URI, PO type and
 	// Value are used.
 	UUID string
-	uuid []ob.Operation
+	// the real UUID when we get it
+	uuidActual common.UUID
+	uuid       []ob.Operation
 	// expression determining how to extract the value from the received
 	// message
 	Value string
@@ -45,6 +48,19 @@ type ArchiveRequest struct {
 	time []ob.Operation
 	// OPTIONAL. Golang time parse string
 	TimeParse string
+
+	// OPTIONAL. a base URI to scan for metadata. If `<uri>` is provided, we
+	// scan `<uri>/!meta/+` for metadata keys/values
+	MetadataURI string
+
+	// OPTIONAL. a URI terminating in a metadata key that contains some kv
+	// structure of metadata, for example `/a/b/c/!meta/metadatahere`
+	MetadataBlock string
+
+	// OPTIONAL. a ObjectBuilder expression to search in the current message
+	// for metadata
+	MetadataExpr string
+	metadataExpr []ob.Operation
 }
 
 func (req *ArchiveRequest) GetSmapMessage(thing interface{}) *common.SmapMessage {
@@ -63,16 +79,47 @@ func (req *ArchiveRequest) GetSmapMessage(thing interface{}) *common.SmapMessage
 
 	rdg.Time = req.getTime(thing)
 
-	if len(req.uuid) > 0 {
-		msg.UUID = common.UUID(ob.Eval(req.uuid, thing).(string))
-	} else {
-		msg.UUID = common.UUID(req.UUID)
+	if len(req.uuid) > 0 && req.uuidActual == "" {
+		req.uuidActual = common.UUID(ob.Eval(req.uuid, thing).(string))
+	} else if req.uuidActual == "" {
+		req.uuidActual = common.UUID(req.UUID)
 	}
+	msg.UUID = req.uuidActual
 	msg.Path = req.URI + "/" + req.Value
 	msg.Readings = []common.Reading{rdg}
-	msg.Metadata = common.Dict{"SourceName": "testmebw"}
+
+	if len(req.metadataExpr) > 0 {
+		msg.Metadata = make(common.Dict)
+		if md, ok := ob.Eval(req.metadataExpr, thing).(map[string]interface{}); ok {
+			for k, v := range md {
+				msg.Metadata[k] = fmt.Sprintf("%s", v)
+			}
+		}
+	}
 
 	return msg
+}
+
+func (req *ArchiveRequest) GetMetadata(msg *bw.SimpleMessage) *common.SmapMessage {
+	var ret = new(common.SmapMessage)
+	ret.UUID = req.uuidActual
+	ret.Path = req.URI + "/" + req.Value
+	ret.Metadata = make(common.Dict)
+
+	for _, po := range msg.POs {
+		var md map[string]interface{}
+		if po.IsTypeDF(bw.PODFMsgPack) {
+			err := po.(bw.MsgPackPayloadObject).ValueInto(&md)
+			if err != nil {
+				log.Error(errors.Wrap(err, "Could not unmarshal msgpack metadata"))
+				return nil
+			}
+		}
+		for k, v := range md {
+			ret.Metadata[k] = fmt.Sprintf("%s", v)
+		}
+	}
+	return ret
 }
 
 func (req *ArchiveRequest) getTime(thing interface{}) uint64 {
@@ -92,7 +139,7 @@ func (req *ArchiveRequest) getTime(thing interface{}) uint64 {
 
 // When we receive a metadata message with the right key (currently !meta/giles), then
 // we parse out the list of contained ObjectTemplates
-func (bwh *BOSSWaveHandler) ParseArchiveRequests(msg *bw.SimpleMessage) []*ArchiveRequest {
+func (bwh *BOSSWaveHandler) ExtractArchiveRequests(msg *bw.SimpleMessage) []*ArchiveRequest {
 	var requests []*ArchiveRequest
 	for _, po := range msg.POs {
 		if !po.IsTypeDF(GilesArchiveRequestPIDString) {
@@ -117,6 +164,7 @@ func (bwh *BOSSWaveHandler) ParseArchiveRequests(msg *bw.SimpleMessage) []*Archi
 			request.URI = strings.TrimSuffix(request.URI, "!meta/giles")
 			request.URI = strings.TrimSuffix(request.URI, "/")
 		}
+		//TODO: build a chain here to check if they have da permissiones
 		requests = append(requests, request)
 	}
 
@@ -128,7 +176,7 @@ func (bwh *BOSSWaveHandler) ParseArchiveRequests(msg *bw.SimpleMessage) []*Archi
 // Then we build a chain on the URI to the VK -- if this fails, then we stop
 // Then we build the operator chains for the expressions required
 // Then we subscribe to the URI indicated.
-func (bwh *BOSSWaveHandler) HandleArchiveRequest(request *ArchiveRequest) (*URIArchiver, error) {
+func (bwh *BOSSWaveHandler) ParseArchiveRequest(request *ArchiveRequest) (*URIArchiver, error) {
 	if request.FromVK == "" {
 		return nil, errors.New("VK was empty in ArchiveRequest")
 	}
@@ -140,10 +188,42 @@ func (bwh *BOSSWaveHandler) HandleArchiveRequest(request *ArchiveRequest) (*URIA
 		request.uuid = ob.Parse(request.UUID)
 	}
 
-	if request.Time == "" {
-	} else {
+	if request.Time != "" {
 		request.time = ob.Parse(request.Time)
 	}
+
+	if request.MetadataExpr != "" {
+		request.metadataExpr = ob.Parse(request.MetadataExpr)
+	}
+
+	var metadataChan = make(chan *bw.SimpleMessage)
+	if request.MetadataURI != "" {
+		sub1, err := bwh.bw.Subscribe(&bw.SubscribeParams{
+			URI: strings.TrimSuffix(request.MetadataURI, "/") + "/!meta/+",
+		})
+		if err != nil {
+			return nil, err
+		}
+		go func() {
+			for msg := range sub1 {
+				metadataChan <- msg
+			}
+		}()
+
+		q1, err := bwh.bw.Query(&bw.QueryParams{
+			URI: strings.TrimSuffix(request.MetadataURI, "/") + "/!meta/+",
+		})
+		if err != nil {
+			return nil, err
+		}
+		go func() {
+			for msg := range q1 {
+				metadataChan <- msg
+			}
+		}()
+	}
+	//TODO: subscribe then query MetadataBlock
+	//TODO: subscribe then query MetadataURI
 
 	log.Debugf("Subscribing to %s", request.URI)
 	sub, err := bwh.bw.Subscribe(&bw.SubscribeParams{
@@ -154,7 +234,7 @@ func (bwh *BOSSWaveHandler) HandleArchiveRequest(request *ArchiveRequest) (*URIA
 	}
 	log.Debugf("Got archive request %+v", request)
 
-	archiver := &URIArchiver{sub, request}
+	archiver := &URIArchiver{sub, metadataChan, request}
 	go archiver.Listen(bwh.a)
 
 	return archiver, nil
@@ -165,10 +245,16 @@ func (bwh *BOSSWaveHandler) HandleArchiveRequest(request *ArchiveRequest) (*URIA
 // that get sent to the archiver instance
 type URIArchiver struct {
 	subscription chan *bw.SimpleMessage
+	metadataChan chan *bw.SimpleMessage
 	*ArchiveRequest
 }
 
 func (uri *URIArchiver) Listen(a *giles.Archiver) {
+	go func() {
+		for msg := range uri.metadataChan {
+			a.AddData(uri.GetMetadata(msg))
+		}
+	}()
 	for msg := range uri.subscription {
 		for _, po := range msg.POs {
 			if !po.IsType(uri.PO, uri.PO) {

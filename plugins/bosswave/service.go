@@ -61,10 +61,7 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 
 	go func() {
 		for msg := range v.Subscribe() {
-			requests := bwh.ParseArchiveRequests(msg)
-			for _, req := range requests {
-				bwh.HandleArchiveRequest(req)
-			}
+			go bwh.handleArchiveRequest(msg)
 		}
 	}()
 
@@ -74,6 +71,13 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 func Handle(a *giles.Archiver, entityfile, namespace string) {
 	bwh := NewHandler(a, entityfile, namespace)
 	<-bwh.stop
+}
+
+func (bwh *BOSSWaveHandler) handleArchiveRequest(msg *bw.SimpleMessage) {
+	requests := bwh.ExtractArchiveRequests(msg)
+	for _, req := range requests {
+		bwh.ParseArchiveRequest(req)
+	}
 }
 
 func (bwh *BOSSWaveHandler) listenQueries(msg *bw.SimpleMessage) {

@@ -90,9 +90,16 @@ func (req *ArchiveRequest) GetSmapMessage(thing interface{}) *common.SmapMessage
 
 	if len(req.metadataExpr) > 0 {
 		msg.Metadata = make(common.Dict)
+		msg.Properties = new(common.SmapProperties)
 		if md, ok := ob.Eval(req.metadataExpr, thing).(map[string]interface{}); ok {
 			for k, v := range md {
-				msg.Metadata[k] = fmt.Sprintf("%s", v)
+				val := fmt.Sprintf("%s", v)
+				if k == "UnitofTime" {
+					msg.Properties.UnitOfTime, _ = common.ParseUOT(val)
+				} else if k == "UnitofMeasure" {
+					msg.Properties.UnitOfMeasure = val
+				}
+				msg.Metadata[k] = val
 			}
 		}
 	}
@@ -108,6 +115,7 @@ func (req *ArchiveRequest) GetMetadata(msg *bw.SimpleMessage) *common.SmapMessag
 	ret.UUID = req.uuidActual
 	ret.Path = req.URI + "/" + req.Value
 	ret.Metadata = make(common.Dict)
+	ret.Properties = new(common.SmapProperties)
 
 	for _, po := range msg.POs {
 		var md map[string]interface{}
@@ -118,11 +126,18 @@ func (req *ArchiveRequest) GetMetadata(msg *bw.SimpleMessage) *common.SmapMessag
 				return nil
 			}
 		} else if po.IsTypeDF(bw.PODFSMetadata) {
+			md = make(map[string]interface{})
 			tuple := po.(bw.MetadataPayloadObject).Value()
-			ret.Metadata[getMetadataKey(msg.URI)] = tuple.Value
+			md[getMetadataKey(msg.URI)] = tuple.Value
 		}
 		for k, v := range md {
-			ret.Metadata[k] = fmt.Sprintf("%s", v)
+			val := fmt.Sprintf("%s", v)
+			if k == "UnitofTime" {
+				ret.Properties.UnitOfTime, _ = common.ParseUOT(val)
+			} else if k == "UnitofMeasure" {
+				ret.Properties.UnitOfMeasure = val
+			}
+			ret.Metadata[k] = val
 		}
 	}
 	return ret

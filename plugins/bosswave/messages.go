@@ -3,6 +3,7 @@ package bosswave
 import (
 	"github.com/gtfierro/giles2/common"
 	bw "gopkg.in/immesys/bw2bind.v5"
+	"math"
 )
 
 const (
@@ -83,9 +84,7 @@ func (msg QueryTimeseriesResult) ToMsgPackBW() (po bw.PayloadObject) {
 	return
 }
 
-// do we need a "query result" struct?
 type KeyValueMetadata struct {
-	Nonce    uint32
 	UUID     string
 	Metadata map[string]interface{}
 }
@@ -96,14 +95,9 @@ func (msg KeyValueMetadata) ToMsgPackBW() (po bw.PayloadObject) {
 }
 
 type Timeseries struct {
-	Nonce uint32
-	UUID  string
-	Data  []Point
-}
-
-type Point struct {
-	Time  uint64
-	Value float64
+	UUID   string
+	Times  []uint64
+	Values []float64
 }
 
 func (msg Timeseries) ToMsgPackBW() (po bw.PayloadObject) {
@@ -112,9 +106,10 @@ func (msg Timeseries) ToMsgPackBW() (po bw.PayloadObject) {
 }
 
 func (msg Timeseries) ToReadings() []common.Reading {
-	var res = make([]common.Reading, len(msg.Data))
-	for idx, point := range msg.Data {
-		res[idx] = &common.SmapNumberReading{Time: point.Time, Value: point.Value, UoT: common.GuessTimeUnit(point.Time)}
+	lesserLength := int(math.Min(float64(len(msg.Times)), float64(len(msg.Values))))
+	var res = make([]common.Reading, lesserLength)
+	for idx := 0; idx < lesserLength; idx++ {
+		res[idx] = &common.SmapNumberReading{Time: msg.Times[idx], Value: msg.Values[idx], UoT: common.GuessTimeUnit(msg.Times[idx])}
 	}
 	return res
 }

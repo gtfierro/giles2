@@ -24,8 +24,8 @@ func POsFromSmapMessageList(nonce uint32, list common.SmapMessageList) []bw.Payl
 		Data:  []Timeseries{},
 	}
 	for _, msg := range list {
-		mdRes.Data = append(mdRes.Data, ExtractMetadata(msg))
-		tsRes.Data = append(tsRes.Data, ExtractTimeseries(msg))
+		mdRes.Data = append(mdRes.Data, ExtractMetadataToBW(msg))
+		tsRes.Data = append(tsRes.Data, ExtractTimeseriesToBW(msg))
 	}
 	replies[0] = mdRes.ToMsgPackBW()
 	replies[1] = tsRes.ToMsgPackBW()
@@ -33,7 +33,7 @@ func POsFromSmapMessageList(nonce uint32, list common.SmapMessageList) []bw.Payl
 	return replies
 }
 
-func ExtractMetadata(msg *common.SmapMessage) KeyValueMetadata {
+func ExtractMetadataToBW(msg *common.SmapMessage) KeyValueMetadata {
 	md := KeyValueMetadata{
 		UUID:     string(msg.UUID),
 		Metadata: make(map[string]interface{}),
@@ -43,15 +43,17 @@ func ExtractMetadata(msg *common.SmapMessage) KeyValueMetadata {
 	return md
 }
 
-func ExtractTimeseries(msg *common.SmapMessage) Timeseries {
+func ExtractTimeseriesToBW(msg *common.SmapMessage) Timeseries {
 	ts := Timeseries{
-		UUID: string(msg.UUID),
-		Data: make([]Point, len(msg.Readings)),
+		UUID:   string(msg.UUID),
+		Times:  make([]uint64, len(msg.Readings)),
+		Values: make([]float64, len(msg.Readings)),
 	}
 	for i, rdg := range msg.Readings {
 		if !rdg.IsObject() {
 			d := rdg.(*common.SmapNumberReading)
-			ts.Data[i] = Point{d.Time, d.Value}
+			ts.Times[i] = d.Time
+			ts.Values[i] = d.Value
 		}
 	}
 	return ts

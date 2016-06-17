@@ -102,6 +102,9 @@ func (req *ArchiveRequest) GetSmapMessage(thing interface{}) *common.SmapMessage
 
 func (req *ArchiveRequest) GetMetadata(msg *bw.SimpleMessage) *common.SmapMessage {
 	var ret = new(common.SmapMessage)
+	if req.UUID != "" && req.uuidActual == "" {
+		req.uuidActual = common.UUID(req.UUID)
+	}
 	ret.UUID = req.uuidActual
 	ret.Path = req.URI + "/" + req.Value
 	ret.Metadata = make(common.Dict)
@@ -114,6 +117,9 @@ func (req *ArchiveRequest) GetMetadata(msg *bw.SimpleMessage) *common.SmapMessag
 				log.Error(errors.Wrap(err, "Could not unmarshal msgpack metadata"))
 				return nil
 			}
+		} else if po.IsTypeDF(bw.PODFSMetadata) {
+			tuple := po.(bw.MetadataPayloadObject).Value()
+			ret.Metadata[getMetadataKey(msg.URI)] = tuple.Value
 		}
 		for k, v := range md {
 			ret.Metadata[k] = fmt.Sprintf("%s", v)
@@ -163,6 +169,9 @@ func (bwh *BOSSWaveHandler) ExtractArchiveRequests(msg *bw.SimpleMessage) []*Arc
 		if request.URI == "" { // no URI supplied
 			request.URI = strings.TrimSuffix(request.URI, "!meta/giles")
 			request.URI = strings.TrimSuffix(request.URI, "/")
+		}
+		if request.MetadataURI == "" {
+			request.MetadataURI = request.URI
 		}
 		//TODO: build a chain here to check if they have da permissiones
 		requests = append(requests, request)

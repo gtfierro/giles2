@@ -9,6 +9,7 @@ larger arrays, slices, maps, structs, or combinations thereof.
 Its just normal object syntax:
 
 * `[i]`: return thing at index i
+    * supports negative index: `[-1]` will return last item of list
 * `[i:j]`: return slice of things between indices i and 
 * `[:]`: return all things
 * `key1`: (only works at top level): return value at key "key1"

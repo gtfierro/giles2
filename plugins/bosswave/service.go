@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	bw "gopkg.in/immesys/bw2bind.v5"
 	"os"
+	"sync"
 )
 
 // logger
@@ -35,6 +36,10 @@ type BOSSWaveHandler struct {
 	stop chan bool
 	// subscribe to */!meta/archive to see what we subscribe to
 	incomingData chan *bw.SimpleMessage
+
+	// archive requests. Map of hash -> request struct
+	requests     map[string]*ArchiveRequest
+	requestsLock sync.RWMutex
 }
 
 func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandler {
@@ -43,6 +48,7 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 		bw:        bw.ConnectOrExit(""),
 		namespace: namespace,
 		stop:      make(chan bool),
+		requests:  make(map[string]*ArchiveRequest),
 	}
 	bwh.bw.OverrideAutoChainTo(true)
 	bwh.vk = bwh.bw.SetEntityFileOrExit(entityfile)
@@ -76,8 +82,22 @@ func Handle(a *giles.Archiver, entityfile, namespace string) {
 func (bwh *BOSSWaveHandler) handleArchiveRequest(msg *bw.SimpleMessage) {
 	requests := bwh.ExtractArchiveRequests(msg)
 	for _, req := range requests {
-		bwh.ParseArchiveRequest(req)
+		if bwh.addRequest(req) {
+			bwh.ParseArchiveRequest(req)
+		}
 	}
+}
+
+// Adds request if it does not already exist. Returns true if the request is new.
+func (bwh *BOSSWaveHandler) addRequest(req *ArchiveRequest) bool {
+	bwh.requestsLock.Lock()
+	defer bwh.requestsLock.Unlock()
+	hash := req.Hash()
+	if _, found := bwh.requests[req.Hash()]; !found {
+		bwh.requests[hash] = req
+		return true
+	}
+	return false
 }
 
 func (bwh *BOSSWaveHandler) listenQueries(msg *bw.SimpleMessage) {

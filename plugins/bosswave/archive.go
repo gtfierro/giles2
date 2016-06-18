@@ -158,6 +158,11 @@ func (req *ArchiveRequest) getTime(thing interface{}) uint64 {
 	return uint64(time.Now().UnixNano())
 }
 
+// Creates a hash of this object that is unique to its parameters. We will use the URI, PO, UUID and Value
+func (req *ArchiveRequest) Hash() string {
+	return req.URI + bw.PONumDotForm(req.PO) + req.UUID + req.Value
+}
+
 // When we receive a metadata message with the right key (currently !meta/giles), then
 // we parse out the list of contained ObjectTemplates
 func (bwh *BOSSWaveHandler) ExtractArchiveRequests(msg *bw.SimpleMessage) []*ArchiveRequest {

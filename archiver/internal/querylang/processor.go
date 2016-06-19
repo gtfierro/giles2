@@ -87,7 +87,7 @@ func (parsed *ParsedQuery) GetParams() common.QueryParams {
 			Where: parsed.Where,
 		}
 	case DELETE_TYPE:
-		if len(parsed.Target) > 0 || len(parsed.Where) > 0 {
+		if parsed.Data == nil {
 			return &common.TagParams{
 				Tags:  parsed.Target,
 				Where: parsed.Where,

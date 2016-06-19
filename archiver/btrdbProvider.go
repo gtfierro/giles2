@@ -124,7 +124,7 @@ func (b *btrdbDB) receiveStatus(conn *tsConn) error {
 	if resp.Which() == btrdb.RESPONSE_VOID && resp.StatusCode() != btrdb.STATUSCODE_OK {
 		return fmt.Errorf("Received error status code when writing: %v", resp.StatusCode().String())
 	} else {
-		return fmt.Errorf("Received a non-VOID response %v with statuscode %v. Probably receiveData was intended?", resp.Which(), resp.StatusCode().String())
+		return nil
 	}
 }
 
@@ -162,7 +162,7 @@ func (b *btrdbDB) AddMessage(msg *common.SmapMessage) error {
 	pkt.req.SetInsertValues(*pkt.ins)
 
 	// write to the database
-	err = b.reliableWriteStatus(&pkt)
+	err = b.reliableWriteStatus(pkt.seg)
 	b.packetpool.Put(pkt)
 	return err
 }
@@ -233,7 +233,7 @@ func (b *btrdbDB) DeleteData(uuids []common.UUID, start, end uint64) error {
 		del.SetStartTime(int64(start))
 		del.SetEndTime(int64(end))
 		req.SetDeleteValues(del)
-		_, err := b.reliableWriteData(seg)
+		err := b.reliableWriteStatus(seg)
 		if err != nil {
 			return err
 		}
@@ -249,7 +249,7 @@ func (b *btrdbDB) ValidTimestamp(time uint64, uot common.UnitOfTime) bool {
 	return time >= 0 && time <= MaximumTime && err == nil
 }
 
-func (b *btrdbDB) reliableWriteStatus(pkt *btrdbReading) error {
+func (b *btrdbDB) reliableWriteStatus(seg *capn.Segment) error {
 	var (
 		conn *tsConn
 		err  error
@@ -257,7 +257,7 @@ func (b *btrdbDB) reliableWriteStatus(pkt *btrdbReading) error {
 	for {
 		conn = b.connpool.Get()
 		if !conn.IsClosed() {
-			pkt.seg.WriteTo(conn)
+			seg.WriteTo(conn)
 			if err = b.receiveStatus(conn); err == BtrDBReadErr {
 				conn.Close()
 				b.connpool.Put(conn)

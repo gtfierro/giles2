@@ -4,46 +4,17 @@ import (
 	"github.com/gtfierro/giles2/common"
 )
 
-type SelectParams struct {
-	Tags  []string
-	Where common.Dict
-}
-
-type DistinctParams struct {
-	Tag   string
-	Where common.Dict
-}
-
-type DataParams struct {
-	// clause to evaluate for which streams to fetch.
-	// If this is empty, uses the UUIDs
-	Where common.Dict
-	// UUIDs from which to fetch data. Superceded by Where
-	UUIDs []common.UUID
-	// restrict the number of streams returned
-	StreamLimit int
-	// restrict the number of data points per stream returned.
-	// Defaults to the most recent
-	DataLimit int
-	// time to start fetching data from (inclusive)
-	Begin uint64
-	// time to stop fetching data from (inclusive)
-	End uint64
-	// converts all readings to this unit of time when finished
-	ConvertToUnit common.UnitOfTime
-}
-
-func (a *Archiver) SelectTags(params *SelectParams) (QueryResult, error) {
+func (a *Archiver) SelectTags(params *common.TagParams) (QueryResult, error) {
 	return a.mdStore.GetTags(params.Tags, params.Where.ToBson())
 }
 
-func (a *Archiver) DistinctTag(params *DistinctParams) (QueryResult, error) {
+func (a *Archiver) DistinctTag(params *common.DistinctParams) (QueryResult, error) {
 	return a.mdStore.GetDistinct(params.Tag, params.Where.ToBson())
 }
 
 // selects data for the matching streams within the range given
 // by Begin/End
-func (a *Archiver) SelectDataRange(params *DataParams) (common.SmapMessageList, error) {
+func (a *Archiver) SelectDataRange(params *common.DataParams) (common.SmapMessageList, error) {
 	var (
 		err      error
 		result   = common.SmapMessageList{}
@@ -71,7 +42,7 @@ func (a *Archiver) SelectDataRange(params *DataParams) (common.SmapMessageList, 
 }
 
 // selects the data point most immediately before the Start parameter for all matching streams
-func (a *Archiver) SelectDataBefore(params *DataParams) (result common.SmapMessageList, err error) {
+func (a *Archiver) SelectDataBefore(params *common.DataParams) (result common.SmapMessageList, err error) {
 	var readings []common.SmapNumbersResponse
 	if err = a.prepareDataParams(params); err != nil {
 		return
@@ -82,7 +53,7 @@ func (a *Archiver) SelectDataBefore(params *DataParams) (result common.SmapMessa
 }
 
 // selects the data point most immediately after the Start parameter for all matching streams
-func (a *Archiver) SelectDataAfter(params *DataParams) (result common.SmapMessageList, err error) {
+func (a *Archiver) SelectDataAfter(params *common.DataParams) (result common.SmapMessageList, err error) {
 	var readings []common.SmapNumbersResponse
 	if err = a.prepareDataParams(params); err != nil {
 		return
@@ -92,7 +63,7 @@ func (a *Archiver) SelectDataAfter(params *DataParams) (result common.SmapMessag
 	return
 }
 
-func (a *Archiver) DeleteData(params *DataParams) (err error) {
+func (a *Archiver) DeleteData(params *common.DataParams) (err error) {
 	if err = a.prepareDataParams(params); err != nil {
 		return
 	}
@@ -103,7 +74,24 @@ func (a *Archiver) DeleteData(params *DataParams) (err error) {
 	return a.tsStore.DeleteData(params.UUIDs, params.Begin, params.End)
 }
 
-func (a *Archiver) prepareDataParams(params *DataParams) (err error) {
+func (a *Archiver) DeleteTags(params *common.TagParams) (err error) {
+	if len(params.Tags) > 0 {
+		log.Debugf("Removing tags %v docs where %v", params.Tags, params.Where)
+		return a.mdStore.RemoveTags(params.Tags, params.Where.ToBson())
+	}
+	log.Debugf("Removing all docs where %v", params.Where)
+	return a.mdStore.RemoveDocs(params.Where.ToBson())
+}
+
+func (a *Archiver) SetTags(params *common.SetParams) (err error) {
+	log.Debugf("Apply updates %v where %v", params.Set, params.Where)
+	if len(params.Set) == 0 {
+		return nil
+	}
+	return a.mdStore.UpdateDocs(params.Set.ToBson(), params.Where.ToBson())
+}
+
+func (a *Archiver) prepareDataParams(params *common.DataParams) (err error) {
 	// parse and evaluate the where clause if we need to
 	if len(params.Where) > 0 {
 		params.UUIDs, err = a.mdStore.GetUUIDs(params.Where.ToBson())
@@ -133,7 +121,7 @@ func (a *Archiver) prepareDataParams(params *DataParams) (err error) {
 	return nil
 }
 
-func (a *Archiver) packResults(params *DataParams, readings []common.SmapNumbersResponse) common.SmapMessageList {
+func (a *Archiver) packResults(params *common.DataParams, readings []common.SmapNumbersResponse) common.SmapMessageList {
 	var result = common.SmapMessageList{}
 	for _, resp := range readings {
 		if len(resp.Readings) > 0 {

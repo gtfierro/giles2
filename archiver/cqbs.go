@@ -3,7 +3,6 @@ package archiver
 import (
 	"github.com/gtfierro/giles2/archiver/internal/querylang"
 	"github.com/gtfierro/giles2/common"
-	"gopkg.in/mgo.v2/bson"
 	"sync"
 )
 
@@ -24,8 +23,8 @@ type Query struct {
 	Query string
 	// list of keys in this query
 	Keys []string
-	// where clause in BSON
-	WhereClause bson.M
+	// where clause
+	WhereClause common.Dict
 	// uuids
 	Streams     map[common.UUID]UUIDSTATE
 	subscribers *subscriberList
@@ -114,7 +113,7 @@ func (b *Broker) GetQuery(pq *querylang.ParsedQuery) (*Query, error) {
 	// it hasn't been evaluated. So, we evaluate it to get
 	// the initial UUIDs
 	q = NewQuery(pq)
-	uuids, err := b.a.mdStore.GetUUIDs(q.WhereClause)
+	uuids, err := b.a.mdStore.GetUUIDs(q.WhereClause.ToBson())
 	if err != nil {
 		return q, err
 	}
@@ -223,7 +222,7 @@ func (b *Broker) reevaluateQuery(q *Query) {
 		found bool
 	)
 	log.Debugf("reevalute %v", q)
-	uuids, err := b.a.mdStore.GetUUIDs(q.WhereClause)
+	uuids, err := b.a.mdStore.GetUUIDs(q.WhereClause.ToBson())
 	if err != nil {
 		log.Criticalf("Error fetching UUIDs for (%v) from metadata store (%v)", q.WhereClause, err)
 		return

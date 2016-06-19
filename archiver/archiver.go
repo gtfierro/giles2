@@ -6,6 +6,7 @@ import (
 	"github.com/gtfierro/giles2/archiver/internal/querylang"
 	"github.com/gtfierro/giles2/common"
 	"github.com/op/go-logging"
+	"github.com/pkg/errors"
 	"net"
 	"os"
 	"time"
@@ -181,101 +182,43 @@ func (a *Archiver) HandleQuery(querystring string) (QueryResult, error) {
 		return result, fmt.Errorf("Error (%v) in query \"%v\" (error at %v)\n", parsed.Err, querystring, parsed.ErrPos)
 	}
 	return a.evaluateQuery(parsed)
-
 }
 
 func (a *Archiver) evaluateQuery(parsed *querylang.ParsedQuery) (QueryResult, error) {
 	var result QueryResult
-	// execute the query
 	switch parsed.QueryType {
 	case querylang.SELECT_TYPE:
-		return a.handleSelect(parsed)
+		params := parsed.GetParams().(*common.TagParams)
+		return a.SelectTags(params)
 	case querylang.DELETE_TYPE:
-		return result, a.handleDelete(parsed)
+		params := parsed.GetParams()
+		switch t := params.(type) {
+		case *common.TagParams:
+			return result, a.DeleteTags(t)
+		case *common.DataParams:
+			return result, a.DeleteData(t)
+		default:
+			return result, errors.New("Invalid DELETE type")
+		}
 	case querylang.SET_TYPE:
-		return result, a.handleSet(parsed)
+		params := parsed.GetParams().(*common.SetParams)
+		return result, a.SetTags(params)
 	case querylang.DATA_TYPE:
-		return a.handleData(parsed)
-	default:
-		return result, fmt.Errorf("Could not decide query type %v", parsed.Querystring)
+		params := parsed.GetParams().(*common.DataParams)
+		switch parsed.Data.Dtype {
+		case querylang.IN_TYPE:
+			return a.SelectDataRange(params)
+		case querylang.BEFORE_TYPE:
+			return a.SelectDataBefore(params)
+		case querylang.AFTER_TYPE:
+			return a.SelectDataAfter(params)
+		}
+
 	}
+	return result, nil
 }
 
 func (a *Archiver) HandleNewSubscriber(subscriber *Subscriber, querystring string) error {
 	subscriber.query = a.qp.Parse(querystring)
 	return a.broker.NewSubscriber(subscriber)
-}
-
-func (a *Archiver) handleSelect(parsed *querylang.ParsedQuery) (QueryResult, error) {
-	if parsed.Distinct {
-		return a.mdStore.GetDistinct(parsed.Target[0], parsed.Where)
-	}
-	return a.mdStore.GetTags(parsed.Target, parsed.Where)
-}
-
-func (a *Archiver) handleData(parsed *querylang.ParsedQuery) (common.SmapMessageList, error) {
-	var (
-		result   = common.SmapMessageList{}
-		readings []common.SmapNumbersResponse
-	)
-
-	uuids, err := a.mdStore.GetUUIDs(parsed.Where)
-	if err != nil {
-		return result, err
-	}
-
-	if parsed.Data.Limit.Streamlimit > 0 && len(uuids) > 0 {
-		uuids = uuids[:parsed.Data.Limit.Streamlimit]
-	}
-
-	start := uint64(parsed.Data.Start.UnixNano())
-	end := uint64(parsed.Data.End.UnixNano())
-
-	switch parsed.Data.Dtype {
-	case querylang.IN_TYPE:
-		log.Debugf("Data in start %v end %v", start, end)
-		if start < end {
-			readings, err = a.tsStore.GetData(uuids, start, end)
-		} else {
-			readings, err = a.tsStore.GetData(uuids, end, start)
-		}
-	case querylang.BEFORE_TYPE:
-		log.Debugf("Data before time %v (%v ns)", parsed.Data.Start, start)
-		readings, err = a.tsStore.Prev(uuids, start)
-	case querylang.AFTER_TYPE:
-		log.Debugf("Data after time %v (%v ns)", parsed.Data.Start, start)
-		readings, err = a.tsStore.Next(uuids, start)
-	}
-
-	for _, resp := range readings {
-		if len(resp.Readings) > 0 {
-			msg := &common.SmapMessage{UUID: resp.UUID}
-			for _, rdg := range resp.Readings {
-				rdg.ConvertTime(common.UnitOfTime(parsed.Data.Timeconv))
-				msg.Readings = append(msg.Readings, rdg)
-			}
-			result = append(result, msg)
-		}
-	}
-	log.Debugf("Returning %d readings", len(result))
-
-	return result, nil
-}
-
-func (a *Archiver) handleDelete(parsed *querylang.ParsedQuery) error {
-	if len(parsed.Target) > 0 {
-		// remove tags
-		log.Debugf("Removing tags %v docs where %v", parsed.Target, parsed.Where)
-		return a.mdStore.RemoveTags(parsed.Target, parsed.Where)
-	}
-	log.Debugf("Removing all docs where %v", parsed.Where)
-	return a.mdStore.RemoveDocs(parsed.Where)
-}
-
-func (a *Archiver) handleSet(parsed *querylang.ParsedQuery) error {
-	log.Debugf("Apply updates %v where %v", parsed.Set, parsed.Where)
-	if len(parsed.Set) == 0 {
-		return nil
-	}
-	return a.mdStore.UpdateDocs(parsed.Set, parsed.Where)
 }

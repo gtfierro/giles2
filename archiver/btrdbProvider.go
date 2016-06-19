@@ -223,6 +223,24 @@ func (b *btrdbDB) GetData(uuids []common.UUID, start, end uint64) ([]common.Smap
 	return ret, nil
 }
 
+func (b *btrdbDB) DeleteData(uuids []common.UUID, start, end uint64) error {
+	for _, uu := range uuids {
+		seg := capn.NewBuffer(nil)
+		req := btrdb.NewRootRequest(seg)
+		del := btrdb.NewCmdDeleteValues(seg)
+		uuid, _ := uuid.FromString(string(uu))
+		del.SetUuid(uuid.Bytes())
+		del.SetStartTime(int64(start))
+		del.SetEndTime(int64(end))
+		req.SetDeleteValues(del)
+		_, err := b.reliableWriteData(seg)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (b *btrdbDB) ValidTimestamp(time uint64, uot common.UnitOfTime) bool {
 	var err error
 	if uot != common.UOT_NS {

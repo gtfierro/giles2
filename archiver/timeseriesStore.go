@@ -18,7 +18,10 @@ type TimeseriesStore interface {
 	Next([]common.UUID, uint64) ([]common.SmapNumbersResponse, error)
 
 	// uuids, start time, end time (both in nanoseconds)
-	GetData([]common.UUID, uint64, uint64) ([]common.SmapNumbersResponse, error)
+	GetData(uuids []common.UUID, start uint64, end uint64) ([]common.SmapNumbersResponse, error)
+
+	// delete data
+	DeleteData(uuids []common.UUID, start uint64, end uint64) error
 
 	// returns true if the timestamp can be represented in the database
 	ValidTimestamp(uint64, common.UnitOfTime) bool

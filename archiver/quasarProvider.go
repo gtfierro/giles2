@@ -172,6 +172,30 @@ func (q *quasarDB) GetData(uuids []common.UUID, start uint64, end uint64) ([]com
 	return ret, nil
 }
 
+func (q *quasarDB) DeleteData(uuids []common.UUID, start, end uint64) error {
+	conn := q.connpool.Get()
+	defer q.connpool.Put(conn)
+	for _, uu := range uuids {
+		seg := capn.NewBuffer(nil)
+		req := qsr.NewRootRequest(seg)
+		del := qsr.NewCmdDeleteValues(seg)
+		uuid, _ := uuid.FromString(string(uu))
+		del.SetUuid(uuid.Bytes())
+		del.SetStartTime(int64(start))
+		del.SetEndTime(int64(end))
+		req.SetDeleteValues(del)
+		_, err := seg.WriteTo(conn) // here, ignoring # bytes written
+		if err != nil {
+			return err
+		}
+		_, err = q.receive(conn)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (q *quasarDB) receive(conn *tsConn) (common.SmapNumbersResponse, error) {
 	var sr = common.SmapNumbersResponse{}
 	seg, err := capn.ReadFromStream(conn, nil)

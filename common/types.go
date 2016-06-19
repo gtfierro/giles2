@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/satori/go.uuid"
 	"gopkg.in/mgo.v2/bson"
-	"strconv"
 	"strings"
 )
 
@@ -24,7 +23,7 @@ func (dr DistinctResult) IsResult() {
 }
 
 // a flat map for storing key-value pairs
-type Dict map[string]string
+type Dict map[string]interface{}
 
 func NewDict() *Dict {
 	return new(Dict)
@@ -34,15 +33,17 @@ func DictFromBson(m bson.M) Dict {
 	d := Dict{}
 	for k, v := range m {
 		key := FixMongoKey(k)
-		if vs, ok := v.(string); ok {
-			d[key] = vs
-		} else if vs, ok := v.(int64); ok {
-			d[key] = strconv.FormatInt(vs, 10)
-		} else if vs, ok := v.(float64); ok {
-			d[key] = strconv.FormatFloat(vs, 'f', -1, 64)
-		}
+		d[key] = v
 	}
 	return d
+}
+
+func (d Dict) ToBson() bson.M {
+	m := bson.M{}
+	for k, v := range d {
+		m[k] = v
+	}
+	return m
 }
 
 func (d Dict) MarshalJSON() ([]byte, error) {

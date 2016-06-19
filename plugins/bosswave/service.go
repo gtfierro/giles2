@@ -58,7 +58,7 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 	bwh.iface.SubscribeSlot("subscribe", bwh.listenCQBS)
 
 	v, e := views.CreateView(bwh.bw, views.Expression{
-		NamespaceList: []string{"gabe.pantry", "scratch.ns"},
+		NamespaceList: []string{"gabe.pantry"},
 		N:             &views.EqualsNode{Key: views.String("giles")},
 	})
 	if e != nil {

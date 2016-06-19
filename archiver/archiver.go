@@ -188,6 +188,10 @@ func (a *Archiver) evaluateQuery(parsed *querylang.ParsedQuery) (QueryResult, er
 	var result QueryResult
 	switch parsed.QueryType {
 	case querylang.SELECT_TYPE:
+		if parsed.Distinct {
+			params := parsed.GetParams().(*common.DistinctParams)
+			return a.DistinctTag(params)
+		}
 		params := parsed.GetParams().(*common.TagParams)
 		return a.SelectTags(params)
 	case querylang.DELETE_TYPE:

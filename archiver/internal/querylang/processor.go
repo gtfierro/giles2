@@ -76,6 +76,12 @@ type ParsedQuery struct {
 func (parsed *ParsedQuery) GetParams() common.QueryParams {
 	switch parsed.QueryType {
 	case SELECT_TYPE:
+		if parsed.Distinct {
+			return &common.DistinctParams{
+				Tag:   parsed.Target[0],
+				Where: parsed.Where,
+			}
+		}
 		return &common.TagParams{
 			Tags:  parsed.Target,
 			Where: parsed.Where,

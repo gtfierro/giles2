@@ -131,6 +131,7 @@ func (vm *ViewManager) Handle(v *View) error {
 	for _, rec := range vm.db.Exec(v.Expr) {
 		if err := vm.startForwarding(rec.URI, v); err != nil {
 			log.Error(err)
+			return err
 		}
 		vm.fwdL.Lock()
 		vm.forwarders[rec.URI].send(rec.Msg)
@@ -195,7 +196,9 @@ func (vm *ViewManager) subscribeNamespaces(expr Expression) {
 			// process subscription
 			for msg := range sub {
 				for _, rec := range GetRecords(msg) {
-					vm.db.Insert(rec)
+					if err := vm.db.Insert(rec); err != nil {
+						log.Error(errors.Wrap(err, "Could not insert record"))
+					}
 				}
 				vm.checkViews()
 			}
@@ -211,7 +214,9 @@ func (vm *ViewManager) subscribeNamespaces(expr Expression) {
 		go func() {
 			for msg := range persistedMetadata {
 				for _, rec := range GetRecords(msg) {
-					vm.db.Insert(rec)
+					if err := vm.db.Insert(rec); err != nil {
+						log.Error(errors.Wrap(err, "Could not insert record"))
+					}
 				}
 				vm.checkViews()
 			}
@@ -277,6 +282,7 @@ func (vm *ViewManager) checkViews() {
 				// if it did not match, then forward
 				if err := vm.startForwarding(rec.URI, viewList...); err != nil {
 					log.Error(err)
+					continue
 				}
 				vm.fwdL.Lock()
 				vm.forwarders[rec.URI].send(rec.Msg)

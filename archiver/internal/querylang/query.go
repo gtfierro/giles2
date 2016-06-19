@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/gtfierro/giles2/common"
 	"github.com/taylorchu/toki"
-	"gopkg.in/mgo.v2/bson"
 	"strconv"
 	_time "time"
 )
@@ -18,11 +17,11 @@ import (
 Notes here
 **/
 
-//line query.y:21
+//line query.y:20
 type sqSymType struct {
 	yys      int
 	str      string
-	dict     qDict
+	dict     common.Dict
 	data     *DataQuery
 	limit    Limit
 	timeconv common.UnitOfTime
@@ -113,7 +112,7 @@ const sqEofCode = 1
 const sqErrCode = 2
 const sqInitialStackSize = 16
 
-//line query.y:386
+//line query.y:391
 
 const eof = 0
 
@@ -125,7 +124,6 @@ var supported_formats = []string{"1/2/2006",
 	"1-2-2006 15:04:05 MST",
 	"2006-1-2 15:04:05 MST"}
 
-type qDict map[string]interface{}
 type List []string
 
 func (qt QueryType) String() string {
@@ -149,9 +147,9 @@ type query struct {
 	// information about a data query if we are one
 	data *DataQuery
 	// key-value pairs to add
-	set qDict
+	set common.Dict
 	// where clause for query
-	where qDict
+	where common.Dict
 	// are we querying distinct values?
 	distinct bool
 	// list of tags to target for deletion, selection
@@ -170,22 +168,6 @@ func (q *query) Print() {
 	fmt.Printf("Contents: %v\n", q.Contents)
 	fmt.Printf("Distinct? %v\n", q.distinct)
 	fmt.Printf("where: %v\n", q.where)
-}
-
-func (q *query) ContentsBson() bson.M {
-	ret := bson.M{}
-	for _, tag := range q.Contents {
-		ret[tag] = 1
-	}
-	return ret
-}
-
-func (q *query) WhereBson() bson.M {
-	return bson.M(q.where)
-}
-
-func (q *query) SetBson() bson.M {
-	return bson.M(q.set)
 }
 
 type sqLex struct {
@@ -276,98 +258,98 @@ var sqExca = [...]int{
 	-2, 0,
 }
 
-const sqNprod = 56
+const sqNprod = 57
 const sqPrivate = 57344
 
 var sqTokenNames []string
 var sqStates []string
 
-const sqLast = 134
+const sqLast = 140
 
 var sqAct = [...]int{
 
-	94, 73, 35, 70, 66, 11, 14, 11, 45, 13,
-	55, 46, 21, 47, 47, 31, 42, 17, 46, 17,
-	47, 51, 40, 39, 30, 111, 71, 41, 11, 97,
-	38, 44, 53, 96, 47, 89, 109, 52, 44, 63,
-	48, 49, 12, 88, 27, 95, 19, 67, 58, 59,
-	37, 76, 85, 36, 32, 56, 57, 33, 68, 38,
-	23, 24, 82, 65, 64, 56, 57, 87, 91, 83,
-	84, 86, 80, 81, 93, 90, 79, 98, 22, 54,
-	14, 14, 14, 78, 77, 69, 92, 99, 100, 101,
-	25, 102, 28, 7, 105, 103, 16, 106, 15, 67,
-	61, 62, 18, 20, 9, 60, 110, 47, 104, 10,
-	26, 112, 29, 113, 17, 12, 107, 12, 72, 50,
-	8, 12, 74, 75, 108, 17, 2, 1, 4, 3,
-	43, 6, 5, 34,
+	97, 76, 36, 73, 69, 11, 14, 11, 47, 13,
+	49, 48, 22, 49, 49, 35, 44, 48, 18, 49,
+	18, 58, 57, 53, 42, 41, 40, 43, 55, 11,
+	32, 46, 87, 114, 74, 100, 99, 46, 54, 92,
+	65, 50, 51, 90, 112, 28, 12, 20, 91, 70,
+	61, 12, 98, 79, 7, 68, 38, 37, 34, 15,
+	71, 39, 37, 40, 24, 25, 39, 94, 40, 89,
+	29, 85, 86, 88, 93, 83, 84, 96, 67, 66,
+	101, 52, 23, 14, 14, 14, 56, 59, 60, 95,
+	102, 103, 104, 105, 63, 64, 9, 108, 106, 62,
+	109, 10, 70, 82, 81, 80, 72, 12, 26, 113,
+	49, 107, 8, 17, 115, 110, 116, 18, 10, 19,
+	21, 12, 75, 111, 12, 77, 78, 27, 18, 30,
+	31, 2, 6, 4, 3, 1, 45, 16, 5, 33,
 }
 var sqPact = [...]int{
 
-	122, -1000, 99, 101, 105, 10, 116, -1000, -1000, 101,
-	49, 70, -1000, 8, 74, 116, -12, 26, -13, -1000,
-	-14, -1000, -4, 3, 3, 101, -15, -1000, -3, -26,
-	-1000, 40, 26, 26, -1000, 82, 101, 35, 90, -1000,
-	-1000, 3, 65, -9, 102, -1000, -1000, -1000, 109, 109,
-	-1000, -1000, 64, 63, 56, -1000, 26, 26, 40, 30,
-	90, 17, 90, -1000, 101, 14, 1, 55, 48, 3,
-	-1000, 101, -1000, 21, -2, -6, 21, 101, 101, 101,
-	40, 40, -1000, -1000, -1000, -1000, -1000, -1000, 101, -1000,
-	90, 3, 109, -9, -1000, 100, 110, -1000, -1000, -1000,
-	-1000, -1000, -1000, -1000, 4, 21, -1000, -1000, -10, 109,
-	-1000, -1000, 21, -1000,
+	127, -1000, 91, 105, 108, 11, 119, -1000, -1000, 105,
+	53, 88, -1000, 9, 52, 119, 119, -6, 30, -11,
+	-1000, -12, -1000, -4, 2, 2, 105, -13, -1000, -7,
+	-14, -15, -1000, 62, 35, -1000, 76, 105, 50, 35,
+	93, -1000, -1000, 2, 86, -1, 106, -1000, -1000, -1000,
+	112, 112, -1000, -1000, 85, 84, 83, -1000, -1000, 35,
+	35, -1000, 93, -3, 93, -1000, 105, 14, 16, 5,
+	54, 47, 2, -1000, 105, -1000, 28, 1, 0, 28,
+	105, 105, 105, -1000, -1000, -1000, -1000, -1000, -1000, -1000,
+	105, -1000, -1000, 93, 2, 112, -1, -1000, 99, 109,
+	-1000, -1000, -1000, -1000, -1000, -1000, -1000, 12, 28, -1000,
+	-1000, -2, 112, -1000, -1000, 28, -1000,
 }
 var sqPgo = [...]int{
 
-	0, 15, 133, 96, 9, 132, 93, 4, 50, 131,
-	16, 130, 3, 1, 0, 8, 2, 127,
+	0, 139, 15, 113, 9, 138, 54, 4, 56, 132,
+	16, 136, 3, 1, 0, 8, 2, 135,
 }
 var sqR1 = [...]int{
 
-	0, 17, 17, 17, 17, 17, 17, 17, 6, 6,
-	8, 7, 7, 4, 4, 4, 4, 4, 4, 5,
-	5, 5, 5, 9, 9, 9, 9, 10, 10, 11,
-	11, 11, 11, 12, 12, 13, 13, 13, 13, 14,
-	14, 3, 2, 2, 2, 2, 2, 2, 2, 15,
-	16, 1, 1, 1, 1, 1,
+	0, 17, 17, 17, 17, 17, 17, 17, 17, 6,
+	6, 8, 7, 7, 4, 4, 4, 4, 4, 4,
+	5, 5, 5, 5, 9, 9, 9, 9, 10, 10,
+	11, 11, 11, 11, 12, 12, 13, 13, 13, 13,
+	14, 14, 3, 2, 2, 2, 2, 2, 2, 2,
+	2, 15, 16, 1, 1, 1, 1,
 }
 var sqR2 = [...]int{
 
-	0, 4, 3, 4, 4, 3, 4, 3, 1, 3,
-	3, 1, 3, 3, 3, 3, 5, 5, 5, 1,
-	1, 2, 1, 9, 7, 5, 5, 1, 2, 2,
-	1, 1, 1, 2, 3, 0, 2, 2, 4, 0,
-	2, 2, 3, 3, 3, 3, 2, 3, 4, 1,
-	1, 3, 3, 2, 3, 1,
+	0, 4, 3, 4, 4, 3, 4, 4, 3, 1,
+	3, 3, 1, 3, 3, 3, 3, 5, 5, 5,
+	1, 1, 2, 1, 9, 7, 5, 5, 1, 2,
+	2, 1, 1, 1, 2, 3, 0, 2, 2, 4,
+	0, 2, 2, 3, 3, 3, 3, 2, 3, 4,
+	3, 1, 1, 3, 3, 2, 1,
 }
 var sqChk = [...]int{
 
 	-1000, -17, 4, 7, 6, -5, -9, -6, 21, 5,
-	10, -16, 16, -4, -16, -6, -3, 9, -3, 36,
-	-3, -16, 29, 11, 12, 20, -3, 36, 18, -3,
-	36, -1, 28, 31, -2, -16, 27, -8, 33, 36,
-	36, 31, -10, -11, 35, -15, 15, 17, -10, -10,
-	-6, 36, -15, 35, -8, 36, 25, 26, -1, -1,
-	23, 18, 19, -16, 29, 28, -7, -15, -10, 20,
-	-12, 35, 16, -13, 13, 14, -13, 20, 20, 20,
-	-1, -1, 32, -15, -15, 35, -15, -16, 29, 34,
-	20, 20, -10, -16, -14, 24, 35, 35, -14, -4,
-	-4, -4, -16, -7, -10, -13, -12, 16, 14, 32,
-	-14, 35, -13, -14,
+	10, -16, 16, -4, -16, -6, -9, -3, 9, -3,
+	36, -3, -16, 29, 11, 12, 20, -3, 36, 18,
+	-3, -3, 36, -1, 28, -2, -16, 27, -8, 31,
+	33, 36, 36, 31, -10, -11, 35, -15, 15, 17,
+	-10, -10, -6, 36, -15, 35, -8, 36, 36, 25,
+	26, -2, 23, 18, 19, -16, 29, 28, -2, -7,
+	-15, -10, 20, -12, 35, 16, -13, 13, 14, -13,
+	20, 20, 20, -2, -2, -15, -15, 35, -15, -16,
+	29, 32, 34, 20, 20, -10, -16, -14, 24, 35,
+	35, -14, -4, -4, -4, -16, -7, -10, -13, -12,
+	16, 14, 32, -14, 35, -13, -14,
 }
 var sqDef = [...]int{
 
-	0, -2, 0, 0, 0, 0, 0, 19, 20, 22,
-	0, 8, 50, 0, 0, 0, 0, 0, 0, 2,
-	0, 21, 0, 0, 0, 0, 0, 5, 0, 0,
-	7, 41, 0, 0, 55, 0, 0, 0, 0, 1,
-	3, 0, 0, 27, 30, 31, 32, 49, 35, 35,
-	9, 4, 13, 14, 15, 6, 0, 0, 53, 0,
-	0, 0, 0, 46, 0, 0, 0, 11, 0, 0,
-	28, 0, 29, 39, 0, 0, 39, 0, 0, 0,
-	51, 52, 54, 42, 43, 44, 45, 47, 0, 10,
-	0, 0, 35, 33, 25, 0, 36, 37, 26, 16,
-	17, 18, 48, 12, 0, 39, 34, 40, 0, 35,
-	24, 38, 39, 23,
+	0, -2, 0, 0, 0, 0, 0, 20, 21, 23,
+	0, 9, 52, 0, 0, 0, 0, 0, 0, 0,
+	2, 0, 22, 0, 0, 0, 0, 0, 5, 0,
+	0, 0, 8, 42, 0, 56, 0, 0, 0, 0,
+	0, 1, 3, 0, 0, 28, 31, 32, 33, 51,
+	36, 36, 10, 4, 14, 15, 16, 6, 7, 0,
+	0, 55, 0, 0, 0, 47, 0, 0, 0, 0,
+	12, 0, 0, 29, 0, 30, 40, 0, 0, 40,
+	0, 0, 0, 53, 54, 43, 44, 45, 46, 48,
+	0, 50, 11, 0, 0, 36, 34, 26, 0, 37,
+	38, 27, 17, 18, 19, 49, 13, 0, 40, 35,
+	41, 0, 36, 25, 39, 40, 24,
 }
 var sqTok1 = [...]int{
 
@@ -723,7 +705,7 @@ sqdefault:
 
 	case 1:
 		sqDollar = sqS[sqpt-4 : sqpt+1]
-		//line query.y:60
+		//line query.y:59
 		{
 			sqlex.(*sqLex).query.Contents = sqDollar[2].list
 			sqlex.(*sqLex).query.where = sqDollar[3].dict
@@ -731,14 +713,14 @@ sqdefault:
 		}
 	case 2:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:66
+		//line query.y:65
 		{
 			sqlex.(*sqLex).query.Contents = sqDollar[2].list
 			sqlex.(*sqLex).query.qtype = SELECT_TYPE
 		}
 	case 3:
 		sqDollar = sqS[sqpt-4 : sqpt+1]
-		//line query.y:71
+		//line query.y:70
 		{
 			sqlex.(*sqLex).query.where = sqDollar[3].dict
 			sqlex.(*sqLex).query.data = sqDollar[2].data
@@ -746,7 +728,7 @@ sqdefault:
 		}
 	case 4:
 		sqDollar = sqS[sqpt-4 : sqpt+1]
-		//line query.y:77
+		//line query.y:76
 		{
 			sqlex.(*sqLex).query.where = sqDollar[3].dict
 			sqlex.(*sqLex).query.set = sqDollar[2].dict
@@ -754,81 +736,82 @@ sqdefault:
 		}
 	case 5:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:83
+		//line query.y:82
 		{
 			sqlex.(*sqLex).query.set = sqDollar[2].dict
 			sqlex.(*sqLex).query.qtype = SET_TYPE
 		}
 	case 6:
 		sqDollar = sqS[sqpt-4 : sqpt+1]
-		//line query.y:88
+		//line query.y:87
 		{
 			sqlex.(*sqLex).query.Contents = sqDollar[2].list
 			sqlex.(*sqLex).query.where = sqDollar[3].dict
 			sqlex.(*sqLex).query.qtype = DELETE_TYPE
 		}
 	case 7:
+		sqDollar = sqS[sqpt-4 : sqpt+1]
+		//line query.y:93
+		{
+			sqlex.(*sqLex).query.data = sqDollar[2].data
+			sqlex.(*sqLex).query.where = sqDollar[3].dict
+			sqlex.(*sqLex).query.qtype = DELETE_TYPE
+		}
+	case 8:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:94
+		//line query.y:99
 		{
 			sqlex.(*sqLex).query.Contents = []string{}
 			sqlex.(*sqLex).query.where = sqDollar[2].dict
 			sqlex.(*sqLex).query.qtype = DELETE_TYPE
 		}
-	case 8:
+	case 9:
 		sqDollar = sqS[sqpt-1 : sqpt+1]
-		//line query.y:102
+		//line query.y:107
 		{
 			sqVAL.list = List{sqDollar[1].str}
-		}
-	case 9:
-		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:106
-		{
-			sqVAL.list = append(List{sqDollar[1].str}, sqDollar[3].list...)
 		}
 	case 10:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:112
-		{
-			sqVAL.list = sqDollar[2].list
-		}
-	case 11:
-		sqDollar = sqS[sqpt-1 : sqpt+1]
-		//line query.y:117
-		{
-			sqVAL.list = List{sqDollar[1].str}
-		}
-	case 12:
-		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:121
+		//line query.y:111
 		{
 			sqVAL.list = append(List{sqDollar[1].str}, sqDollar[3].list...)
 		}
+	case 11:
+		sqDollar = sqS[sqpt-3 : sqpt+1]
+		//line query.y:117
+		{
+			sqVAL.list = sqDollar[2].list
+		}
+	case 12:
+		sqDollar = sqS[sqpt-1 : sqpt+1]
+		//line query.y:122
+		{
+			sqVAL.list = List{sqDollar[1].str}
+		}
 	case 13:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:127
+		//line query.y:126
 		{
-			sqVAL.dict = qDict{sqDollar[1].str: sqDollar[3].str}
+			sqVAL.list = append(List{sqDollar[1].str}, sqDollar[3].list...)
 		}
 	case 14:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:131
+		//line query.y:132
 		{
-			sqVAL.dict = qDict{sqDollar[1].str: sqDollar[3].str}
+			sqVAL.dict = common.Dict{sqDollar[1].str: sqDollar[3].str}
 		}
 	case 15:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:135
+		//line query.y:136
 		{
-			sqVAL.dict = qDict{sqDollar[1].str: sqDollar[3].list}
+			sqVAL.dict = common.Dict{sqDollar[1].str: sqDollar[3].str}
 		}
 	case 16:
-		sqDollar = sqS[sqpt-5 : sqpt+1]
-		//line query.y:139
+		sqDollar = sqS[sqpt-3 : sqpt+1]
+		//line query.y:140
 		{
-			sqDollar[5].dict[sqDollar[1].str] = sqDollar[3].str
-			sqVAL.dict = sqDollar[5].dict
+			sqVAL.dict = common.Dict{sqDollar[1].str: sqDollar[3].list}
 		}
 	case 17:
 		sqDollar = sqS[sqpt-5 : sqpt+1]
@@ -841,75 +824,82 @@ sqdefault:
 		sqDollar = sqS[sqpt-5 : sqpt+1]
 		//line query.y:149
 		{
-			sqDollar[5].dict[sqDollar[1].str] = sqDollar[3].list
+			sqDollar[5].dict[sqDollar[1].str] = sqDollar[3].str
 			sqVAL.dict = sqDollar[5].dict
 		}
 	case 19:
-		sqDollar = sqS[sqpt-1 : sqpt+1]
-		//line query.y:156
+		sqDollar = sqS[sqpt-5 : sqpt+1]
+		//line query.y:154
 		{
-			sqlex.(*sqLex).query.Contents = sqDollar[1].list
-			sqVAL.list = sqDollar[1].list
+			sqDollar[5].dict[sqDollar[1].str] = sqDollar[3].list
+			sqVAL.dict = sqDollar[5].dict
 		}
 	case 20:
 		sqDollar = sqS[sqpt-1 : sqpt+1]
 		//line query.y:161
 		{
-			sqVAL.list = List{}
+			sqlex.(*sqLex).query.Contents = sqDollar[1].list
+			sqVAL.list = sqDollar[1].list
 		}
 	case 21:
+		sqDollar = sqS[sqpt-1 : sqpt+1]
+		//line query.y:166
+		{
+			sqVAL.list = List{}
+		}
+	case 22:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
-		//line query.y:165
+		//line query.y:170
 		{
 			sqlex.(*sqLex).query.distinct = true
 			sqVAL.list = List{sqDollar[2].str}
 		}
-	case 22:
+	case 23:
 		sqDollar = sqS[sqpt-1 : sqpt+1]
-		//line query.y:170
+		//line query.y:175
 		{
 			sqlex.(*sqLex).query.distinct = true
 			sqVAL.list = List{}
 		}
-	case 23:
+	case 24:
 		sqDollar = sqS[sqpt-9 : sqpt+1]
-		//line query.y:177
+		//line query.y:182
 		{
 			sqVAL.data = &DataQuery{Dtype: IN_TYPE, Start: sqDollar[4].time, End: sqDollar[6].time, Limit: sqDollar[8].limit, Timeconv: sqDollar[9].timeconv}
 		}
-	case 24:
+	case 25:
 		sqDollar = sqS[sqpt-7 : sqpt+1]
-		//line query.y:181
+		//line query.y:186
 		{
 			sqVAL.data = &DataQuery{Dtype: IN_TYPE, Start: sqDollar[3].time, End: sqDollar[5].time, Limit: sqDollar[6].limit, Timeconv: sqDollar[7].timeconv}
 		}
-	case 25:
+	case 26:
 		sqDollar = sqS[sqpt-5 : sqpt+1]
-		//line query.y:185
+		//line query.y:190
 		{
 			sqVAL.data = &DataQuery{Dtype: BEFORE_TYPE, Start: sqDollar[3].time, Limit: sqDollar[4].limit, Timeconv: sqDollar[5].timeconv}
 		}
-	case 26:
+	case 27:
 		sqDollar = sqS[sqpt-5 : sqpt+1]
-		//line query.y:189
+		//line query.y:194
 		{
 			sqVAL.data = &DataQuery{Dtype: AFTER_TYPE, Start: sqDollar[3].time, Limit: sqDollar[4].limit, Timeconv: sqDollar[5].timeconv}
 		}
-	case 27:
+	case 28:
 		sqDollar = sqS[sqpt-1 : sqpt+1]
-		//line query.y:195
+		//line query.y:200
 		{
 			sqVAL.time = sqDollar[1].time
 		}
-	case 28:
+	case 29:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
-		//line query.y:199
+		//line query.y:204
 		{
 			sqVAL.time = sqDollar[1].time.Add(sqDollar[2].timediff)
 		}
-	case 29:
+	case 30:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
-		//line query.y:205
+		//line query.y:210
 		{
 			foundtime, err := common.ParseAbsTime(sqDollar[1].str, sqDollar[2].str)
 			if err != nil {
@@ -917,9 +907,9 @@ sqdefault:
 			}
 			sqVAL.time = foundtime
 		}
-	case 30:
+	case 31:
 		sqDollar = sqS[sqpt-1 : sqpt+1]
-		//line query.y:213
+		//line query.y:218
 		{
 			num, err := strconv.ParseInt(sqDollar[1].str, 10, 64)
 			if err != nil {
@@ -927,9 +917,9 @@ sqdefault:
 			}
 			sqVAL.time = _time.Unix(num, 0)
 		}
-	case 31:
+	case 32:
 		sqDollar = sqS[sqpt-1 : sqpt+1]
-		//line query.y:221
+		//line query.y:226
 		{
 			found := false
 			for _, format := range supported_formats {
@@ -945,15 +935,15 @@ sqdefault:
 				sqlex.(*sqLex).Error(fmt.Sprintf("No time format matching \"%v\" found", sqDollar[1].str))
 			}
 		}
-	case 32:
+	case 33:
 		sqDollar = sqS[sqpt-1 : sqpt+1]
-		//line query.y:237
+		//line query.y:242
 		{
 			sqVAL.time = _time.Now()
 		}
-	case 33:
+	case 34:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
-		//line query.y:243
+		//line query.y:248
 		{
 			var err error
 			sqVAL.timediff, err = common.ParseReltime(sqDollar[1].str, sqDollar[2].str)
@@ -961,9 +951,9 @@ sqdefault:
 				sqlex.(*sqLex).Error(fmt.Sprintf("Error parsing relative time \"%v %v\" (%v)", sqDollar[1].str, sqDollar[2].str, err.Error()))
 			}
 		}
-	case 34:
+	case 35:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:251
+		//line query.y:256
 		{
 			newDuration, err := common.ParseReltime(sqDollar[1].str, sqDollar[2].str)
 			if err != nil {
@@ -971,15 +961,15 @@ sqdefault:
 			}
 			sqVAL.timediff = common.AddDurations(newDuration, sqDollar[3].timediff)
 		}
-	case 35:
+	case 36:
 		sqDollar = sqS[sqpt-0 : sqpt+1]
-		//line query.y:261
+		//line query.y:266
 		{
 			sqVAL.limit = Limit{Limit: -1, Streamlimit: -1}
 		}
-	case 36:
+	case 37:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
-		//line query.y:265
+		//line query.y:270
 		{
 			num, err := strconv.ParseInt(sqDollar[2].str, 10, 64)
 			if err != nil {
@@ -987,9 +977,9 @@ sqdefault:
 			}
 			sqVAL.limit = Limit{Limit: num, Streamlimit: -1}
 		}
-	case 37:
+	case 38:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
-		//line query.y:273
+		//line query.y:278
 		{
 			num, err := strconv.ParseInt(sqDollar[2].str, 10, 64)
 			if err != nil {
@@ -997,9 +987,9 @@ sqdefault:
 			}
 			sqVAL.limit = Limit{Limit: -1, Streamlimit: num}
 		}
-	case 38:
+	case 39:
 		sqDollar = sqS[sqpt-4 : sqpt+1]
-		//line query.y:281
+		//line query.y:286
 		{
 			limit_num, err := strconv.ParseInt(sqDollar[2].str, 10, 64)
 			if err != nil {
@@ -1011,15 +1001,15 @@ sqdefault:
 			}
 			sqVAL.limit = Limit{Limit: limit_num, Streamlimit: slimit_num}
 		}
-	case 39:
+	case 40:
 		sqDollar = sqS[sqpt-0 : sqpt+1]
-		//line query.y:295
+		//line query.y:300
 		{
 			sqVAL.timeconv = common.UOT_MS
 		}
-	case 40:
+	case 41:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
-		//line query.y:299
+		//line query.y:304
 		{
 			uot, err := common.ParseUOT(sqDollar[2].str)
 			if err != nil {
@@ -1027,99 +1017,99 @@ sqdefault:
 			}
 			sqVAL.timeconv = uot
 		}
-	case 41:
+	case 42:
 		sqDollar = sqS[sqpt-2 : sqpt+1]
-		//line query.y:311
+		//line query.y:316
 		{
 			sqVAL.dict = sqDollar[2].dict
 		}
-	case 42:
-		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:318
-		{
-			sqVAL.dict = qDict{fixMongoKey(sqDollar[1].str): qDict{"$regex": sqDollar[3].str}}
-		}
 	case 43:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:322
+		//line query.y:323
 		{
-			sqVAL.dict = qDict{fixMongoKey(sqDollar[1].str): sqDollar[3].str}
+			sqVAL.dict = common.Dict{fixMongoKey(sqDollar[1].str): common.Dict{"$regex": sqDollar[3].str}}
 		}
 	case 44:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:326
+		//line query.y:327
 		{
-			sqVAL.dict = qDict{fixMongoKey(sqDollar[1].str): sqDollar[3].str}
+			sqVAL.dict = common.Dict{fixMongoKey(sqDollar[1].str): sqDollar[3].str}
 		}
 	case 45:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:330
+		//line query.y:331
 		{
-			sqVAL.dict = qDict{fixMongoKey(sqDollar[1].str): qDict{"$neq": sqDollar[3].str}}
+			sqVAL.dict = common.Dict{fixMongoKey(sqDollar[1].str): sqDollar[3].str}
 		}
 	case 46:
-		sqDollar = sqS[sqpt-2 : sqpt+1]
-		//line query.y:334
+		sqDollar = sqS[sqpt-3 : sqpt+1]
+		//line query.y:335
 		{
-			sqVAL.dict = qDict{fixMongoKey(sqDollar[2].str): qDict{"$exists": true}}
+			sqVAL.dict = common.Dict{fixMongoKey(sqDollar[1].str): common.Dict{"$neq": sqDollar[3].str}}
 		}
 	case 47:
-		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:338
+		sqDollar = sqS[sqpt-2 : sqpt+1]
+		//line query.y:339
 		{
-			sqVAL.dict = qDict{fixMongoKey(sqDollar[3].str): qDict{"$in": sqDollar[1].list}}
+			sqVAL.dict = common.Dict{fixMongoKey(sqDollar[2].str): common.Dict{"$exists": true}}
 		}
 	case 48:
-		sqDollar = sqS[sqpt-4 : sqpt+1]
-		//line query.y:342
+		sqDollar = sqS[sqpt-3 : sqpt+1]
+		//line query.y:343
 		{
-			sqVAL.dict = qDict{fixMongoKey(sqDollar[3].str): qDict{"$not": qDict{"$in": sqDollar[1].list}}}
+			sqVAL.dict = common.Dict{fixMongoKey(sqDollar[3].str): common.Dict{"$in": sqDollar[1].list}}
 		}
 	case 49:
+		sqDollar = sqS[sqpt-4 : sqpt+1]
+		//line query.y:347
+		{
+			sqVAL.dict = common.Dict{fixMongoKey(sqDollar[3].str): common.Dict{"$not": common.Dict{"$in": sqDollar[1].list}}}
+		}
+	case 50:
+		sqDollar = sqS[sqpt-3 : sqpt+1]
+		//line query.y:351
+		{
+			sqVAL.dict = sqDollar[2].dict
+		}
+	case 51:
 		sqDollar = sqS[sqpt-1 : sqpt+1]
-		//line query.y:348
+		//line query.y:357
 		{
 			sqVAL.str = sqDollar[1].str[1 : len(sqDollar[1].str)-1]
 		}
-	case 50:
+	case 52:
 		sqDollar = sqS[sqpt-1 : sqpt+1]
-		//line query.y:354
+		//line query.y:363
 		{
 
 			sqlex.(*sqLex)._keys[sqDollar[1].str] = struct{}{}
 			sqVAL.str = cleantagstring(sqDollar[1].str)
 		}
-	case 51:
-		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:362
-		{
-			sqVAL.dict = qDict{"$and": []qDict{sqDollar[1].dict, sqDollar[3].dict}}
-		}
-	case 52:
-		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:366
-		{
-			sqVAL.dict = qDict{"$or": []qDict{sqDollar[1].dict, sqDollar[3].dict}}
-		}
 	case 53:
-		sqDollar = sqS[sqpt-2 : sqpt+1]
-		//line query.y:370
+		sqDollar = sqS[sqpt-3 : sqpt+1]
+		//line query.y:371
 		{
-			tmp := make(qDict)
-			for k, v := range sqDollar[2].dict {
-				tmp[k] = qDict{"$ne": v}
-			}
-			sqVAL.dict = tmp
+			sqVAL.dict = common.Dict{"$and": []common.Dict{sqDollar[1].dict, sqDollar[3].dict}}
 		}
 	case 54:
 		sqDollar = sqS[sqpt-3 : sqpt+1]
-		//line query.y:378
+		//line query.y:375
 		{
-			sqVAL.dict = sqDollar[2].dict
+			sqVAL.dict = common.Dict{"$or": []common.Dict{sqDollar[1].dict, sqDollar[3].dict}}
 		}
 	case 55:
+		sqDollar = sqS[sqpt-2 : sqpt+1]
+		//line query.y:379
+		{
+			tmp := make(common.Dict)
+			for k, v := range sqDollar[2].dict {
+				tmp[k] = common.Dict{"$ne": v}
+			}
+			sqVAL.dict = tmp
+		}
+	case 56:
 		sqDollar = sqS[sqpt-1 : sqpt+1]
-		//line query.y:382
+		//line query.y:387
 		{
 			sqVAL.dict = sqDollar[1].dict
 		}

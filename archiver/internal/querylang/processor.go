@@ -2,8 +2,8 @@
 package querylang
 
 import (
+	"github.com/gtfierro/giles2/common"
 	"github.com/karlseguin/ccache"
-	"gopkg.in/mgo.v2/bson"
 	"strings"
 	"time"
 )
@@ -30,8 +30,8 @@ func (qp *QueryProcessor) Parse(querystring string) *ParsedQuery {
 			QueryType: l.query.qtype,
 			Keys:      make([]string, len(l._keys)),
 			Target:    l.query.Contents,
-			Where:     l.query.WhereBson(),
-			Set:       l.query.SetBson(),
+			Where:     l.query.where,
+			Set:       l.query.set,
 			Distinct:  l.query.distinct,
 			Data:      l.query.data,
 			Err:       l.error,
@@ -58,9 +58,9 @@ type ParsedQuery struct {
 	Target []string
 	//TODO: replace these with with something that's not bson.M
 	// where clause for query
-	Where bson.M
+	Where common.Dict
 	// key-value pairs to add
-	Set bson.M
+	Set common.Dict
 	// are we querying distinct values?
 	Distinct bool
 	// a unique representation of this query used to compare two different query objects
@@ -71,6 +71,46 @@ type ParsedQuery struct {
 	// token where the error in parsing took place
 	ErrPos      string
 	Querystring string
+}
+
+func (parsed *ParsedQuery) GetParams() common.QueryParams {
+	switch parsed.QueryType {
+	case SELECT_TYPE:
+		return &common.TagParams{
+			Tags:  parsed.Target,
+			Where: parsed.Where,
+		}
+	case DELETE_TYPE:
+		if len(parsed.Target) > 0 || len(parsed.Where) > 0 {
+			return &common.TagParams{
+				Tags:  parsed.Target,
+				Where: parsed.Where,
+			}
+		} else {
+			return &common.DataParams{
+				Where: parsed.Where,
+				Begin: uint64(parsed.Data.Start.UnixNano()),
+				End:   uint64(parsed.Data.End.UnixNano()),
+			}
+		}
+	case SET_TYPE:
+		return &common.SetParams{
+			Set:   parsed.Set,
+			Where: parsed.Where,
+		}
+	case DATA_TYPE:
+		return &common.DataParams{
+			Where:         parsed.Where,
+			StreamLimit:   int(parsed.Data.Limit.Streamlimit),
+			DataLimit:     int(parsed.Data.Limit.Limit),
+			Begin:         uint64(parsed.Data.Start.UnixNano()),
+			End:           uint64(parsed.Data.End.UnixNano()),
+			ConvertToUnit: parsed.Data.Timeconv,
+		}
+	default:
+		return nil
+	}
+	return nil
 }
 
 type QueryType uint8

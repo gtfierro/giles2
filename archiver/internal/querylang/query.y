@@ -8,7 +8,6 @@ import (
 	"github.com/taylorchu/toki"
     "github.com/gtfierro/giles2/common"
 	"strconv"
-	"gopkg.in/mgo.v2/bson"
     _time "time"
 )
 
@@ -20,7 +19,7 @@ Notes here
 
 %union{
 	str string
-	dict qDict
+	dict common.Dict
 	data *DataQuery
 	limit Limit
     timeconv common.UnitOfTime
@@ -90,6 +89,12 @@ query		: SELECT selector whereClause SEMICOLON
 				sqlex.(*sqLex).query.where = $3
 				sqlex.(*sqLex).query.qtype = DELETE_TYPE
 			}
+            | DELETE dataClause whereClause SEMICOLON
+            {
+				sqlex.(*sqLex).query.data = $2
+				sqlex.(*sqLex).query.where = $3
+				sqlex.(*sqLex).query.qtype = DELETE_TYPE
+            }
 			| DELETE whereClause SEMICOLON
 			{
 				sqlex.(*sqLex).query.Contents = []string{}
@@ -125,15 +130,15 @@ valueList   : qstring
 
 setList     : lvalue EQ qstring
             {
-                $$ = qDict{$1: $3}
+                $$ = common.Dict{$1: $3}
             }
             | lvalue EQ NUMBER
             {
-                $$ = qDict{$1: $3}
+                $$ = common.Dict{$1: $3}
             }
             | lvalue EQ valueListBrack
             {
-                $$ = qDict{$1: $3}
+                $$ = common.Dict{$1: $3}
             }
             | lvalue EQ qstring COMMA setList
             {
@@ -316,31 +321,35 @@ whereClause : WHERE whereList
 
 whereTerm : lvalue LIKE qstring
 			{
-				$$ = qDict{fixMongoKey($1): qDict{"$regex": $3}}
+				$$ = common.Dict{fixMongoKey($1): common.Dict{"$regex": $3}}
 			}
 		  | lvalue EQ qstring
 			{
-				$$ = qDict{fixMongoKey($1): $3}
+				$$ = common.Dict{fixMongoKey($1): $3}
 			}
           | lvalue EQ NUMBER
             {
-				$$ = qDict{fixMongoKey($1): $3}
+				$$ = common.Dict{fixMongoKey($1): $3}
             }
 		  | lvalue NEQ qstring
 			{
-				$$ = qDict{fixMongoKey($1): qDict{"$neq": $3}}
+				$$ = common.Dict{fixMongoKey($1): common.Dict{"$neq": $3}}
 			}
 		  | HAS lvalue
 			{
-				$$ = qDict{fixMongoKey($2): qDict{"$exists": true}}
+				$$ = common.Dict{fixMongoKey($2): common.Dict{"$exists": true}}
 			}
           | valueListBrack IN lvalue
             {
-                $$ = qDict{fixMongoKey($3): qDict{"$in": $1}}
+                $$ = common.Dict{fixMongoKey($3): common.Dict{"$in": $1}}
             }
           | valueListBrack NOT IN lvalue
             {
-                $$ = qDict{fixMongoKey($3): qDict{"$not": qDict{"$in": $1}}}
+                $$ = common.Dict{fixMongoKey($3): common.Dict{"$not": common.Dict{"$in": $1}}}
+            }
+          | LPAREN whereTerm RPAREN
+            {
+                $$ = $2
             }
 		  ;
 
@@ -358,25 +367,21 @@ lvalue    : LVALUE
           }
           ;
 
-whereList : whereList AND whereList
+whereList : whereList AND whereTerm
 			{
-				$$ = qDict{"$and": []qDict{$1, $3}}
+				$$ = common.Dict{"$and": []common.Dict{$1, $3}}
 			}
-		  | whereList OR whereList
+		  | whereList OR whereTerm
 			{
-				$$ = qDict{"$or": []qDict{$1, $3}}
+				$$ = common.Dict{"$or": []common.Dict{$1, $3}}
 			}
-		  | NOT whereList
+		  | NOT whereTerm
 			{
-                tmp := make(qDict)
+                tmp := make(common.Dict)
                 for k,v := range $2 {
-                    tmp[k] = qDict{"$ne": v}
+                    tmp[k] = common.Dict{"$ne": v}
                 }
 				$$ = tmp
-			}
-		  | LPAREN whereList RPAREN
-			{
-				$$ = $2
 			}
 		  | whereTerm
 			{
@@ -393,7 +398,6 @@ var supported_formats = []string{"1/2/2006",
                                  "1/2/2006 15:04:05 MST",
                                  "1-2-2006 15:04:05 MST",
                                  "2006-1-2 15:04:05 MST"}
-type qDict map[string]interface{}
 type List []string
 
 func (qt QueryType) String() string {
@@ -417,9 +421,9 @@ type query struct {
 	// information about a data query if we are one
 	data	   *DataQuery
     // key-value pairs to add
-    set         qDict
+    set         common.Dict
 	// where clause for query
-	where	  qDict
+	where	  common.Dict
 	// are we querying distinct values?
 	distinct  bool
 	// list of tags to target for deletion, selection
@@ -438,22 +442,6 @@ func (q *query) Print() {
 	fmt.Printf("Contents: %v\n", q.Contents)
 	fmt.Printf("Distinct? %v\n", q.distinct)
 	fmt.Printf("where: %v\n", q.where)
-}
-
-func (q *query) ContentsBson() bson.M {
-    ret := bson.M{}
-    for _, tag := range q.Contents {
-        ret[tag] = 1
-    }
-    return ret
-}
-
-func (q *query) WhereBson() bson.M {
-    return bson.M(q.where)
-}
-
-func (q *query) SetBson() bson.M {
-    return bson.M(q.set)
 }
 
 type sqLex struct {

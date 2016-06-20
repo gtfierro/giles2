@@ -11,10 +11,11 @@ const (
 	GilesQueryErrorPIDString       = "2.0.9.2"
 	GilesKeyValueMetadataPIDString = "2.0.9.3"
 	GilesTimeseriesPIDString       = "2.0.9.4"
+	GilesStatisticsPIDString       = "2.0.9.5"
 
-	GilesQueryListResultPIDString       = "2.0.9.5"
-	GilesQueryMetadataResultPIDString   = "2.0.9.6"
-	GilesQueryTimeseriesResultPIDString = "2.0.9.7"
+	GilesQueryListResultPIDString       = "2.0.9.6"
+	GilesQueryMetadataResultPIDString   = "2.0.9.7"
+	GilesQueryTimeseriesResultPIDString = "2.0.9.8"
 
 	GilesArchiveRequestPIDString = "2.0.8.0"
 )
@@ -77,6 +78,7 @@ func (msg QueryMetadataResult) ToMsgPackBW() (po bw.PayloadObject) {
 type QueryTimeseriesResult struct {
 	Nonce uint32
 	Data  []Timeseries
+	Stats []Statistics
 }
 
 func (msg QueryTimeseriesResult) ToMsgPackBW() (po bw.PayloadObject) {
@@ -110,6 +112,29 @@ func (msg Timeseries) ToReadings() []common.Reading {
 	var res = make([]common.Reading, lesserLength)
 	for idx := 0; idx < lesserLength; idx++ {
 		res[idx] = &common.SmapNumberReading{Time: msg.Times[idx], Value: msg.Values[idx], UoT: common.GuessTimeUnit(msg.Times[idx])}
+	}
+	return res
+}
+
+type Statistics struct {
+	UUID  string
+	Times []uint64
+	Count []uint64
+	Min   []float64
+	Mean  []float64
+	Max   []float64
+}
+
+func (msg Statistics) ToMsgPackBW() (po bw.PayloadObject) {
+	po, _ = bw.CreateMsgPackPayloadObject(GilesTimeseriesPID, msg)
+	return
+}
+
+func (msg Statistics) ToReadings() []common.Reading {
+	lesserLength := int(math.Min(float64(len(msg.Times)), float64(len(msg.Count))))
+	var res = make([]common.Reading, lesserLength)
+	for idx := 0; idx < lesserLength; idx++ {
+		res[idx] = &common.StatisticalNumberReading{Time: msg.Times[idx], UoT: common.GuessTimeUnit(msg.Times[idx]), Count: msg.Count[idx], Min: msg.Min[idx], Max: msg.Max[idx], Mean: msg.Mean[idx]}
 	}
 	return res
 }

@@ -22,10 +22,12 @@ func POsFromSmapMessageList(nonce uint32, list common.SmapMessageList) []bw.Payl
 	tsRes := QueryTimeseriesResult{
 		Nonce: nonce,
 		Data:  []Timeseries{},
+		Stats: []Statistics{},
 	}
 	for _, msg := range list {
 		mdRes.Data = append(mdRes.Data, ExtractMetadataToBW(msg))
 		tsRes.Data = append(tsRes.Data, ExtractTimeseriesToBW(msg))
+		tsRes.Stats = append(tsRes.Stats, ExtractStatisticsToBW(msg))
 	}
 	replies[0] = mdRes.ToMsgPackBW()
 	replies[1] = tsRes.ToMsgPackBW()
@@ -38,7 +40,7 @@ func ExtractMetadataToBW(msg *common.SmapMessage) KeyValueMetadata {
 		UUID:     string(msg.UUID),
 		Metadata: make(map[string]interface{}),
 	}
-	md.Metadata["Metadata"] = msg.Metadata
+	md.Metadata["Metadata"] = map[string]interface{}(msg.Metadata)
 	md.Metadata["Properties"] = msg.Properties
 	return md
 }
@@ -50,11 +52,33 @@ func ExtractTimeseriesToBW(msg *common.SmapMessage) Timeseries {
 		Values: make([]float64, len(msg.Readings)),
 	}
 	for i, rdg := range msg.Readings {
-		if !rdg.IsObject() {
+		if !rdg.IsObject() && !rdg.IsStats() {
 			d := rdg.(*common.SmapNumberReading)
 			ts.Times[i] = d.Time
 			ts.Values[i] = d.Value
 		}
 	}
 	return ts
+}
+
+func ExtractStatisticsToBW(msg *common.SmapMessage) Statistics {
+	stats := Statistics{
+		UUID:  string(msg.UUID),
+		Times: make([]uint64, len(msg.Readings)),
+		Count: make([]uint64, len(msg.Readings)),
+		Min:   make([]float64, len(msg.Readings)),
+		Mean:  make([]float64, len(msg.Readings)),
+		Max:   make([]float64, len(msg.Readings)),
+	}
+	for i, rdg := range msg.Readings {
+		if rdg.IsStats() {
+			d := rdg.(*common.StatisticalNumberReading)
+			stats.Times[i] = d.Time
+			stats.Count[i] = d.Count
+			stats.Min[i] = d.Min
+			stats.Mean[i] = d.Mean
+			stats.Max[i] = d.Max
+		}
+	}
+	return stats
 }

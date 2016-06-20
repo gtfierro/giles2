@@ -133,7 +133,9 @@ func (bwh *BOSSWaveHandler) listenQueries(msg *bw.SimpleMessage) {
 		}
 		po, _ := bw.CreateMsgPackPayloadObject(GilesQueryErrorPID, msg)
 		log.Error(errors.Wrap(err, "Error evaluating query"))
-		bwh.iface.PublishSignal(signalURI, po)
+		if err := bwh.iface.PublishSignal(signalURI, po); err != nil {
+			log.Error(errors.Wrap(err, "Error sending response"))
+		}
 	}
 
 	var reply []bw.PayloadObject
@@ -149,8 +151,11 @@ func (bwh *BOSSWaveHandler) listenQueries(msg *bw.SimpleMessage) {
 	default:
 		log.Debug("type %T", res)
 	}
+	log.Debugf("Reply on %s: %d", bwh.iface.SignalURI(signalURI), len(reply))
 
-	bwh.iface.PublishSignal(signalURI, reply...)
+	if err := bwh.iface.PublishSignal(signalURI, reply...); err != nil {
+		log.Error(errors.Wrap(err, "Error sending response"))
+	}
 }
 
 func (bwh *BOSSWaveHandler) listenCQBS(msg *bw.SimpleMessage) {

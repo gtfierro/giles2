@@ -123,9 +123,10 @@ func (b *btrdbDB) receiveStatus(conn *tsConn) error {
 	// react to the type of message
 	if resp.Which() == btrdb.RESPONSE_VOID && resp.StatusCode() != btrdb.STATUSCODE_OK {
 		return fmt.Errorf("Received error status code when writing: %v", resp.StatusCode().String())
-	} else {
+	} else if resp.Which() == btrdb.RESPONSE_VOID && resp.StatusCode() == btrdb.STATUSCODE_OK {
 		return nil
 	}
+	return fmt.Errorf("This is weird\n")
 }
 
 func (b *btrdbDB) AddMessage(msg *common.SmapMessage) error {

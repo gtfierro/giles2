@@ -110,6 +110,43 @@ func (b *btrdbDB) receiveData(conn *tsConn) (common.SmapNumbersResponse, error) 
 	return sr, nil
 }
 
+func (b *btrdbDB) receiveStatsData(conn *tsConn) (common.StatisticalNumbersResponse, error) {
+	var (
+		sr       = common.StatisticalNumbersResponse{}
+		finished = false
+	)
+	sr.Readings = []*common.StatisticalNumberReading{}
+
+	for !finished {
+		// wait for response on given connection
+		seg, err := capn.ReadFromStream(conn, nil)
+		if err != nil {
+			conn.Close()
+			log.Errorf("Error receiving data from BtrDB %v", err)
+			return sr, BtrDBReadErr
+		}
+		resp := btrdb.ReadRootResponse(seg)
+		switch resp.Which() {
+		case btrdb.RESPONSE_VOID:
+			return sr, fmt.Errorf("Got a RESPONSE_VOID with statuscode %v, but was expecting data", resp.StatusCode().String())
+		case btrdb.RESPONSE_STATISTICALRECORDS:
+			if resp.StatusCode() != btrdb.STATUSCODE_OK {
+				return sr, fmt.Errorf("Error when reading from BtrDB: %v", resp.StatusCode().String())
+			}
+			for _, rec := range resp.StatisticalRecords().Values().ToArray() {
+				sr.Readings = append(sr.Readings, &common.StatisticalNumberReading{
+					Time: uint64(rec.Time()), Count: rec.Count(),
+					Min: rec.Min(), Mean: rec.Mean(), Max: rec.Max(),
+					UoT: common.UOT_NS})
+			}
+			finished = resp.Final()
+		default:
+			log.Errorf("Got unexpected type: %v with status code %v", resp.Which(), resp.StatusCode().String())
+		}
+	}
+	return sr, nil
+}
+
 func (b *btrdbDB) receiveStatus(conn *tsConn) error {
 	// wait for response on the given connection
 	seg, err := capn.ReadFromStream(conn, nil)
@@ -224,6 +261,52 @@ func (b *btrdbDB) GetData(uuids []common.UUID, start, end uint64) ([]common.Smap
 	return ret, nil
 }
 
+func (b *btrdbDB) StatisticalData(uuids []common.UUID, pointWidth int, start, end uint64) ([]common.StatisticalNumbersResponse, error) {
+	var ret = make([]common.StatisticalNumbersResponse, len(uuids))
+	log.Debugf("STATISTICAL pointwidth: %v", pointWidth)
+	for i, uu := range uuids {
+		seg := capn.NewBuffer(nil)
+		req := btrdb.NewRootRequest(seg)
+		query := btrdb.NewCmdQueryStatisticalValues(seg)
+		uuid, _ := uuid.FromString(string(uu))
+		query.SetUuid(uuid.Bytes())
+		query.SetStartTime(int64(start))
+		query.SetEndTime(int64(end))
+		query.SetPointWidth(uint8(pointWidth))
+		req.SetQueryStatisticalValues(query)
+		sr, err := b.reliableWriteStatsData(seg)
+		if err != nil {
+			return ret, err
+		}
+		sr.UUID = uu
+		ret[i] = sr
+	}
+	return ret, nil
+}
+
+func (b *btrdbDB) WindowData(uuids []common.UUID, width, start, end uint64) ([]common.StatisticalNumbersResponse, error) {
+	var ret = make([]common.StatisticalNumbersResponse, len(uuids))
+	log.Debugf("WINDOW width: %v", width)
+	for i, uu := range uuids {
+		seg := capn.NewBuffer(nil)
+		req := btrdb.NewRootRequest(seg)
+		query := btrdb.NewCmdQueryWindowValues(seg)
+		uuid, _ := uuid.FromString(string(uu))
+		query.SetUuid(uuid.Bytes())
+		query.SetStartTime(int64(start))
+		query.SetEndTime(int64(end))
+		query.SetWidth(width)
+		req.SetQueryWindowValues(query)
+		sr, err := b.reliableWriteStatsData(seg)
+		if err != nil {
+			return ret, err
+		}
+		sr.UUID = uu
+		ret[i] = sr
+	}
+	return ret, nil
+}
+
 func (b *btrdbDB) DeleteData(uuids []common.UUID, start, end uint64) error {
 	for _, uu := range uuids {
 		seg := capn.NewBuffer(nil)
@@ -286,6 +369,32 @@ func (b *btrdbDB) reliableWriteData(seg *capn.Segment) (common.SmapNumbersRespon
 		if !conn.IsClosed() {
 			seg.WriteTo(conn)
 			if sr, err = b.receiveData(conn); err == BtrDBReadErr {
+				conn.Close()
+				b.connpool.Put(conn)
+				//fmt.Errorf("Error writing to btrdb %v", err)
+				continue
+			} else if err != nil { // if not read error
+				b.connpool.Put(conn)
+				return sr, err
+			}
+		}
+		break
+	}
+	b.connpool.Put(conn)
+	return sr, nil
+}
+
+func (b *btrdbDB) reliableWriteStatsData(seg *capn.Segment) (common.StatisticalNumbersResponse, error) {
+	var (
+		sr   common.StatisticalNumbersResponse
+		conn *tsConn
+		err  error
+	)
+	for {
+		conn = b.connpool.Get()
+		if !conn.IsClosed() {
+			seg.WriteTo(conn)
+			if sr, err = b.receiveStatsData(conn); err == BtrDBReadErr {
 				conn.Close()
 				b.connpool.Put(conn)
 				//fmt.Errorf("Error writing to btrdb %v", err)

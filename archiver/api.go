@@ -63,6 +63,24 @@ func (a *Archiver) SelectDataAfter(params *common.DataParams) (result common.Sma
 	return
 }
 
+func (a *Archiver) SelectStatisticalData(params *common.DataParams) (result common.SmapMessageList, err error) {
+	var readings []common.StatisticalNumbersResponse
+	if err = a.prepareDataParams(params); err != nil {
+		return
+	}
+	// switch order so its consistent
+	if params.End < params.Begin {
+		params.Begin, params.End = params.End, params.Begin
+	}
+	if params.IsStatistical {
+		readings, err = a.tsStore.StatisticalData(params.UUIDs, params.PointWidth, params.Begin, params.End)
+	} else if params.IsWindow {
+		readings, err = a.tsStore.WindowData(params.UUIDs, params.Width, params.Begin, params.End)
+	}
+	result = a.packStatsResults(params, readings)
+	return
+}
+
 func (a *Archiver) DeleteData(params *common.DataParams) (err error) {
 	if err = a.prepareDataParams(params); err != nil {
 		return
@@ -122,6 +140,26 @@ func (a *Archiver) prepareDataParams(params *common.DataParams) (err error) {
 }
 
 func (a *Archiver) packResults(params *common.DataParams, readings []common.SmapNumbersResponse) common.SmapMessageList {
+	var result = common.SmapMessageList{}
+	for _, resp := range readings {
+		if len(resp.Readings) > 0 {
+			msg := &common.SmapMessage{UUID: resp.UUID}
+			for _, rdg := range resp.Readings {
+				rdg.ConvertTime(common.UnitOfTime(params.ConvertToUnit))
+				msg.Readings = append(msg.Readings, rdg)
+			}
+			// apply data limit if exists
+			if params.DataLimit > 0 && len(msg.Readings) > params.DataLimit {
+				msg.Readings = msg.Readings[:params.DataLimit]
+			}
+			result = append(result, msg)
+		}
+	}
+	log.Debugf("Returning %d readings", len(result))
+	return result
+}
+
+func (a *Archiver) packStatsResults(params *common.DataParams, readings []common.StatisticalNumbersResponse) common.SmapMessageList {
 	var result = common.SmapMessageList{}
 	for _, resp := range readings {
 		if len(resp.Readings) > 0 {

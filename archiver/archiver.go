@@ -209,6 +209,9 @@ func (a *Archiver) evaluateQuery(parsed *querylang.ParsedQuery) (QueryResult, er
 		return result, a.SetTags(params)
 	case querylang.DATA_TYPE:
 		params := parsed.GetParams().(*common.DataParams)
+		if params.IsStatistical || params.IsWindow {
+			return a.SelectStatisticalData(params)
+		}
 		switch parsed.Data.Dtype {
 		case querylang.IN_TYPE:
 			return a.SelectDataRange(params)

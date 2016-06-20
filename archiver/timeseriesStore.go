@@ -20,6 +20,12 @@ type TimeseriesStore interface {
 	// uuids, start time, end time (both in nanoseconds)
 	GetData(uuids []common.UUID, start uint64, end uint64) ([]common.SmapNumbersResponse, error)
 
+	// pointWidth is the log of the number of records to aggregate
+	StatisticalData(uuids []common.UUID, pointWidth int, start, end uint64) ([]common.StatisticalNumbersResponse, error)
+
+	// width in nanoseconds
+	WindowData(uuids []common.UUID, width, start, end uint64) ([]common.StatisticalNumbersResponse, error)
+
 	// delete data
 	DeleteData(uuids []common.UUID, start uint64, end uint64) error
 

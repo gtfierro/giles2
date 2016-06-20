@@ -172,6 +172,63 @@ func (q *quasarDB) GetData(uuids []common.UUID, start uint64, end uint64) ([]com
 	return ret, nil
 }
 
+func (q *quasarDB) StatisticalData(uuids []common.UUID, pointWidth int, start, end uint64) ([]common.StatisticalNumbersResponse, error) {
+	var ret = make([]common.StatisticalNumbersResponse, len(uuids))
+	conn := q.connpool.Get()
+	defer q.connpool.Put(conn)
+	for i, uu := range uuids {
+		seg := capn.NewBuffer(nil)
+		req := qsr.NewRootRequest(seg)
+		query := qsr.NewCmdQueryStatisticalValues(seg)
+		uuid, _ := uuid.FromString(string(uu))
+		query.SetUuid(uuid.Bytes())
+		query.SetStartTime(int64(start))
+		query.SetEndTime(int64(end))
+		query.SetPointWidth(uint8(pointWidth))
+		req.SetQueryStatisticalValues(query)
+		_, err := seg.WriteTo(conn) // here, ignoring # bytes written
+		if err != nil {
+			return ret, err
+		}
+		sr, err := q.receiveStats(conn)
+		if err != nil {
+			return ret, err
+		}
+		sr.UUID = uu
+		ret[i] = sr
+	}
+	return ret, nil
+}
+
+//TODO: fix?
+func (q *quasarDB) WindowData(uuids []common.UUID, pointWidth, start, end uint64) ([]common.StatisticalNumbersResponse, error) {
+	var ret = make([]common.StatisticalNumbersResponse, len(uuids))
+	conn := q.connpool.Get()
+	defer q.connpool.Put(conn)
+	for i, uu := range uuids {
+		seg := capn.NewBuffer(nil)
+		req := qsr.NewRootRequest(seg)
+		query := qsr.NewCmdQueryStatisticalValues(seg)
+		uuid, _ := uuid.FromString(string(uu))
+		query.SetUuid(uuid.Bytes())
+		query.SetStartTime(int64(start))
+		query.SetEndTime(int64(end))
+		query.SetPointWidth(uint8(pointWidth))
+		req.SetQueryStatisticalValues(query)
+		_, err := seg.WriteTo(conn) // here, ignoring # bytes written
+		if err != nil {
+			return ret, err
+		}
+		sr, err := q.receiveStats(conn)
+		if err != nil {
+			return ret, err
+		}
+		sr.UUID = uu
+		ret[i] = sr
+	}
+	return ret, nil
+}
+
 func (q *quasarDB) DeleteData(uuids []common.UUID, start, end uint64) error {
 	conn := q.connpool.Get()
 	defer q.connpool.Put(conn)
@@ -220,6 +277,42 @@ func (q *quasarDB) receive(conn *tsConn) (common.SmapNumbersResponse, error) {
 		sr.Readings = []*common.SmapNumberReading{}
 		for _, rec := range resp.Records().Values().ToArray() {
 			sr.Readings = append(sr.Readings, &common.SmapNumberReading{Time: uint64(rec.Time()), Value: rec.Value()})
+		}
+		return sr, nil
+	default:
+		return sr, fmt.Errorf("Got unexpected Quasar Error code (%v)", resp.StatusCode().String())
+	}
+	return sr, nil
+
+}
+
+func (q *quasarDB) receiveStats(conn *tsConn) (common.StatisticalNumbersResponse, error) {
+	var sr = common.StatisticalNumbersResponse{}
+	seg, err := capn.ReadFromStream(conn, nil)
+	if err != nil {
+		conn.Close()
+		log.Errorf("Error receiving data from Quasar %v", err)
+		return sr, err
+	}
+	resp := qsr.ReadRootResponse(seg)
+
+	//log.Debug("qsr resp %v", resp.Which())
+	//log.Debug("status code %v", resp.StatusCode())
+	switch resp.Which() {
+	case qsr.RESPONSE_VOID:
+		if resp.StatusCode() != qsr.STATUSCODE_OK {
+			return sr, fmt.Errorf("Received error status code when writing: %v", resp.StatusCode())
+		}
+	case qsr.RESPONSE_RECORDS:
+		if resp.StatusCode() != 0 {
+			return sr, fmt.Errorf("Error when reading from Quasar: %v", resp.StatusCode().String())
+		}
+		sr.Readings = []*common.StatisticalNumberReading{}
+		for _, rec := range resp.StatisticalRecords().Values().ToArray() {
+			sr.Readings = append(sr.Readings, &common.StatisticalNumberReading{
+				Time: uint64(rec.Time()), Count: rec.Count(),
+				Min: rec.Min(), Mean: rec.Mean(), Max: rec.Max(),
+				UoT: common.UOT_NS})
 		}
 		return sr, nil
 	default:

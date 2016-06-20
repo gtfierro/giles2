@@ -102,6 +102,45 @@ func (s *SmapObjectReading) SetUOT(uot UnitOfTime) {
 	s.UoT = uot
 }
 
+type StatisticalNumberReading struct {
+	Time  uint64
+	UoT   UnitOfTime
+	Count uint64
+	Min   float64
+	Mean  float64
+	Max   float64
+}
+
+func (s *StatisticalNumberReading) IsObject() bool {
+	return true
+}
+
+func (s *StatisticalNumberReading) GetValue() interface{} {
+	return map[string]interface{}{"Count": s.Count, "Min": s.Min, "Mean": s.Mean, "Max": s.Max}
+}
+
+func (s *StatisticalNumberReading) SetUOT(uot UnitOfTime) {
+	s.UoT = uot
+}
+
+func (s *StatisticalNumberReading) ConvertTime(to_uot UnitOfTime) (err error) {
+	guess := GuessTimeUnit(s.Time)
+	if to_uot != guess {
+		s.Time, err = convertTime(s.Time, guess, to_uot)
+		s.UoT = guess
+	}
+	return
+}
+
+func (s *StatisticalNumberReading) MarshalJSON() ([]byte, error) {
+	timeString := strconv.FormatUint(s.Time, 10)
+	return json.Marshal([]interface{}{json.Number(timeString), s.Count, s.Min, s.Mean, s.Max})
+}
+
+func (s *StatisticalNumberReading) GetTime() uint64 {
+	return s.Time
+}
+
 type SmapNumbersResponse struct {
 	Readings []*SmapNumberReading
 	UUID     UUID `json:"uuid"`
@@ -109,5 +148,10 @@ type SmapNumbersResponse struct {
 
 type SmapObjectResponse struct {
 	Readings []*SmapObjectReading
+	UUID     UUID `json:"uuid"`
+}
+
+type StatisticalNumbersResponse struct {
+	Readings []*StatisticalNumberReading
 	UUID     UUID `json:"uuid"`
 }

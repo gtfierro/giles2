@@ -33,6 +33,20 @@ func (params DistinctParams) Dump() string {
 	return ret
 }
 
+type SetParams struct {
+	Set   Dict
+	Where Dict
+}
+
+func (params SetParams) Dump() string {
+	return fmt.Sprintf("SET\n%+v\nWHERE:\n%+v", params.Set, params.Where)
+}
+
+// 3 valid states:
+// - !IsStatistical && !IsWindow: normal range query
+// - !IsStatistical && IsWindow: window query
+// - IsStatistical && !IsWindow: statistical query
+// - IsStatistical && IsWindow: INVALID
 type DataParams struct {
 	// clause to evaluate for which streams to fetch.
 	// If this is empty, uses the UUIDs
@@ -50,6 +64,14 @@ type DataParams struct {
 	End uint64
 	// converts all readings to this unit of time when finished
 	ConvertToUnit UnitOfTime
+	// if true, then we interpret pointwidth
+	IsStatistical bool
+	// PointWidth of X means the window size is (1 << X) nanoseconds
+	PointWidth int
+	// if true, then we interpret windowwidth.
+	IsWindow bool
+	// we interpret this as nanoseconds
+	Width uint64
 }
 
 func (params DataParams) Dump() string {
@@ -57,13 +79,4 @@ func (params DataParams) Dump() string {
 	ret += fmt.Sprintf("Begin: %d\nEnd: %d\n", params.Begin, params.End)
 	ret += fmt.Sprintf("Convert to : %s", params.ConvertToUnit.String())
 	return ret
-}
-
-type SetParams struct {
-	Set   Dict
-	Where Dict
-}
-
-func (params SetParams) Dump() string {
-	return fmt.Sprintf("SET\n%+v\nWHERE:\n%+v", params.Set, params.Where)
 }

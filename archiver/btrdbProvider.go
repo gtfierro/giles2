@@ -263,7 +263,6 @@ func (b *btrdbDB) GetData(uuids []common.UUID, start, end uint64) ([]common.Smap
 
 func (b *btrdbDB) StatisticalData(uuids []common.UUID, pointWidth int, start, end uint64) ([]common.StatisticalNumbersResponse, error) {
 	var ret = make([]common.StatisticalNumbersResponse, len(uuids))
-	log.Debugf("STATISTICAL pointwidth: %v", pointWidth)
 	for i, uu := range uuids {
 		seg := capn.NewBuffer(nil)
 		req := btrdb.NewRootRequest(seg)
@@ -286,7 +285,6 @@ func (b *btrdbDB) StatisticalData(uuids []common.UUID, pointWidth int, start, en
 
 func (b *btrdbDB) WindowData(uuids []common.UUID, width, start, end uint64) ([]common.StatisticalNumbersResponse, error) {
 	var ret = make([]common.StatisticalNumbersResponse, len(uuids))
-	log.Debugf("WINDOW width: %v", width)
 	for i, uu := range uuids {
 		seg := capn.NewBuffer(nil)
 		req := btrdb.NewRootRequest(seg)

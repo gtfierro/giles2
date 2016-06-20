@@ -28,7 +28,7 @@ Notes here
     timediff _time.Duration
 }
 
-%token <str> SELECT DISTINCT DELETE SET APPLY
+%token <str> SELECT DISTINCT DELETE SET APPLY STATISTICAL WINDOW
 %token <str> WHERE
 %token <str> DATA BEFORE AFTER LIMIT STREAMLIMIT NOW
 %token <str> LVALUE QSTRING
@@ -180,19 +180,35 @@ selector	: tagList
 
 dataClause : DATA IN LPAREN timeref COMMA timeref RPAREN limit timeconv
 			{
-				$$ = &DataQuery{Dtype: IN_TYPE, Start: $4, End: $6, Limit: $8, Timeconv: $9}
+				$$ = &DataQuery{Dtype: IN_TYPE, Start: $4, End: $6, Limit: $8, Timeconv: $9, IsStatistical: false, IsWindow: false}
 			}
 		   | DATA IN timeref COMMA timeref limit timeconv
 			{
-				$$ = &DataQuery{Dtype: IN_TYPE, Start: $3, End: $5, Limit: $6, Timeconv: $7}
+				$$ = &DataQuery{Dtype: IN_TYPE, Start: $3, End: $5, Limit: $6, Timeconv: $7, IsStatistical: false, IsWindow: false}
+			}
+		   | STATISTICAL LPAREN NUMBER RPAREN DATA IN LPAREN timeref COMMA timeref RPAREN limit timeconv
+			{
+                num, err := strconv.ParseInt($3, 10, 64)
+                if err != nil {
+				    sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse integer \"%v\" (%v)", $1, err.Error()))
+                }
+				$$ = &DataQuery{Dtype: IN_TYPE, Start: $8, End: $10, Limit: $12, Timeconv: $13, IsStatistical: true, IsWindow: false, PointWidth: uint64(num)}
+			}
+		   | WINDOW LPAREN NUMBER lvalue RPAREN DATA IN LPAREN timeref COMMA timeref RPAREN limit timeconv
+			{
+                dur, err := common.ParseReltime($3, $4)
+                if err != nil {
+				    sqlex.(*sqLex).Error(fmt.Sprintf("Error parsing relative time \"%v %v\" (%v)", $3, $4, err.Error()))
+                }
+				$$ = &DataQuery{Dtype: IN_TYPE, Start: $9, End: $11, Limit: $13, Timeconv: $14, IsStatistical: false, IsWindow: true, Width: uint64(dur.Nanoseconds())}
 			}
 		   | DATA BEFORE timeref limit timeconv
 			{
-				$$ = &DataQuery{Dtype: BEFORE_TYPE, Start: $3, Limit: $4, Timeconv: $5}
+				$$ = &DataQuery{Dtype: BEFORE_TYPE, Start: $3, Limit: $4, Timeconv: $5, IsStatistical: false, IsWindow: false}
 			}
 		   | DATA AFTER timeref limit timeconv
 			{
-				$$ = &DataQuery{Dtype: AFTER_TYPE, Start: $3, Limit: $4, Timeconv: $5}
+				$$ = &DataQuery{Dtype: AFTER_TYPE, Start: $3, Limit: $4, Timeconv: $5, IsStatistical: false, IsWindow: false}
 			}
 		   ;
 
@@ -464,6 +480,8 @@ func NewSQLex(s string) *sqLex {
             {Token: APPLY, Pattern: "apply"},
 			{Token: DELETE, Pattern: "delete"},
 			{Token: DISTINCT, Pattern: "distinct"},
+			{Token: STATISTICAL, Pattern: "statistical"},
+			{Token: WINDOW, Pattern: "window"},
 			{Token: LIMIT, Pattern: "limit"},
 			{Token: STREAMLIMIT, Pattern: "streamlimit"},
 			{Token: ALL, Pattern: "\\*"},

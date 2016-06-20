@@ -6,11 +6,15 @@ import (
 )
 
 type DataQuery struct {
-	Dtype    DataQueryType
-	Start    time.Time
-	End      time.Time
-	Limit    Limit
-	Timeconv common.UnitOfTime
+	Dtype         DataQueryType
+	Start         time.Time
+	End           time.Time
+	Limit         Limit
+	Timeconv      common.UnitOfTime
+	IsStatistical bool
+	IsWindow      bool
+	Width         uint64
+	PointWidth    uint64
 }
 
 type Limit struct {

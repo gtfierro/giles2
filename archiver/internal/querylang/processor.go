@@ -94,9 +94,11 @@ func (parsed *ParsedQuery) GetParams() common.QueryParams {
 			}
 		} else {
 			return &common.DataParams{
-				Where: parsed.Where,
-				Begin: uint64(parsed.Data.Start.UnixNano()),
-				End:   uint64(parsed.Data.End.UnixNano()),
+				Where:         parsed.Where,
+				Begin:         uint64(parsed.Data.Start.UnixNano()),
+				End:           uint64(parsed.Data.End.UnixNano()),
+				IsStatistical: false,
+				IsWindow:      false,
 			}
 		}
 	case SET_TYPE:
@@ -112,6 +114,10 @@ func (parsed *ParsedQuery) GetParams() common.QueryParams {
 			Begin:         uint64(parsed.Data.Start.UnixNano()),
 			End:           uint64(parsed.Data.End.UnixNano()),
 			ConvertToUnit: parsed.Data.Timeconv,
+			IsStatistical: parsed.Data.IsStatistical,
+			IsWindow:      parsed.Data.IsWindow,
+			Width:         parsed.Data.Width,
+			PointWidth:    int(parsed.Data.PointWidth),
 		}
 	default:
 		return nil

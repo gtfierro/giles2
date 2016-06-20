@@ -13,6 +13,7 @@ type Reading interface {
 	SetUOT(uot UnitOfTime)
 	GetValue() interface{}
 	IsObject() bool
+	IsStats() bool
 }
 
 // Reading implementation for numerical data
@@ -59,6 +60,10 @@ func (s *SmapNumberReading) IsObject() bool {
 	return false
 }
 
+func (s *SmapNumberReading) IsStats() bool {
+	return false
+}
+
 func (s *SmapNumberReading) GetValue() interface{} {
 	return s.Value
 }
@@ -94,6 +99,10 @@ func (s *SmapObjectReading) IsObject() bool {
 	return true
 }
 
+func (s *SmapObjectReading) IsStats() bool {
+	return false
+}
+
 func (s *SmapObjectReading) GetValue() interface{} {
 	return s.Value
 }
@@ -112,6 +121,10 @@ type StatisticalNumberReading struct {
 }
 
 func (s *StatisticalNumberReading) IsObject() bool {
+	return false
+}
+
+func (s *StatisticalNumberReading) IsStats() bool {
 	return true
 }
 

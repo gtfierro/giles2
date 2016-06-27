@@ -28,7 +28,7 @@ Notes here
     timediff _time.Duration
 }
 
-%token <str> SELECT DISTINCT DELETE SET APPLY STATISTICAL WINDOW
+%token <str> SELECT DISTINCT DELETE SET APPLY STATISTICAL WINDOW STATISTICS
 %token <str> WHERE
 %token <str> DATA BEFORE AFTER LIMIT STREAMLIMIT NOW
 %token <str> LVALUE QSTRING
@@ -187,6 +187,14 @@ dataClause : DATA IN LPAREN timeref COMMA timeref RPAREN limit timeconv
 				$$ = &DataQuery{Dtype: IN_TYPE, Start: $3, End: $5, Limit: $6, Timeconv: $7, IsStatistical: false, IsWindow: false}
 			}
 		   | STATISTICAL LPAREN NUMBER RPAREN DATA IN LPAREN timeref COMMA timeref RPAREN limit timeconv
+			{
+                num, err := strconv.ParseInt($3, 10, 64)
+                if err != nil {
+				    sqlex.(*sqLex).Error(fmt.Sprintf("Could not parse integer \"%v\" (%v)", $1, err.Error()))
+                }
+				$$ = &DataQuery{Dtype: IN_TYPE, Start: $8, End: $10, Limit: $12, Timeconv: $13, IsStatistical: true, IsWindow: false, PointWidth: uint64(num)}
+			}
+		   | STATISTICS LPAREN NUMBER RPAREN DATA IN LPAREN timeref COMMA timeref RPAREN limit timeconv
 			{
                 num, err := strconv.ParseInt($3, 10, 64)
                 if err != nil {
@@ -481,6 +489,7 @@ func NewSQLex(s string) *sqLex {
 			{Token: DELETE, Pattern: "delete"},
 			{Token: DISTINCT, Pattern: "distinct"},
 			{Token: STATISTICAL, Pattern: "statistical"},
+			{Token: STATISTICS, Pattern: "statistics"},
 			{Token: WINDOW, Pattern: "window"},
 			{Token: LIMIT, Pattern: "limit"},
 			{Token: STREAMLIMIT, Pattern: "streamlimit"},

@@ -9,6 +9,7 @@ import (
 	"github.com/satori/go.uuid"
 	bw "gopkg.in/immesys/bw2bind.v5"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -19,6 +20,7 @@ var NAMESPACE_UUID = uuid.FromStringOrNil("b26d2e62-333e-11e6-b557-0cc47a0f7eea"
 // operate on any object. Each ArchiveRequest acts as a translator for received
 // messages into a single timeseries stream
 type ArchiveRequest struct {
+	sync.RWMutex
 	// AUTOPOPULATED. The entity that requested the URI to be archived.
 	FromVK string
 	// OPTIONAL. the URI to subscribe to. Requires building a chain on the URI
@@ -109,9 +111,11 @@ func (req *ArchiveRequest) GetSmapMessage(thing interface{}) *common.SmapMessage
 
 func (req *ArchiveRequest) GetMetadata(msg *bw.SimpleMessage) *common.SmapMessage {
 	var ret = new(common.SmapMessage)
+	req.RLock()
 	if req.UUID != "" && req.uuidActual == "" {
 		req.uuidActual = common.UUID(req.UUID)
 	}
+	req.RUnlock()
 	ret.UUID = req.uuidActual
 	ret.Path = req.URI + "/" + req.Value
 	ret.Metadata = make(common.Dict)
@@ -278,11 +282,12 @@ type URIArchiver struct {
 }
 
 func (uri *URIArchiver) Listen(a *giles.Archiver) {
-	go func() {
-		for msg := range uri.metadataChan {
-			a.AddData(uri.GetMetadata(msg))
-		}
-	}()
+	newWorkerPool(uri.metadataChan, func(msg *bw.SimpleMessage) { a.AddData(uri.GetMetadata(msg)) }, 1000).start()
+	//go func() {
+	//	for msg := range uri.metadataChan {
+	//		a.AddData(uri.GetMetadata(msg))
+	//	}
+	//}()
 	for msg := range uri.subscription {
 		for _, po := range msg.POs {
 			if !po.IsType(uri.PO, uri.PO) {

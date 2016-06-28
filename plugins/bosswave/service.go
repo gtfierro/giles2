@@ -61,7 +61,7 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 	if err != nil {
 		log.Error(errors.Wrap(err, "Could not subscribe"))
 	}
-	newWorkerPool(queryChan, bwh.listenQueries, 100).start()
+	newWorkerPool(queryChan, bwh.listenQueries, 1000).start()
 
 	bwh.iface.SubscribeSlot("subscribe", bwh.listenCQBS)
 

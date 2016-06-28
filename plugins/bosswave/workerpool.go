@@ -45,7 +45,6 @@ func (pool *workerPool) start() {
 			case worker := <-pool.workers:
 				go pool.handle(worker, msg)
 			default:
-				log.Info("new worker")
 				worker := newWorker(pool.cb)
 				go pool.handle(worker, msg)
 			}

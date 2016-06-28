@@ -214,11 +214,14 @@ func (b *btrdbDB) queryNearestValue(uuids []common.UUID, start uint64, backwards
 		req := btrdb.NewRootRequest(seg)
 		query := btrdb.NewCmdQueryNearestValue(seg)
 		query.SetBackward(backwards)
-		uuid, _ := uuid.FromString(string(uu))
+		uuid, err := uuid.FromString(string(uu))
+		if err != nil {
+			return ret, err
+		}
 		query.SetUuid(uuid.Bytes())
 		query.SetTime(int64(start))
 		req.SetQueryNearestValue(query)
-		_, err := seg.WriteTo(conn) // here, ignoring # bytes written
+		_, err = seg.WriteTo(conn) // here, ignoring # bytes written
 		if err != nil {
 			return ret, err
 		}
@@ -246,7 +249,10 @@ func (b *btrdbDB) GetData(uuids []common.UUID, start, end uint64) ([]common.Smap
 		seg := capn.NewBuffer(nil)
 		req := btrdb.NewRootRequest(seg)
 		query := btrdb.NewCmdQueryStandardValues(seg)
-		uuid, _ := uuid.FromString(string(uu))
+		uuid, err := uuid.FromString(string(uu))
+		if err != nil {
+			return ret, err
+		}
 		query.SetUuid(uuid.Bytes())
 		query.SetStartTime(int64(start))
 		query.SetEndTime(int64(end))
@@ -267,7 +273,10 @@ func (b *btrdbDB) StatisticalData(uuids []common.UUID, pointWidth int, start, en
 		seg := capn.NewBuffer(nil)
 		req := btrdb.NewRootRequest(seg)
 		query := btrdb.NewCmdQueryStatisticalValues(seg)
-		uuid, _ := uuid.FromString(string(uu))
+		uuid, err := uuid.FromString(string(uu))
+		if err != nil {
+			return ret, err
+		}
 		query.SetUuid(uuid.Bytes())
 		query.SetStartTime(int64(start))
 		query.SetEndTime(int64(end))
@@ -289,7 +298,10 @@ func (b *btrdbDB) WindowData(uuids []common.UUID, width, start, end uint64) ([]c
 		seg := capn.NewBuffer(nil)
 		req := btrdb.NewRootRequest(seg)
 		query := btrdb.NewCmdQueryWindowValues(seg)
-		uuid, _ := uuid.FromString(string(uu))
+		uuid, err := uuid.FromString(string(uu))
+		if err != nil {
+			return ret, err
+		}
 		query.SetUuid(uuid.Bytes())
 		query.SetStartTime(int64(start))
 		query.SetEndTime(int64(end))
@@ -310,12 +322,15 @@ func (b *btrdbDB) DeleteData(uuids []common.UUID, start, end uint64) error {
 		seg := capn.NewBuffer(nil)
 		req := btrdb.NewRootRequest(seg)
 		del := btrdb.NewCmdDeleteValues(seg)
-		uuid, _ := uuid.FromString(string(uu))
+		uuid, err := uuid.FromString(string(uu))
+		if err != nil {
+			return err
+		}
 		del.SetUuid(uuid.Bytes())
 		del.SetStartTime(int64(start))
 		del.SetEndTime(int64(end))
 		req.SetDeleteValues(del)
-		err := b.reliableWriteStatus(seg)
+		err = b.reliableWriteStatus(seg)
 		if err != nil {
 			return err
 		}
@@ -338,7 +353,7 @@ func (b *btrdbDB) reliableWriteStatus(seg *capn.Segment) error {
 	)
 	for {
 		conn = b.connpool.Get()
-		if !conn.IsClosed() {
+		if conn != nil && !conn.IsClosed() {
 			seg.WriteTo(conn)
 			if err = b.receiveStatus(conn); err == BtrDBReadErr {
 				conn.Close()
@@ -352,7 +367,9 @@ func (b *btrdbDB) reliableWriteStatus(seg *capn.Segment) error {
 		}
 		break
 	}
-	b.connpool.Put(conn)
+	if conn != nil {
+		b.connpool.Put(conn)
+	}
 	return nil
 }
 
@@ -364,7 +381,7 @@ func (b *btrdbDB) reliableWriteData(seg *capn.Segment) (common.SmapNumbersRespon
 	)
 	for {
 		conn = b.connpool.Get()
-		if !conn.IsClosed() {
+		if conn != nil && !conn.IsClosed() {
 			seg.WriteTo(conn)
 			if sr, err = b.receiveData(conn); err == BtrDBReadErr {
 				conn.Close()
@@ -378,7 +395,9 @@ func (b *btrdbDB) reliableWriteData(seg *capn.Segment) (common.SmapNumbersRespon
 		}
 		break
 	}
-	b.connpool.Put(conn)
+	if conn != nil {
+		b.connpool.Put(conn)
+	}
 	return sr, nil
 }
 
@@ -390,7 +409,7 @@ func (b *btrdbDB) reliableWriteStatsData(seg *capn.Segment) (common.StatisticalN
 	)
 	for {
 		conn = b.connpool.Get()
-		if !conn.IsClosed() {
+		if conn != nil && !conn.IsClosed() {
 			seg.WriteTo(conn)
 			if sr, err = b.receiveStatsData(conn); err == BtrDBReadErr {
 				conn.Close()
@@ -404,6 +423,8 @@ func (b *btrdbDB) reliableWriteStatsData(seg *capn.Segment) (common.StatisticalN
 		}
 		break
 	}
-	b.connpool.Put(conn)
+	if conn != nil {
+		b.connpool.Put(conn)
+	}
 	return sr, nil
 }

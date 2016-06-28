@@ -277,11 +277,13 @@ func (vm *ViewManager) checkViews() {
 			v._setMatchSetTo(false)
 		}
 		// for all matching URIs, check if that URI previously matched
+		view.Lock()
 		for _, rec := range matching {
 			if _, found := view.MatchSet[rec.URI]; !found {
 				// if it did not match, then forward
 				if err := vm.startForwarding(rec.URI, viewList...); err != nil {
 					log.Error(err)
+					view.Unlock()
 					continue
 				}
 				vm.fwdL.Lock()
@@ -297,6 +299,7 @@ func (vm *ViewManager) checkViews() {
 				vm.stopForwarding(uri, viewList...)
 			}
 		}
+		view.Unlock()
 	}
 }
 

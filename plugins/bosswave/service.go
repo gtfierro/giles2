@@ -119,6 +119,7 @@ func (bwh *BOSSWaveHandler) listenQueries(msg *bw.SimpleMessage) {
 		log.Error("Received query was not msgpack")
 	} else if err := obj.ValueInto(&query); err != nil {
 		log.Error(errors.Wrap(err, "Could not unmarshal received query"))
+		return
 	}
 
 	signalURI = fmt.Sprintf("%s,queries", fromVK[:len(fromVK)-1])

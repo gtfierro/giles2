@@ -49,6 +49,7 @@ type View struct {
 	Expr Expression
 	// This is the collection of URIs that this view matches
 	MatchSet map[string]bool
+	sync.Mutex
 }
 
 // The next issue is: how do we define and evaluate predicates? The view instance will subscribe to all
@@ -86,9 +87,11 @@ func CreateView(client *bw.BW2Client, expr Expression) (v *View, err error) {
 // marks all matchset entries as false so we can tell which of them
 // changed
 func (v *View) _setMatchSetTo(val bool) {
+	v.Lock()
 	for uri := range v.MatchSet {
 		v.MatchSet[uri] = val
 	}
+	v.Unlock()
 }
 
 func (v *View) Subscribe() chan *bw.SimpleMessage {

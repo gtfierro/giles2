@@ -54,7 +54,15 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 	bwh.vk = bwh.bw.SetEntityFileOrExit(entityfile)
 	bwh.svc = bwh.bw.RegisterService(bwh.namespace, "s.giles")
 	bwh.iface = bwh.svc.RegisterInterface("0", "i.archiver")
-	bwh.iface.SubscribeSlot("query", bwh.listenQueries)
+	//bwh.iface.SubscribeSlot("query", bwh.listenQueries)
+	queryChan, err := bwh.bw.Subscribe(&bw.SubscribeParams{
+		URI: bwh.iface.SlotURI("query"),
+	})
+	if err != nil {
+		log.Error(errors.Wrap(err, "Could not subscribe"))
+	}
+	newWorkerPool(queryChan, bwh.listenQueries, 100).start()
+
 	bwh.iface.SubscribeSlot("subscribe", bwh.listenCQBS)
 
 	v, e := views.CreateView(bwh.bw, views.Expression{

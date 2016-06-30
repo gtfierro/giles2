@@ -92,7 +92,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 			mdStore:        a.mdStore,
 			maxConnections: *c.Archiver.MaxConnections,
 		}
-		tsStore = newBtrDB(config)
+		tsStore = newBtrIface(config)
 	default:
 		log.Fatalf(*c.Archiver.TimeseriesStore, " is not a recognized timeseries store")
 	}

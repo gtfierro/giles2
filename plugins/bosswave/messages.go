@@ -7,17 +7,16 @@ import (
 )
 
 const (
-	GilesKeyValueQueryPIDString    = "2.0.9.1"
-	GilesQueryErrorPIDString       = "2.0.9.2"
-	GilesKeyValueMetadataPIDString = "2.0.9.3"
-	GilesTimeseriesPIDString       = "2.0.9.4"
-	GilesStatisticsPIDString       = "2.0.9.5"
+	GilesArchiveRequestPIDString        = "2.0.8.0"
+	GilesKeyValueQueryPIDString         = "2.0.8.1"
+	GilesQueryMetadataResultPIDString   = "2.0.8.2"
+	GilesKeyValueMetadataPIDString      = "2.0.8.3"
+	GilesQueryTimeseriesResultPIDString = "2.0.8.4"
+	GilesTimeseriesPIDString            = "2.0.8.5"
+	GilesStatisticsPIDString            = "2.0.8.6"
+	GilesQueryErrorPIDString            = "2.0.8.9"
 
-	GilesQueryListResultPIDString       = "2.0.9.6"
-	GilesQueryMetadataResultPIDString   = "2.0.9.7"
-	GilesQueryTimeseriesResultPIDString = "2.0.9.8"
-
-	GilesArchiveRequestPIDString = "2.0.8.0"
+	GilesQueryListResultPIDString = "2.0.8.7"
 )
 
 var (

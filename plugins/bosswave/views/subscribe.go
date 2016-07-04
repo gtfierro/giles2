@@ -51,6 +51,11 @@ func (f *forwarder) addViews(vs ...*View) {
 func (f *forwarder) removeViews(vs ...*View) {
 	f.Lock()
 	for _, view := range vs {
+		// do not block while holding a lock; default to not informing of a 'leave'
+		select {
+		case view.RM <- f.uri:
+		default:
+		}
 		delete(f.forwardList, view)
 	}
 	f.Unlock()

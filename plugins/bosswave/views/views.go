@@ -45,6 +45,8 @@ type View struct {
 	client *bw.BW2Client
 	// the channel of messages received on this View
 	C chan *bw.SimpleMessage
+	// list of URIs that no longer match the view
+	RM chan string
 	// the expression that defines this view
 	Expr Expression
 	// This is the collection of URIs that this view matches
@@ -75,6 +77,7 @@ func CreateView(client *bw.BW2Client, expr Expression) (v *View, err error) {
 	v = new(View)
 	v.client = client
 	v.C = make(chan *bw.SimpleMessage, 1000)
+	v.RM = make(chan string, 10)
 	v.Expr = expr
 	v.MatchSet = make(map[string]bool)
 	vmInitializer.Do(func() { VM = NewViewManager(client) })
@@ -102,6 +105,19 @@ func (v *View) SubscribeCallback(fxn func(msg *bw.SimpleMessage)) error {
 	go func() {
 		for msg := range v.C {
 			fxn(msg)
+		}
+	}()
+	return nil
+}
+
+func (v *View) SubscribeRemovals() chan string {
+	return v.RM
+}
+
+func (v *View) SubscribeRemovalsCallback(fxn func(uri string)) error {
+	go func() {
+		for uri := range v.RM {
+			fxn(uri)
 		}
 	}()
 	return nil

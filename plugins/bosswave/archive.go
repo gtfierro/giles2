@@ -65,6 +65,44 @@ type ArchiveRequest struct {
 	metadataExpr []ob.Operation
 }
 
+// Print the parameters
+func (req *ArchiveRequest) Dump() {
+	fmt.Printf("PublishedBy: %s\n", req.FromVK)
+	fmt.Printf("Archiving: %s\n", req.URI)
+	if req.PO > 0 {
+		fmt.Printf("Extracting PO: %s\n", bw.PONumDotForm(req.PO))
+	} else {
+		fmt.Printf("Extracts all POs\n")
+	}
+	if req.uuidActual != "" {
+		fmt.Printf("Stream UUID: %s\n", req.uuidActual)
+	} else {
+		fmt.Printf("UUID Expression: %s\n", req.UUID)
+	}
+
+	fmt.Printf("Value Expr: %s\n", req.Value)
+
+	if req.Time != "" {
+		fmt.Printf("Time Expr: %s\n", req.Time)
+		fmt.Printf("Parse Time: %s\n", req.TimeParse)
+	} else {
+		fmt.Printf("Using server timestamps\n")
+	}
+
+	fmt.Println("Metadata:")
+	if len(req.MetadataURIs) > 0 {
+		for _, uri := range req.MetadataURIs {
+			fmt.Printf(" Metadata from URI %s\n", uri)
+		}
+	}
+	if req.MetadataBlock != "" {
+		fmt.Printf(" Metadata block uri: %s\n", req.MetadataBlock)
+	}
+	if req.MetadataExpr != "" {
+		fmt.Printf(" Metadata Expr: %s\n", req.MetadataExpr)
+	}
+}
+
 func (req *ArchiveRequest) GetSmapMessage(thing interface{}) *common.SmapMessage {
 	var msg = new(common.SmapMessage)
 	var rdg = new(common.SmapNumberReading)

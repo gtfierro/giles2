@@ -33,6 +33,8 @@ func (f *forwarder) send(msg *bw.SimpleMessage) {
 		select {
 		case view.C <- msg:
 		default:
+			log.Warningf("Dropping msg")
+			msg.Dump()
 		}
 	}
 	f.RUnlock()

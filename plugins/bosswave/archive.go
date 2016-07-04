@@ -32,7 +32,7 @@ type ArchiveRequest struct {
 	// Extracts objects of the given Payload Object type from all messages
 	// published on the URI. If elided, operates on all PO types.
 	PO int
-	// OPTIONAL. If provided, this is used as the stream UUID.  If not
+	// OPTIONAL. If provided, this is an objectbuilder expr to extract the stream UUID.  If not
 	// provided, then a UUIDv3 with NAMESPACE_UUID and the URI, PO type and
 	// Value are used.
 	UUID string
@@ -51,9 +51,9 @@ type ArchiveRequest struct {
 	// OPTIONAL. Golang time parse string
 	TimeParse string
 
-	// OPTIONAL. a base URI to scan for metadata. If `<uri>` is provided, we
+	// OPTIONAL. a list of base URIs to scan for metadata. If `<uri>` is provided, we
 	// scan `<uri>/!meta/+` for metadata keys/values
-	MetadataURI string
+	MetadataURIs []string
 
 	// OPTIONAL. a URI terminating in a metadata key that contains some kv
 	// structure of metadata, for example `/a/b/c/!meta/metadatahere`
@@ -194,8 +194,8 @@ func (bwh *BOSSWaveHandler) ExtractArchiveRequests(msg *bw.SimpleMessage) []*Arc
 			request.URI = strings.TrimSuffix(request.URI, "!meta/giles")
 			request.URI = strings.TrimSuffix(request.URI, "/")
 		}
-		if request.MetadataURI == "" {
-			request.MetadataURI = request.URI
+		if len(request.MetadataURIs) == 0 {
+			request.MetadataURIs = []string{request.URI}
 		}
 		//TODO: build a chain here to check if they have da permissiones
 		requests = append(requests, request)
@@ -216,7 +216,7 @@ func (bwh *BOSSWaveHandler) ParseArchiveRequest(request *ArchiveRequest) (*URIAr
 	request.value = ob.Parse(request.Value)
 
 	if request.UUID == "" {
-		request.UUID = uuid.NewV3(NAMESPACE_UUID, request.URI+request.Value).String()
+		request.UUID = uuid.NewV3(NAMESPACE_UUID, request.URI+string(request.PO)+request.Value).String()
 	} else {
 		request.uuid = ob.Parse(request.UUID)
 	}
@@ -230,30 +230,32 @@ func (bwh *BOSSWaveHandler) ParseArchiveRequest(request *ArchiveRequest) (*URIAr
 	}
 
 	var metadataChan = make(chan *bw.SimpleMessage)
-	if request.MetadataURI != "" {
-		sub1, err := bwh.bw.Subscribe(&bw.SubscribeParams{
-			URI: strings.TrimSuffix(request.MetadataURI, "/") + "/!meta/+",
-		})
-		if err != nil {
-			return nil, err
-		}
-		go func() {
-			for msg := range sub1 {
-				metadataChan <- msg
+	if len(request.MetadataURIs) > 0 {
+		for _, metadataURI := range request.MetadataURIs {
+			sub1, err := bwh.bw.Subscribe(&bw.SubscribeParams{
+				URI: strings.TrimSuffix(metadataURI, "/") + "/!meta/+",
+			})
+			if err != nil {
+				return nil, err
 			}
-		}()
+			go func() {
+				for msg := range sub1 {
+					metadataChan <- msg
+				}
+			}()
 
-		q1, err := bwh.bw.Query(&bw.QueryParams{
-			URI: strings.TrimSuffix(request.MetadataURI, "/") + "/!meta/+",
-		})
-		if err != nil {
-			return nil, err
-		}
-		go func() {
-			for msg := range q1 {
-				metadataChan <- msg
+			q1, err := bwh.bw.Query(&bw.QueryParams{
+				URI: strings.TrimSuffix(metadataURI, "/") + "/!meta/+",
+			})
+			if err != nil {
+				return nil, err
 			}
-		}()
+			go func() {
+				for msg := range q1 {
+					metadataChan <- msg
+				}
+			}()
+		}
 	}
 	//TODO: subscribe then query MetadataBlock
 
@@ -264,7 +266,8 @@ func (bwh *BOSSWaveHandler) ParseArchiveRequest(request *ArchiveRequest) (*URIAr
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not subscribe")
 	}
-	log.Debugf("Got archive request %+v", request)
+	log.Debugf("Got archive request")
+	request.Dump()
 
 	archiver := &URIArchiver{sub, metadataChan, request}
 	go archiver.Listen(bwh.a)

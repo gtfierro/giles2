@@ -5,6 +5,7 @@ import (
 	giles "github.com/gtfierro/giles2/archiver"
 	"github.com/gtfierro/giles2/common"
 	ob "github.com/gtfierro/giles2/objectbuilder"
+	"github.com/gtfierro/giles2/plugins/bosswave/util"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	bw "gopkg.in/immesys/bw2bind.v5"
@@ -149,11 +150,11 @@ func (req *ArchiveRequest) GetSmapMessage(thing interface{}) *common.SmapMessage
 
 func (req *ArchiveRequest) GetMetadata(msg *bw.SimpleMessage) *common.SmapMessage {
 	var ret = new(common.SmapMessage)
-	req.RLock()
+	req.Lock()
 	if req.UUID != "" && req.uuidActual == "" {
 		req.uuidActual = common.UUID(req.UUID)
 	}
-	req.RUnlock()
+	req.Unlock()
 	ret.UUID = req.uuidActual
 	ret.Path = req.URI + "/" + req.Value
 	ret.Metadata = make(common.Dict)
@@ -323,12 +324,7 @@ type URIArchiver struct {
 }
 
 func (uri *URIArchiver) Listen(a *giles.Archiver) {
-	newWorkerPool(uri.metadataChan, func(msg *bw.SimpleMessage) { a.AddData(uri.GetMetadata(msg)) }, 1000).start()
-	//go func() {
-	//	for msg := range uri.metadataChan {
-	//		a.AddData(uri.GetMetadata(msg))
-	//	}
-	//}()
+	util.NewWorkerPool(uri.metadataChan, func(msg *bw.SimpleMessage) { a.AddData(uri.GetMetadata(msg)) }, 1000).Start()
 	for msg := range uri.subscription {
 		for _, po := range msg.POs {
 			if !po.IsType(uri.PO, uri.PO) {

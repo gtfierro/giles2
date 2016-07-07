@@ -3,6 +3,7 @@ package views
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/gtfierro/giles2/plugins/bosswave/util"
 	"github.com/pkg/errors"
 	bw "gopkg.in/immesys/bw2bind.v5"
 	"reflect"
@@ -191,18 +192,17 @@ func (vm *ViewManager) subscribeNamespaces(expr Expression) {
 		if err != nil {
 			log.Fatal(errors.Wrapf(err, "Could not subscribe to namespace %s", uri))
 		}
+		log.Debugf("Subscribed to namespace %s", uri)
 		// handle the subscriptions
-		go func(sub chan *bw.SimpleMessage) {
-			// process subscription
-			for msg := range sub {
-				for _, rec := range GetRecords(msg) {
-					if err := vm.db.Insert(rec); err != nil {
-						log.Error(errors.Wrap(err, "Could not insert record"))
-					}
+		sub := vm.namespaceSubscriptions[namespace]
+		util.NewWorkerPool(sub, func(msg *bw.SimpleMessage) {
+			for _, rec := range GetRecords(msg) {
+				if err := vm.db.Insert(rec); err != nil {
+					log.Error(errors.Wrap(err, "Could not insert record"))
 				}
-				vm.checkViews()
 			}
-		}(vm.namespaceSubscriptions[namespace])
+			vm.checkViews()
+		}, 1000).Start()
 		// Subscriptions only give us metadata messages that appear AFTER the subscription begins,
 		// so we execute a query to get all metadata messages that were there already
 		persistedMetadata, err = vm.client.Query(&bw.QueryParams{
@@ -211,16 +211,14 @@ func (vm *ViewManager) subscribeNamespaces(expr Expression) {
 		if err != nil {
 			log.Fatal(errors.Wrapf(err, "Could not query namespace %s", uri))
 		}
-		go func() {
-			for msg := range persistedMetadata {
-				for _, rec := range GetRecords(msg) {
-					if err := vm.db.Insert(rec); err != nil {
-						log.Error(errors.Wrap(err, "Could not insert record"))
-					}
+		util.NewWorkerPool(persistedMetadata, func(msg *bw.SimpleMessage) {
+			for _, rec := range GetRecords(msg) {
+				if err := vm.db.Insert(rec); err != nil {
+					log.Error(errors.Wrap(err, "Could not insert record"))
 				}
-				vm.checkViews()
 			}
-		}()
+			vm.checkViews()
+		}, 1000).Start()
 	}
 }
 
@@ -277,13 +275,14 @@ func (vm *ViewManager) checkViews() {
 			v._setMatchSetTo(false)
 		}
 		// for all matching URIs, check if that URI previously matched
-		view.Lock()
 		for _, rec := range matching {
-			if _, found := view.MatchSet[rec.URI]; !found {
+			view.Lock()
+			_, found := view.MatchSet[rec.URI]
+			view.Unlock()
+			if !found {
 				// if it did not match, then forward
 				if err := vm.startForwarding(rec.URI, viewList...); err != nil {
 					log.Error(err)
-					view.Unlock()
 					continue
 				}
 				vm.fwdL.Lock()
@@ -299,7 +298,6 @@ func (vm *ViewManager) checkViews() {
 				vm.stopForwarding(uri, viewList...)
 			}
 		}
-		view.Unlock()
 	}
 }
 

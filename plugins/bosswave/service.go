@@ -4,6 +4,7 @@ import (
 	"fmt"
 	giles "github.com/gtfierro/giles2/archiver"
 	"github.com/gtfierro/giles2/common"
+	"github.com/gtfierro/giles2/plugins/bosswave/util"
 	"github.com/gtfierro/giles2/plugins/bosswave/views"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
@@ -61,7 +62,7 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 	if err != nil {
 		log.Error(errors.Wrap(err, "Could not subscribe"))
 	}
-	newWorkerPool(queryChan, bwh.listenQueries, 1000).start()
+	util.NewWorkerPool(queryChan, bwh.listenQueries, 1000).Start()
 
 	bwh.iface.SubscribeSlot("subscribe", bwh.listenCQBS)
 

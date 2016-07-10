@@ -16,10 +16,9 @@ import (
 var ignoreDefault = bson.M{"_id": 0, "_api": 0}
 
 type mongoStore struct {
-	session     *mgo.Session
-	db          *mgo.Database
-	metadata    *mgo.Collection
-	enforceKeys bool
+	session  *mgo.Session
+	db       *mgo.Database
+	metadata *mgo.Collection
 
 	pool *mongoConnectionPool
 
@@ -37,8 +36,7 @@ type mongoStore struct {
 }
 
 type mongoConfig struct {
-	address     *net.TCPAddr
-	enforceKeys bool
+	address *net.TCPAddr
 }
 
 func newMongoStore(c *mongoConfig) *mongoStore {
@@ -57,8 +55,6 @@ func newMongoStore(c *mongoConfig) *mongoStore {
 
 	// add indexes. This will fail Fatal
 	m.addIndexes()
-
-	m.enforceKeys = c.enforceKeys
 
 	m.pool = newMongoConnectionPool(m.session, m.metadata, 20)
 

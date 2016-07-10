@@ -36,8 +36,6 @@ type Archiver struct {
 	broker *Broker
 	// metrics
 	metrics metricMap
-	// enforce ephemral key checks
-	enforceKeys bool
 }
 
 // Returns a new archiver object from a configuration. Will Fatal out of the
@@ -51,8 +49,6 @@ func NewArchiver(c *Config) (a *Archiver) {
 
 	a = &Archiver{}
 
-	a.enforceKeys = c.Archiver.EnforceKeys
-
 	switch *c.Archiver.MetadataStore {
 	case "mongo":
 		mongoaddr, err := net.ResolveTCPAddr("tcp4", *c.Mongo.Address+":"+*c.Mongo.Port)
@@ -60,8 +56,7 @@ func NewArchiver(c *Config) (a *Archiver) {
 			log.Fatalf("Error parsing Mongo address: %v", err)
 		}
 		config := &mongoConfig{
-			address:     mongoaddr,
-			enforceKeys: c.Archiver.EnforceKeys,
+			address: mongoaddr,
 		}
 		mdStore = newMongoStore(config)
 	default:
@@ -77,9 +72,8 @@ func NewArchiver(c *Config) (a *Archiver) {
 			log.Fatalf("Error parsing Quasar address: %v", err)
 		}
 		config := &quasarConfig{
-			addr:           qsraddr,
-			mdStore:        a.mdStore,
-			maxConnections: *c.Archiver.MaxConnections,
+			addr:    qsraddr,
+			mdStore: a.mdStore,
 		}
 		tsStore = newQuasarDB(config)
 	case "btrdb":
@@ -88,9 +82,8 @@ func NewArchiver(c *Config) (a *Archiver) {
 			log.Fatalf("Error parsing BtrDB address: %v", err)
 		}
 		config := &btrdbConfig{
-			addr:           btrdbaddr,
-			mdStore:        a.mdStore,
-			maxConnections: *c.Archiver.MaxConnections,
+			addr:    btrdbaddr,
+			mdStore: a.mdStore,
 		}
 		tsStore = newBtrIface(config)
 	default:

@@ -10,10 +10,7 @@ type Config struct {
 		TimeseriesStore *string
 		MetadataStore   *string
 		Objects         *string
-		Keepalive       *int
-		EnforceKeys     bool
 		LogLevel        *string
-		MaxConnections  *int
 		PeriodicReport  bool
 	}
 
@@ -36,11 +33,6 @@ type Config struct {
 		Port           *string
 		Address        *string
 		UpdateInterval *int
-	}
-
-	Venkman struct {
-		Port    *string
-		Address *string
 	}
 
 	HTTP struct {
@@ -69,17 +61,6 @@ type Config struct {
 		AddPort       *int
 		QueryPort     *int
 		SubscribePort *int
-	}
-
-	SSH struct {
-		Enabled            bool
-		Port               *string
-		PrivateKey         *string
-		AuthorizedKeysFile *string
-		User               *string
-		Pass               *string
-		PasswordEnabled    bool
-		KeyAuthEnabled     bool
 	}
 
 	Profile struct {
@@ -117,7 +98,6 @@ func PrintConfig(c *Config) {
 	case "quasar":
 		fmt.Println("	at address", *c.Quasar.Address, ":", *c.Quasar.Port)
 	}
-	fmt.Println("	with keepalive", *c.Archiver.Keepalive)
 
 	if c.Profile.Enabled {
 		fmt.Println("Profiling enabled for", *c.Profile.BenchmarkTimer, "seconds!")

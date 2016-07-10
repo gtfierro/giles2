@@ -13,9 +13,8 @@ import (
 )
 
 type btrdbConfig struct {
-	addr           *net.TCPAddr
-	mdStore        MetadataStore
-	maxConnections int
+	addr    *net.TCPAddr
+	mdStore MetadataStore
 }
 
 var BtrDBReadErr = errors.New("Error receiving data from BtrDB")

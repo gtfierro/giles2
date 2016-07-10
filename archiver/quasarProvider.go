@@ -37,7 +37,7 @@ func newQuasarDB(c *quasarConfig) *quasarDB {
 	q := &quasarDB{
 		addr:           c.addr,
 		mdStore:        c.mdStore,
-		maxConnections: c.maxConnections,
+		maxConnections: 200,
 	}
 	log.Noticef("Connecting to Quasar at %v...", q.addr.String())
 	q.packetpool = sync.Pool{

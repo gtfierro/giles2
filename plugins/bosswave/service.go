@@ -43,11 +43,11 @@ type BOSSWaveHandler struct {
 	requestsLock sync.RWMutex
 }
 
-func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandler {
+func NewHandler(a *giles.Archiver, entityfile, deployNS string, listenNS []string) *BOSSWaveHandler {
 	bwh := &BOSSWaveHandler{
 		a:         a,
 		bw:        bw.ConnectOrExit(""),
-		namespace: namespace,
+		namespace: deployNS,
 		stop:      make(chan bool),
 		requests:  make(map[string]*ArchiveRequest),
 	}
@@ -67,7 +67,7 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 	bwh.iface.SubscribeSlot("subscribe", bwh.listenCQBS)
 
 	v, e := views.CreateView(bwh.bw, views.Expression{
-		NamespaceList: []string{"gabe.pantry"},
+		NamespaceList: listenNS,
 		N:             &views.EqualsNode{Key: views.String("giles")},
 	})
 	if e != nil {
@@ -83,8 +83,8 @@ func NewHandler(a *giles.Archiver, entityfile, namespace string) *BOSSWaveHandle
 	return bwh
 }
 
-func Handle(a *giles.Archiver, entityfile, namespace string) {
-	bwh := NewHandler(a, entityfile, namespace)
+func Handle(a *giles.Archiver, entityfile, namespace string, listenNS []string) {
+	bwh := NewHandler(a, entityfile, namespace, listenNS)
 	<-bwh.stop
 }
 

@@ -44,6 +44,7 @@ type Config struct {
 		Enabled    bool
 		Entityfile string
 		Namespace  string
+		ListenNS   []string
 	}
 
 	WebSocket struct {

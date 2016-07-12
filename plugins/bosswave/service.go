@@ -43,31 +43,32 @@ type BOSSWaveHandler struct {
 	requestsLock sync.RWMutex
 }
 
-func NewHandler(a *giles.Archiver, entityfile, deployNS string, listenNS []string) *BOSSWaveHandler {
+func NewHandler(a *giles.Archiver, config *giles.BOSSWAVE) *BOSSWaveHandler {
 	bwh := &BOSSWaveHandler{
 		a:         a,
-		bw:        bw.ConnectOrExit(""),
-		namespace: deployNS,
+		bw:        bw.ConnectOrExit(config.Address),
+		namespace: config.Namespace,
 		stop:      make(chan bool),
 		requests:  make(map[string]*ArchiveRequest),
 	}
 	bwh.bw.OverrideAutoChainTo(true)
-	bwh.vk = bwh.bw.SetEntityFileOrExit(entityfile)
+	bwh.vk = bwh.bw.SetEntityFileOrExit(config.Entityfile)
 	bwh.svc = bwh.bw.RegisterService(bwh.namespace, "s.giles")
 	bwh.iface = bwh.svc.RegisterInterface("0", "i.archiver")
-	//bwh.iface.SubscribeSlot("query", bwh.listenQueries)
 	queryChan, err := bwh.bw.Subscribe(&bw.SubscribeParams{
 		URI: bwh.iface.SlotURI("query"),
 	})
 	if err != nil {
 		log.Error(errors.Wrap(err, "Could not subscribe"))
 	}
+	log.Noticef("Listening on %s", bwh.iface.SlotURI("query"))
+	log.Noticef("Listening on %s", bwh.iface.SlotURI("subscribe"))
 	util.NewWorkerPool(queryChan, bwh.listenQueries, 1000).Start()
 
 	bwh.iface.SubscribeSlot("subscribe", bwh.listenCQBS)
 
 	v, e := views.CreateView(bwh.bw, views.Expression{
-		NamespaceList: listenNS,
+		NamespaceList: config.ListenNS,
 		N:             &views.EqualsNode{Key: views.String("giles")},
 	})
 	if e != nil {
@@ -83,8 +84,8 @@ func NewHandler(a *giles.Archiver, entityfile, deployNS string, listenNS []strin
 	return bwh
 }
 
-func Handle(a *giles.Archiver, entityfile, namespace string, listenNS []string) {
-	bwh := NewHandler(a, entityfile, namespace, listenNS)
+func Handle(a *giles.Archiver, config *giles.BOSSWAVE) {
+	bwh := NewHandler(a, config)
 	<-bwh.stop
 }
 

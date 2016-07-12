@@ -5,6 +5,14 @@ import (
 	"gopkg.in/gcfg.v1"
 )
 
+type BOSSWAVE struct {
+	Enabled    bool
+	Address    string
+	Entityfile string
+	Namespace  string
+	ListenNS   []string
+}
+
 type Config struct {
 	Archiver struct {
 		TimeseriesStore *string
@@ -40,12 +48,7 @@ type Config struct {
 		Port    *int
 	}
 
-	BOSSWAVE struct {
-		Enabled    bool
-		Entityfile string
-		Namespace  string
-		ListenNS   []string
-	}
+	BOSSWAVE BOSSWAVE
 
 	WebSocket struct {
 		Enabled bool

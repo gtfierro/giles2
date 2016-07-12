@@ -86,7 +86,7 @@ func main() {
 	}
 
 	if config.BOSSWAVE.Enabled {
-		go bosswave.Handle(a, config.BOSSWAVE.Entityfile, config.BOSSWAVE.Namespace)
+		go bosswave.Handle(a, &config.BOSSWAVE)
 	}
 
 	if config.WebSocket.Enabled {

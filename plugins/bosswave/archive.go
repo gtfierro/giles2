@@ -298,7 +298,7 @@ func (bwh *BOSSWaveHandler) ParseArchiveRequest(request *ArchiveRequest) (*URIAr
 	}
 	//TODO: subscribe then query MetadataBlock
 
-	log.Debugf("Subscribing to %s", request.URI)
+	log.Debugf("Subscribing for Archival on %s", request.URI)
 	sub, err := bwh.bw.Subscribe(&bw.SubscribeParams{
 		URI: request.URI,
 	})

@@ -93,7 +93,9 @@ func (bwh *BOSSWaveHandler) handleArchiveRequest(msg *bw.SimpleMessage) {
 	requests := bwh.ExtractArchiveRequests(msg)
 	for _, req := range requests {
 		if bwh.addRequest(req) {
-			bwh.ParseArchiveRequest(req)
+			if _, err := bwh.ParseArchiveRequest(req); err != nil {
+				log.Error(errors.Wrap(err, "Could not handle archive request"))
+			}
 		}
 	}
 }

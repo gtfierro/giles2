@@ -249,7 +249,9 @@ func (vm *ViewManager) startForwarding(uri string, views ...*View) error {
 
 	vm.forwarders[uri].addViews(views...)
 	for _, v := range views {
+		v.Lock()
 		v.MatchSet[uri] = true
+		v.Unlock()
 	}
 	return nil
 }
@@ -290,14 +292,18 @@ func (vm *ViewManager) checkViews() {
 				vm.fwdL.Unlock()
 			}
 			for _, v := range viewList {
+				v.Lock()
 				v.MatchSet[rec.URI] = true
+				v.Unlock()
 			}
 		}
+		view.Lock()
 		for uri, doesItStay := range view.MatchSet {
 			if !doesItStay {
 				vm.stopForwarding(uri, viewList...)
 			}
 		}
+		view.Unlock()
 	}
 }
 

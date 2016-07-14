@@ -25,9 +25,15 @@ func POsFromSmapMessageList(nonce uint32, list common.SmapMessageList) []bw.Payl
 		Stats: []Statistics{},
 	}
 	for _, msg := range list {
-		mdRes.Data = append(mdRes.Data, ExtractMetadataToBW(msg))
-		tsRes.Data = append(tsRes.Data, ExtractTimeseriesToBW(msg))
-		tsRes.Stats = append(tsRes.Stats, ExtractStatisticsToBW(msg))
+		if len(msg.Metadata) > 0 || msg.Properties != nil {
+			mdRes.Data = append(mdRes.Data, ExtractMetadataToBW(msg))
+		}
+		if len(msg.Readings) > 0 && !msg.Readings[0].IsStats() {
+			tsRes.Data = append(tsRes.Data, ExtractTimeseriesToBW(msg))
+		}
+		if len(msg.Readings) > 0 && msg.Readings[0].IsStats() {
+			tsRes.Stats = append(tsRes.Stats, ExtractStatisticsToBW(msg))
+		}
 	}
 	replies[0] = mdRes.ToMsgPackBW()
 	replies[1] = tsRes.ToMsgPackBW()
@@ -39,6 +45,7 @@ func ExtractMetadataToBW(msg *common.SmapMessage) KeyValueMetadata {
 	md := KeyValueMetadata{
 		UUID:     string(msg.UUID),
 		Metadata: make(map[string]interface{}),
+		Path:     msg.Path,
 	}
 	md.Metadata["Metadata"] = map[string]interface{}(msg.Metadata)
 	md.Metadata["Properties"] = msg.Properties

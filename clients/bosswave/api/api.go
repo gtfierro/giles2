@@ -38,7 +38,7 @@ func (api *API) Query(query string) error {
 		Query: query,
 		Nonce: nonce,
 	}
-	wg.Add(2)
+	wg.Add(1)
 	fmt.Printf("Subscribe to %v\n", api.uri+fmt.Sprintf("/signal/%s,queries", api.vk[:len(api.vk)-1]))
 	c, err := api.client.Subscribe(&bw.SubscribeParams{
 		URI: api.uri + fmt.Sprintf("/signal/%s,queries", api.vk[:len(api.vk)-1]),
@@ -48,23 +48,43 @@ func (api *API) Query(query string) error {
 	}
 	go func() {
 		for msg := range c {
-			if found, err := GetError(nonce, msg); found {
+			var isMyResponse bool = false
+
+			// check for error
+			found, err := GetError(nonce, msg)
+			isMyResponse = isMyResponse || found
+			if found {
 				fmt.Println(err)
-				wg.Done()
-				wg.Done()
 			}
-			if found, res, err := GetMetadata(nonce, msg); err == nil && found {
-				fmt.Printf("Metadata %+v\n", res)
-				wg.Done()
+
+			// check for metadata
+			found, metadata, err := GetMetadata(nonce, msg)
+			isMyResponse = isMyResponse || found
+			if err == nil && found {
+				fmt.Println(metadata.Dump())
 			} else if found && err != nil {
 				fmt.Println(err)
-				wg.Done()
 			}
-			if found, res, err := GetTimeseries(nonce, msg); err == nil && found {
-				fmt.Printf("Timeseries %+v\n", res)
-				wg.Done()
+
+			// check for timeseries
+			found, timeseries, err := GetTimeseries(nonce, msg)
+			isMyResponse = isMyResponse || found
+			if err == nil && found {
+				fmt.Println(timeseries.Dump())
 			} else if found && err != nil {
 				fmt.Println(err)
+			}
+
+			// check for lists
+			found, listdata, err := GetDistinctList(nonce, msg)
+			isMyResponse = isMyResponse || found
+			if err == nil && found {
+				fmt.Println(listdata.Dump())
+			} else if found && err != nil {
+				fmt.Println(err)
+			}
+
+			if isMyResponse {
 				wg.Done()
 			}
 		}
@@ -130,4 +150,21 @@ func GetTimeseries(nonce uint32, msg *bw.SimpleMessage) (bool, messages.QueryTim
 		return true, timeseriesResults, nil
 	}
 	return false, timeseriesResults, nil
+}
+
+func GetDistinctList(nonce uint32, msg *bw.SimpleMessage) (bool, messages.QueryListResult, error) {
+	var (
+		po         bw.PayloadObject
+		listResult messages.QueryListResult
+	)
+	if po = msg.GetOnePODF(messages.GilesQueryListResultPIDString); po != nil {
+		if err := po.(bw.MsgPackPayloadObject).ValueInto(&listResult); err != nil {
+			return false, listResult, err
+		}
+		if listResult.Nonce != nonce {
+			return false, listResult, nil
+		}
+		return true, listResult, nil
+	}
+	return false, listResult, nil
 }

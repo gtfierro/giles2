@@ -230,7 +230,7 @@ func NewSQLex(s string) *sqLex {
 			{Token: QSTRING, Pattern: "(\"[^\"\\\\]*?(\\.[^\"\\\\]*?)*?\")|('[^'\\\\]*?(\\.[^'\\\\]*?)*?')"},
 		})
 	scanner.SetInput(s)
-	q := &query{Contents: []string{}, distinct: false, data: &DataQuery{}}
+	q := &query{Contents: []string{}, distinct: false}
 	return &sqLex{query: q, querystring: s, scanner: scanner, error: nil, lasttoken: "", _keys: map[string]struct{}{}, tokens: []string{}}
 }
 

@@ -1,6 +1,8 @@
 package bosswave
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/gtfierro/giles2/common"
 	bw "gopkg.in/immesys/bw2bind.v5"
 	"math"
@@ -14,9 +16,8 @@ const (
 	GilesQueryTimeseriesResultPIDString = "2.0.8.4"
 	GilesTimeseriesPIDString            = "2.0.8.5"
 	GilesStatisticsPIDString            = "2.0.8.6"
+	GilesQueryListResultPIDString       = "2.0.8.7"
 	GilesQueryErrorPIDString            = "2.0.8.9"
-
-	GilesQueryListResultPIDString = "2.0.8.7"
 )
 
 var (
@@ -64,6 +65,14 @@ func (msg QueryListResult) ToMsgPackBW() (po bw.PayloadObject) {
 	return
 }
 
+func (msg QueryListResult) Dump() string {
+	if bytes, err := json.MarshalIndent(msg.Data, "", "  "); err != nil {
+		return fmt.Sprintf("%+v", msg)
+	} else {
+		return string(bytes)
+	}
+}
+
 type QueryMetadataResult struct {
 	Nonce uint32
 	Data  []KeyValueMetadata
@@ -72,6 +81,14 @@ type QueryMetadataResult struct {
 func (msg QueryMetadataResult) ToMsgPackBW() (po bw.PayloadObject) {
 	po, _ = bw.CreateMsgPackPayloadObject(GilesQueryMetadataResultPID, msg)
 	return
+}
+
+func (msg QueryMetadataResult) Dump() string {
+	var res string
+	for _, kv := range msg.Data {
+		res += kv.Dump()
+	}
+	return res
 }
 
 type QueryTimeseriesResult struct {
@@ -85,8 +102,17 @@ func (msg QueryTimeseriesResult) ToMsgPackBW() (po bw.PayloadObject) {
 	return
 }
 
+func (msg QueryTimeseriesResult) Dump() string {
+	var res string
+	for _, ts := range msg.Data {
+		res += ts.Dump()
+	}
+	return res
+}
+
 type KeyValueMetadata struct {
 	UUID     string
+	Path     string
 	Metadata map[string]interface{}
 }
 
@@ -95,8 +121,29 @@ func (msg KeyValueMetadata) ToMsgPackBW() (po bw.PayloadObject) {
 	return
 }
 
+func (msg KeyValueMetadata) Dump() string {
+	var md = make(map[string]interface{})
+	for k, v := range msg.Metadata {
+		if vmap, ok := v.(map[interface{}]interface{}); ok {
+			for kk, vv := range vmap {
+				md[k+"/"+kk.(string)] = vv
+			}
+		} else {
+			md[k] = v
+		}
+	}
+	msg.Metadata = md
+	if bytes, err := json.MarshalIndent(msg, "", "  "); err != nil {
+		log.Error(err)
+		return fmt.Sprintf("%+v", msg)
+	} else {
+		return string(bytes)
+	}
+}
+
 type Timeseries struct {
 	UUID   string
+	Path   string
 	Times  []uint64
 	Values []float64
 }
@@ -113,6 +160,18 @@ func (msg Timeseries) ToReadings() []common.Reading {
 		res[idx] = &common.SmapNumberReading{Time: msg.Times[idx], Value: msg.Values[idx], UoT: common.GuessTimeUnit(msg.Times[idx])}
 	}
 	return res
+}
+
+func (msg Timeseries) Dump() string {
+	var res [][]interface{}
+	for i, time := range msg.Times {
+		res = append(res, []interface{}{time, msg.Values[i]})
+	}
+	if bytes, err := json.MarshalIndent(map[string]interface{}{"UUID": msg.UUID, "Timeseries": res}, "", "  "); err != nil {
+		return fmt.Sprintf("%+v", res)
+	} else {
+		return string(bytes)
+	}
 }
 
 type Statistics struct {

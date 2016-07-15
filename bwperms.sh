@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ux
+set -u
 
 if [ -z ${1+x} ]; then
     echo "Usage: ./bwperms.sh from to deployNS listenNS"

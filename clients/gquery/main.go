@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/codegangsta/cli"
-	"github.com/gtfierro/giles2/clients/bosswave/api"
+	"github.com/gtfierro/giles2/clients/gquery/api"
 	bw "gopkg.in/immesys/bw2bind.v5"
 	"gopkg.in/readline.v1"
 	"os"

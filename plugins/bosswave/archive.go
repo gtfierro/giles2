@@ -52,6 +52,9 @@ type ArchiveRequest struct {
 	// OPTIONAL. Golang time parse string
 	TimeParse string
 
+	// OPTIONAL. Defaults to true. If true, the archiver will call bw2bind's "GetMetadata" on the archived URI,
+	// which inherits metadata from each of its components
+	InheritMetadata bool
 	// OPTIONAL. a list of base URIs to scan for metadata. If `<uri>` is provided, we
 	// scan `<uri>/!meta/+` for metadata keys/values
 	MetadataURIs []string
@@ -91,6 +94,9 @@ func (req *ArchiveRequest) Dump() {
 	}
 
 	fmt.Println("Metadata:")
+	if req.InheritMetadata {
+		fmt.Println("Inheriting metadata from URI prefixes")
+	}
 	if len(req.MetadataURIs) > 0 {
 		for _, uri := range req.MetadataURIs {
 			fmt.Printf(" Metadata from URI %s\n", uri)
@@ -266,6 +272,34 @@ func (bwh *BOSSWaveHandler) ParseArchiveRequest(request *ArchiveRequest) (*URIAr
 
 	if request.MetadataExpr != "" {
 		request.metadataExpr = ob.Parse(request.MetadataExpr)
+	}
+	if request.InheritMetadata {
+		md, _, err := bwh.bw.GetMetadata(request.URI)
+		if err != nil {
+			return nil, err
+		}
+		var ret = new(common.SmapMessage)
+		request.Lock()
+		if request.UUID != "" && request.uuidActual == "" {
+			request.uuidActual = common.UUID(request.UUID)
+		}
+		request.Unlock()
+		ret.UUID = request.uuidActual
+		ret.Path = request.URI + "/" + request.Value
+		ret.Metadata = make(common.Dict)
+		ret.Properties = new(common.SmapProperties)
+		for k, v := range md {
+			val := fmt.Sprintf("%s", v.Value)
+			if k == "UnitofTime" {
+				ret.Properties.UnitOfTime, _ = common.ParseUOT(val)
+			} else if k == "UnitofMeasure" {
+				ret.Properties.UnitOfMeasure = val
+			}
+			ret.Metadata[k] = val
+		}
+		if err = bwh.a.AddData(ret); err != nil {
+			log.Error(errors.Wrap(err, "Could not add data"))
+		}
 	}
 
 	var metadataChan = make(chan *bw.SimpleMessage)

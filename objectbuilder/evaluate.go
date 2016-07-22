@@ -69,6 +69,10 @@ type ObjectOperator struct {
 func (o ObjectOperator) Eval(i interface{}) interface{} {
 	val := reflect.ValueOf(i)
 	kind := val.Type().Kind()
+	if kind == reflect.Ptr {
+		val = val.Elem()
+		kind = val.Type().Kind()
+	}
 	ismap := (kind == reflect.Map)
 	isstruct := (kind == reflect.Struct)
 

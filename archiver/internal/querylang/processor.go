@@ -3,51 +3,43 @@ package querylang
 
 import (
 	"github.com/gtfierro/giles2/common"
-	"github.com/karlseguin/ccache"
 	"strings"
-	"time"
 )
 
 type QueryProcessor struct {
-	parsedQueries *ccache.Cache
 }
 
 // TODO: add caching?
 func NewQueryProcessor() *QueryProcessor {
-	return &QueryProcessor{
-		parsedQueries: ccache.New(ccache.Configure().MaxSize(1000).ItemsToPrune(10)),
-	}
+	return &QueryProcessor{}
 }
 
 func (qp *QueryProcessor) Parse(querystring string) *ParsedQuery {
-	pq, _ := qp.parsedQueries.Fetch(querystring, 10*time.Minute, func() (interface{}, error) {
-		if !strings.HasSuffix(querystring, ";") {
-			querystring = querystring + ";"
-		}
-		l := NewSQLex(querystring)
-		sqParse(l)
-		pq := ParsedQuery{
-			QueryType: l.query.qtype,
-			Keys:      make([]string, len(l._keys)),
-			Target:    l.query.Contents,
-			Where:     l.query.where,
-			Set:       l.query.set,
-			Distinct:  l.query.distinct,
-			Data:      l.query.data,
-			Err:       l.error,
-			ErrPos:    l.lasttoken,
-			//TODO: have a more robust hash function
-			Hash:        QueryHash(querystring),
-			Querystring: querystring,
-		}
-		i := 0
-		for key, _ := range l._keys {
-			pq.Keys[i] = cleantagstring(key)
-			i += 1
-		}
-		return &pq, nil
-	})
-	return pq.Value().(*ParsedQuery)
+	if !strings.HasSuffix(querystring, ";") {
+		querystring = querystring + ";"
+	}
+	l := NewSQLex(querystring)
+	sqParse(l)
+	pq := ParsedQuery{
+		QueryType: l.query.qtype,
+		Keys:      make([]string, len(l._keys)),
+		Target:    l.query.Contents,
+		Where:     l.query.where,
+		Set:       l.query.set,
+		Distinct:  l.query.distinct,
+		Data:      l.query.data,
+		Err:       l.error,
+		ErrPos:    l.lasttoken,
+		//TODO: have a more robust hash function
+		Hash:        QueryHash(querystring),
+		Querystring: querystring,
+	}
+	i := 0
+	for key, _ := range l._keys {
+		pq.Keys[i] = cleantagstring(key)
+		i += 1
+	}
+	return &pq
 }
 
 type ParsedQuery struct {

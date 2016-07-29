@@ -35,6 +35,9 @@ type ArrayOperator struct {
 
 func (o ArrayOperator) Eval(i interface{}) interface{} {
 	val := reflect.ValueOf(i)
+	if !val.IsValid() {
+		return nil
+	}
 	kind := val.Type().Kind()
 	isarray := (kind == reflect.Slice || kind == reflect.Array)
 
@@ -59,7 +62,12 @@ func (o ArrayOperator) Eval(i interface{}) interface{} {
 		return val.Index(length + o.index).Interface()
 	}
 
-	return val.Index(o.index).Interface()
+	ret := val.Index(o.index)
+	if !ret.IsValid() {
+		return nil
+	}
+
+	return ret.Interface()
 }
 
 type ObjectOperator struct {
@@ -68,9 +76,15 @@ type ObjectOperator struct {
 
 func (o ObjectOperator) Eval(i interface{}) interface{} {
 	val := reflect.ValueOf(i)
+	if !val.IsValid() {
+		return nil
+	}
 	kind := val.Type().Kind()
 	if kind == reflect.Ptr {
 		val = val.Elem()
+		if !val.IsValid() {
+			return nil
+		}
 		kind = val.Type().Kind()
 	}
 	ismap := (kind == reflect.Map)

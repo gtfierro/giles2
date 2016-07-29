@@ -1,3 +1,4 @@
+//go:generate go tool yacc -o expr.go -p ex expr.y
 package objectbuilder
 
 import (
@@ -5,9 +6,14 @@ import (
 	"reflect"
 )
 
+var l *lexer
+
+func init() {
+	l = NewExprLexer()
+}
+
 func Parse(s string) []Operation {
-	l := NewExprLexer(s)
-	exParse(l)
+	l.Parse(s)
 	if l.error != nil {
 		fmt.Println(l.error)
 	}

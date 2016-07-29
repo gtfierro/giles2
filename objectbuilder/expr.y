@@ -119,8 +119,9 @@ func (l *lexer) addOperation(o Operation) {
     l.operations = append(l.operations, o)
 }
 
-func NewExprLexer(s string) *lexer {
-    scanner := toki.NewScanner(
+func NewExprLexer() *lexer {
+    l := &lexer{}
+    l.scanner = toki.NewScanner(
         []toki.Def{
             {Token: DOT, Pattern: "\\."},
             {Token: COLON, Pattern: ":"},
@@ -129,13 +130,16 @@ func NewExprLexer(s string) *lexer {
 			{Token: NUMBER, Pattern: "([+-]?([0-9]*\\.)?[0-9]+)"},
 			{Token: KEY, Pattern: "[a-zA-Z\\~\\$\\_][a-zA-Z0-9\\/\\%_\\-]*"},
         })
-    scanner.SetInput(s)
-    return &lexer{
-        expression: s,
-        scanner: scanner,
-        operations: []Operation{},
-        tokens: []string{},
-    }
+    return l
+}
+
+func (l *lexer) Parse(s string) {
+    l.expression = s
+    l.operations = []Operation{}
+    l.tokens = []string{}
+    l.error = nil
+    l.scanner.SetInput(s)
+    exParse(l)
 }
 
 func (l *lexer) Lex(lval *exSymType) int {

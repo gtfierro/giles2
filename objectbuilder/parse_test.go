@@ -75,8 +75,8 @@ func TestParseTokens(t *testing.T) {
 			[]uint32{LBRACKET, NUMBER, RBRACKET, DOT, KEY, LBRACKET, NUMBER, RBRACKET, DOT, KEY},
 		},
 	} {
-		l := NewExprLexer(test.expr)
-		exParse(l)
+		l := NewExprLexer()
+		l.Parse(test.expr)
 		if !compareUintSlice(test.tokens, l.lextokens) {
 			t.Errorf("TOKENS wrong for: %s -> Got %+v but wanted %+v", test.expr, tokenListToNames(l.lextokens), tokenListToNames(test.tokens))
 		}

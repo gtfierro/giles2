@@ -93,7 +93,7 @@ func (api *API) Query(query string) error {
 		URI:            api.uri + "/slot/query",
 		PayloadObjects: []bw.PayloadObject{msg.ToMsgPackBW()},
 	})
-	fmt.Printf("Publish to %v\n", api.uri+"/query")
+	fmt.Printf("Publish to %v\n", api.uri+"/slot/query")
 	wg.Wait()
 	return nil
 }

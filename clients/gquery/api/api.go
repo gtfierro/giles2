@@ -27,7 +27,7 @@ func NewAPI(client *bw.BW2Client, vk string, uri string) *API {
 	return &API{
 		client: client,
 		vk:     vk,
-		uri:    strings.TrimSuffix(uri, "/") + "/s.giles/0/i.archiver",
+		uri:    strings.TrimSuffix(uri, "/") + "/s.giles/_/i.archiver",
 	}
 }
 

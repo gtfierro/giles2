@@ -32,8 +32,6 @@ var (
 	GilesArchiveRequestPID        = bw.FromDotForm(GilesArchiveRequestPIDString)
 )
 
-//TODO: put VK and URi and "format" in these messages, but don't put them in the
-// manifest
 type KeyValueQuery struct {
 	Query string
 	Nonce uint32

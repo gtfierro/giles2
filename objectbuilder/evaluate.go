@@ -109,5 +109,8 @@ func (o ObjectOperator) Eval(i interface{}) interface{} {
 		}
 	}
 	// is struct
-	return val.FieldByName(o.key).Interface()
+	if val.FieldByName(o.key).IsValid() {
+		return val.FieldByName(o.key).Interface()
+	}
+	return i
 }

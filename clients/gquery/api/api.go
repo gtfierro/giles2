@@ -93,8 +93,37 @@ func (api *API) Query(query string) error {
 		URI:            api.uri + "/slot/query",
 		PayloadObjects: []bw.PayloadObject{msg.ToMsgPackBW()},
 	})
-	fmt.Printf("Publish to %v\n", api.uri+"/query")
+	fmt.Printf("Publish to %v\n", api.uri+"/slot/query")
 	wg.Wait()
+	return nil
+}
+
+func (api *API) SubscribeData(query string, cb func(ts messages.QueryTimeseriesResult)) error {
+	nonce := rand.Uint32()
+	msg := messages.KeyValueQuery{
+		Query: query,
+		Nonce: nonce,
+	}
+	fmt.Printf("Subscribe to %v\n", api.uri+fmt.Sprintf("/signal/%s,all", api.vk[:len(api.vk)-1]))
+	c, err := api.client.Subscribe(&bw.SubscribeParams{
+		URI: api.uri + fmt.Sprintf("/signal/%s,all", api.vk[:len(api.vk)-1]),
+	})
+	if err != nil {
+		return err
+	}
+	err = api.client.Publish(&bw.PublishParams{
+		URI:            api.uri + "/slot/subscribe",
+		PayloadObjects: []bw.PayloadObject{msg.ToMsgPackBW()},
+	})
+	fmt.Printf("Publish to %v\n", api.uri+"/slot/subscribe")
+	for msg := range c {
+		found, timeseries, err := GetTimeseries(nonce, msg)
+		if err == nil && found {
+			cb(timeseries)
+		} else if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

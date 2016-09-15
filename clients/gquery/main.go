@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/codegangsta/cli"
 	"github.com/gtfierro/giles2/clients/gquery/api"
+	messages "github.com/gtfierro/giles2/plugins/bosswave"
 	bw "gopkg.in/immesys/bw2bind.v5"
 	"gopkg.in/readline.v1"
 	"os"
@@ -66,6 +67,20 @@ func doIQuery(c *cli.Context) error {
 	return nil
 }
 
+func doSubscribe(c *cli.Context) error {
+	client := bw.ConnectOrExit("")
+	vk := client.SetEntityFileOrExit(c.String("entity"))
+	client.OverrideAutoChainTo(true)
+	API := api.NewAPI(client, vk, c.String("archiver"))
+	return API.SubscribeData(c.String("query"), dump)
+}
+
+func dump(ts messages.QueryTimeseriesResult) {
+	if len(ts.Data) > 0 {
+		ts.Dump()
+	}
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "gquery"
@@ -110,6 +125,29 @@ func main() {
 					Name:  "archiver,a",
 					Value: "gabe.ns",
 					Usage: "REQUIRED. The URI you want to archive",
+				},
+			},
+		},
+		{
+			Name:   "subscribe",
+			Usage:  "Subscribe to Giles",
+			Action: doSubscribe,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:   "entity,e",
+					Value:  "",
+					Usage:  "The entity to use",
+					EnvVar: "BW2_DEFAULT_ENTITY",
+				},
+				cli.StringFlag{
+					Name:  "archiver,a",
+					Value: "gabe.ns",
+					Usage: "REQUIRED. The URI you want to archive",
+				},
+				cli.StringFlag{
+					Name:  "query,q",
+					Value: "",
+					Usage: "Giles query string",
 				},
 			},
 		},

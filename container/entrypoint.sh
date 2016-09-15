@@ -41,6 +41,11 @@ then
   exit 1
 fi
 
+if [ -z "$GILES_BW_ADDRESS" ]
+then
+  GILES_BW_ADDRESS=localhost:28589
+fi
+
 : ${GILES_HTTP_ENABLED:=true}
 : ${GILES_HTTP_PORT:=8079}
 : ${GILES_BOSSWAVE_ENABLED:=true}
@@ -54,6 +59,10 @@ BTRDB_ADDR=$(echo $BTRDB_SERVER | sed 's/\([^:]\+\):[0-9]\+.*/\1/')
 MONGO_PORT=$(echo $MONGO_SERVER | sed 's/.*[^:]\+:\([0-9]\+\).*/\1/')
 MONGO_ADDR=$(echo $MONGO_SERVER | sed 's/\([^:]\+\):[0-9]\+.*/\1/')
 
+LISTEN_NAMESPACES=""
+for ns in $GILES_BW_LISTEN; do
+LISTEN_NAMESPACES+=ListenNS=$ns$'\n'
+done
 
 cat >giles.cfg <<EOF
 [archiver]
@@ -80,8 +89,8 @@ Port=${GILES_HTTP_PORT}
 Entityfile=/etc/giles/${GILES_BW_ENTITY}
 Namespace=${GILES_BW_NAMESPACE}
 Enabled=${GILES_BOSSWAVE_ENABLED}
-ListenNS=${GILES_BW_LISTEN}
-Address=172.17.0.1:28589
+${LISTEN_NAMESPACES}
+Address=${GILES_BW_ADDRESS}
 #Address=parent:28589
 
 [WebSocket]

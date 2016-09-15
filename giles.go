@@ -9,6 +9,7 @@ import (
 	"github.com/gtfierro/giles2/plugins/tcpjson"
 	"github.com/gtfierro/giles2/plugins/websocket"
 	"github.com/op/go-logging"
+
 	"os"
 	"os/signal"
 	"runtime"
@@ -34,13 +35,6 @@ func init() {
 }
 
 func main() {
-	// print up some server stats
-	go func() {
-		for {
-			time.Sleep(5 * time.Second)
-			log.Infof("Number of active goroutines %v", runtime.NumGoroutine())
-		}
-	}()
 
 	signals := make(chan os.Signal, 1)
 	done := make(chan bool)
@@ -50,6 +44,17 @@ func main() {
 		log.Noticef("Got signal %v", sig)
 		done <- true
 	}()
+
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			log.Infof("Number of active goroutines %v", runtime.NumGoroutine())
+		}
+	}()
+
+	//time.AfterFunc(30*time.Second, func() {
+	//	panic("STOP")
+	//})
 
 	flag.Parse()
 	config := archiver.LoadConfig(*configfile)
@@ -102,24 +107,4 @@ func main() {
 	}
 
 	<-done
-	//idx := 0
-	//for {
-	//	time.Sleep(5 * time.Second)
-	//	idx += 5
-	//	if config.Profile.Enabled && idx == *config.Profile.BenchmarkTimer {
-	//		if *config.Profile.MemProfile != "" {
-	//			f, err := os.Create(*config.Profile.MemProfile)
-	//			if err != nil {
-	//				log.Panic(err)
-	//			}
-	//			pprof.WriteHeapProfile(f)
-	//			f.Close()
-	//			trace.Stop()
-	//			return
-	//		}
-	//		if *config.Profile.CpuProfile != "" {
-	//			return
-	//		}
-	//	}
-	//}
 }

@@ -32,6 +32,9 @@ func NewAPI(client *bw.BW2Client, vk string, uri string) *API {
 }
 
 func (api *API) Query(query string) error {
+	if len(query) == 0 {
+		return nil
+	}
 	var wg sync.WaitGroup
 	nonce := rand.Uint32()
 	msg := messages.KeyValueQuery{
